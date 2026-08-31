@@ -2,44 +2,54 @@
 
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
-use Laravel\Sanctum\HasApiTokens;
 
 class User extends Authenticatable
 {
-    use HasApiTokens, HasFactory, Notifiable;
+    use HasFactory, Notifiable, SoftDeletes;
 
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var array<int, string>
-     */
     protected $fillable = [
-        'name',
+        'nama_lengkap',
         'email',
-        'password',
+        'pin',
+        'role',
     ];
 
-    /**
-     * The attributes that should be hidden for serialization.
-     *
-     * @var array<int, string>
-     */
     protected $hidden = [
-        'password',
+        'pin',
         'remember_token',
     ];
 
-    /**
-     * The attributes that should be cast.
-     *
-     * @var array<string, string>
-     */
     protected $casts = [
         'email_verified_at' => 'datetime',
-        'password' => 'hashed',
     ];
+
+    // PIN dipakai sebagai kredensial login, menggantikan kolom "password" bawaan Laravel
+    public function getAuthPassword()
+    {
+        return $this->pin;
+    }
+
+    public function suratMasuk()
+    {
+        return $this->hasMany(SuratMasuk::class);
+    }
+
+    public function suratKeluar()
+    {
+        return $this->hasMany(SuratKeluar::class);
+    }
+
+    public function aktivitas()
+    {
+        return $this->hasMany(Aktivitas::class);
+    }
+
+    public function isAdmin(): bool
+    {
+        return $this->role === 'admin';
+    }
 }
