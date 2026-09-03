@@ -93,9 +93,17 @@ class SuratKeluarController extends Controller
         $data = $request->validated();
 
         $suratKeluar = DB::transaction(function () use ($data, $request) {
-            $tahun = (int) date('Y', strtotime($data['tanggal_surat']));
+            $tanggal = \Carbon\Carbon::parse($data['tanggal_surat']);
+            $tahun   = (int) $tanggal->year;
+            $bulan   = (int) $tanggal->month;
 
-            $data['nomor_surat'] = $this->generateNomorSurat($tahun);
+            $data['nomor_surat'] = $this->generateNomorSurat(
+                $tahun,
+                $bulan,
+                (int) $data['klasifikasi_primer_id'],
+                isset($data['klasifikasi_sekunder_id']) ? (int) $data['klasifikasi_sekunder_id'] : null,
+                isset($data['klasifikasi_tersier_id'])  ? (int) $data['klasifikasi_tersier_id']  : null,
+            );
             $data['status_arsip'] = $data['status_arsip'] ?? 'aktif';
             $data['user_id'] = $request->user()->id;
 
@@ -155,26 +163,45 @@ class SuratKeluarController extends Controller
     }
 
     /**
-     * Generate nomor urut surat keluar: global per tahun & reset tiap tahun
-     * (D2, D3 — sudah [DEFAULT] jadi aman dipakai sekarang), dihitung dari
-     * tahun `tanggal_surat` (bukan tanggal input, supaya surat yang di-backdate
-     * tetap masuk urutan tahun suratnya).
+     * Generate nomor surat keluar dengan format yang dikonfirmasi user 3 Sep 2026 (D1 [LOCKED]):
+     *   {urutan 3 digit}/{kodeP.kodeS.kodeT}/{bulan romawi}/{tahun}
+     * Contoh: 001/01.01.01/IX/2026
      *
-     * TODO(D1): format "{urutan}/SK/{tahun}" di bawah ini CUMA PLACEHOLDER.
-     * Format resmi (mengikuti Tata Naskah Dinas / Perbup / Permendagri, atau
-     * mengikuti format sistem lama) belum dikonfirmasi user. Ganti format
-     * string ini begitu D1 terjawab — cari semua pemanggil generateNomorSurat()
-     * kalau strukturnya berubah total (misal butuh kode klasifikasi di dalamnya).
-     *
-     * Query di-lock (lockForUpdate) di dalam transaction pemanggil supaya dua
-     * surat yang dibuat nyaris bersamaan tidak dapat nomor sama. Untuk jaga-jaga
-     * tetap ada retry beberapa kali kalau nomor ternyata sudah kepakai.
+     * - Urutan: global per tahun (D2), reset tiap tahun (D3). Dihitung dari `tanggal_surat`.
+     * - kodeP/kodeS/kodeT: diambil langsung dari model KlasifikasiPrimer/Sekunder/Tersier.
+     *   Jika sekunder/tersier tidak dipilih, bagian yang bersangkutan dilewati
+     *   (misal cuma primer: "001/01/IX/2026").
+     * - lockForUpdate() di dalam transaction supaya tidak ada nomor kembar pada request bersamaan.
+     * - Retry 3x sebagai jaga-jaga jika terjadi race condition antar transaksi.
      */
-    protected function generateNomorSurat(int $tahun): string
-    {
+    protected function generateNomorSurat(
+        int $tahun,
+        int $bulan,
+        int $klasifikasiPrimerId,
+        ?int $klasifikasiSekonderId = null,
+        ?int $klasifikasiTersierId  = null,
+    ): string {
+        static $bulanRomawi = [
+            1 => 'I', 2 => 'II', 3 => 'III', 4 => 'IV', 5 => 'V', 6 => 'VI',
+            7 => 'VII', 8 => 'VIII', 9 => 'IX', 10 => 'X', 11 => 'XI', 12 => 'XII',
+        ];
+
+        // Ambil kode klasifikasi
+        $primer   = \App\Models\KlasifikasiPrimer::find($klasifikasiPrimerId);
+        $sekunder = $klasifikasiSekonderId  ? \App\Models\KlasifikasiSekunder::find($klasifikasiSekonderId)  : null;
+        $tersier  = $klasifikasiTersierId   ? \App\Models\KlasifikasiTersier::find($klasifikasiTersierId)   : null;
+
+        $bagianKode = collect([
+            $primer?->kode,
+            $sekunder?->kode,
+            $tersier?->kode,
+        ])->filter()->implode('.');
+
+        $romawi = $bulanRomawi[$bulan] ?? (string) $bulan;
+
         for ($percobaan = 0; $percobaan < 3; $percobaan++) {
             $urutan = SuratKeluar::whereYear('tanggal_surat', $tahun)->lockForUpdate()->count() + 1;
-            $nomor = sprintf('%d/SK/%d', $urutan, $tahun);
+            $nomor  = sprintf('%03d/%s/%s/%d', $urutan, $bagianKode, $romawi, $tahun);
 
             if (! SuratKeluar::where('nomor_surat', $nomor)->exists()) {
                 return $nomor;
@@ -184,3 +211,4 @@ class SuratKeluarController extends Controller
         throw new \RuntimeException('Gagal generate nomor surat keluar yang unik setelah beberapa percobaan.');
     }
 }
+

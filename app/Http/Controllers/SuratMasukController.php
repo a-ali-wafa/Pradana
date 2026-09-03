@@ -40,18 +40,36 @@ class SuratMasukController extends Controller
         $this->middleware('auth');
     }
 
-    public function index(): View
+    public function index(Request $request): View
     {
-        $suratMasuk = SuratMasuk::with(['primer', 'sekunder', 'tersier', 'petugas'])
-            ->orderByDesc('tanggal_diterima')
-            ->paginate(20);
+        $query = SuratMasuk::with(['primer', 'sekunder', 'tersier', 'petugas']);
 
-        return view('surat-masuk.index', compact('suratMasuk'));
+        if ($request->filled('cari')) {
+            $kw = $request->input('cari');
+            $query->where(function ($q) use ($kw) {
+                $q->where('perihal', 'like', "%{$kw}%")
+                  ->orWhere('nomor_surat', 'like', "%{$kw}%")
+                  ->orWhere('pengirim', 'like', "%{$kw}%");
+            });
+        }
+
+        if ($request->filled('sifat')) {
+            $query->where('sifat', $request->input('sifat'));
+        }
+
+        if ($request->filled('klasifikasi_primer_id')) {
+            $query->where('klasifikasi_primer_id', $request->integer('klasifikasi_primer_id'));
+        }
+
+        $suratMasuk       = $query->orderByDesc('tanggal_diterima')->paginate(20)->withQueryString();
+        $klasifikasiPrimer = KlasifikasiPrimer::orderBy('kode')->get();
+
+        return view('surat-masuk.index', compact('suratMasuk', 'klasifikasiPrimer'));
     }
 
     public function create(): View
     {
-        $klasifikasiPrimer = KlasifikasiPrimer::orderBy('kode')->get();
+        $klasifikasiPrimer = KlasifikasiPrimer::with('sekunder.tersier')->orderBy('kode')->get();
 
         return view('surat-masuk.create', compact('klasifikasiPrimer'));
     }
@@ -81,10 +99,10 @@ class SuratMasukController extends Controller
 
     public function edit(SuratMasuk $surat_masuk): View
     {
-        $klasifikasiPrimer = KlasifikasiPrimer::orderBy('kode')->get();
+        $klasifikasiPrimer = KlasifikasiPrimer::with('sekunder.tersier')->orderBy('kode')->get();
 
         return view('surat-masuk.edit', [
-            'suratMasuk'       => $surat_masuk,
+            'suratMasuk'        => $surat_masuk,
             'klasifikasiPrimer' => $klasifikasiPrimer,
         ]);
     }

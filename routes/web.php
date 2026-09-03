@@ -92,16 +92,27 @@ Route::middleware('auth')->group(function () {
     Route::post('logout', [AuthController::class, 'logout'])->name('logout');
     Route::get('dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
-    // "Registrasi" user baru — admin-only, sesuai A3 [LOCKED, dikonfirmasi 28 Agu 2026]
-    Route::resource('users', UserController::class)->only(['index', 'create', 'store']);
+    // Manajemen user — admin-only penuh (A3 [LOCKED], B1 [LOCKED #16], 1 Sep 2026)
+    Route::resource('users', UserController::class)
+        ->only(['index', 'create', 'store'])
+        ->middleware('admin');
 
-    Route::resource('klasifikasi-primer', KlasifikasiPrimerController::class)->except(['show']);
-    Route::resource('klasifikasi-sekunder', KlasifikasiSekunderController::class)->except(['show']);
-    Route::resource('klasifikasi-tersier', KlasifikasiTersierController::class)->except(['show']);
+    // Klasifikasi: index() terbuka untuk semua role yang login;
+    // create/store/edit/update/destroy hanya admin (B1 [LOCKED #16], B3 [DEFAULT])
+    Route::resource('klasifikasi-primer', KlasifikasiPrimerController::class)->only(['index']);
+    Route::resource('klasifikasi-primer', KlasifikasiPrimerController::class)->except(['show', 'index'])->middleware('admin');
 
-    // Pengaturan Instansi (baru, 31 Agu 2026, lihat catatan #2b di atas & AGENTS.md 12.18)
+    Route::resource('klasifikasi-sekunder', KlasifikasiSekunderController::class)->only(['index']);
+    Route::resource('klasifikasi-sekunder', KlasifikasiSekunderController::class)->except(['show', 'index'])->middleware('admin');
+
+    Route::resource('klasifikasi-tersier', KlasifikasiTersierController::class)->only(['index']);
+    Route::resource('klasifikasi-tersier', KlasifikasiTersierController::class)->except(['show', 'index'])->middleware('admin');
+
+    // Pengaturan Instansi — admin-only penuh (B4 [DEFAULT], B1 [LOCKED #16], 1 Sep 2026)
+    // (catatan #2b, 31 Agu 2026, lihat AGENTS.md 12.18)
     Route::singleton('pengaturan-instansi', PengaturanInstansiController::class)
-        ->only(['edit', 'update']);
+        ->only(['edit', 'update'])
+        ->middleware('admin');
 
     Route::resource('surat-masuk', SuratMasukController::class);
     Route::resource('surat-keluar', SuratKeluarController::class);
@@ -123,13 +134,17 @@ Route::middleware('auth')->group(function () {
         ->name('lampiran.download');
 
     // Pengajuan hapus lampiran (baru, 31 Agu 2026, lihat AGENTS.md 12.17) —
-    // GANTIKAN route DELETE lampiran/{lampiran} langsung yang sempat ada.
+    // store() terbuka untuk semua role yang login (siapa saja boleh ajukan);
+    // index/setujui/tolak admin-only (B1 [LOCKED #16])
     Route::post('lampiran/{lampiran}/pengajuan-hapus', [PengajuanHapusLampiranController::class, 'store'])
         ->name('lampiran.pengajuan-hapus.store');
     Route::get('pengajuan-hapus-lampiran', [PengajuanHapusLampiranController::class, 'index'])
-        ->name('pengajuan-hapus-lampiran.index');
+        ->name('pengajuan-hapus-lampiran.index')
+        ->middleware('admin');
     Route::post('pengajuan-hapus-lampiran/{pengajuan_hapus_lampiran}/setujui', [PengajuanHapusLampiranController::class, 'setujui'])
-        ->name('pengajuan-hapus-lampiran.setujui');
+        ->name('pengajuan-hapus-lampiran.setujui')
+        ->middleware('admin');
     Route::post('pengajuan-hapus-lampiran/{pengajuan_hapus_lampiran}/tolak', [PengajuanHapusLampiranController::class, 'tolak'])
-        ->name('pengajuan-hapus-lampiran.tolak');
+        ->name('pengajuan-hapus-lampiran.tolak')
+        ->middleware('admin');
 });

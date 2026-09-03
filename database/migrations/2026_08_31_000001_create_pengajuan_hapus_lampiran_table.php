@@ -25,7 +25,7 @@ return new class extends Migration
             // terbaca jelas walau lampiran_id di atas sudah null (lampiran terhapus).
             $table->string('nama_file_snapshot', 255);
 
-            $table->foreignId('diajukan_oleh')->constrained('users')->nullOnDelete();
+            $table->foreignId('diajukan_oleh')->nullable()->constrained('users')->nullOnDelete();
             $table->text('alasan')->nullable();
 
             $table->enum('status', ['menunggu', 'disetujui', 'ditolak'])->default('menunggu')->index();

@@ -14,7 +14,12 @@ class GoogleDriveService
     {
         $client = new Client();
         $client->setApplicationName('PRADANA Arsip Digital');
-        $client->setAuthConfig(config('gdrive.credentials_path'));
+
+        $credentialsPath = config('gdrive.credentials_path');
+        if ($credentialsPath && file_exists($credentialsPath)) {
+            $client->setAuthConfig($credentialsPath);
+        }
+
         $client->addScope(Drive::DRIVE);
 
         $this->service = new Drive($client);
