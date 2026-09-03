@@ -8,7 +8,7 @@ use App\Models\KlasifikasiPrimer;
 use App\Models\SuratMasuk;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Support\Facades\Auth;
+use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 /**
@@ -27,11 +27,11 @@ use Illuminate\View\View;
  * kebetulan "admin only". Koreksi 26 Agu 2026: sebelumnya salah ditulis
  * seolah B2 sudah [DEFAULT] di sini, ternyata belum — cross-check dengan
  * SuratKeluarController asli (yang benar menandainya TODO(B2)/WAJIB TANYA
- * USER). Kalau B2 dijawab beda dari "admin only", ensureAdmin() di sini
- * perlu direvisi (atau dihapus kalau ternyata semua role boleh hapus).
- * Pengecekan admin masih manual (TODO(B1)) karena middleware role (B1)
- * masih blocked — pola sama seperti SuratKeluarController & controller
- * Klasifikasi yang sudah ada.
+ * USER). Kalau B2 dijawab beda dari "admin only", pengecekan di destroy()
+ * di bawah perlu direvisi (atau dihapus kalau ternyata semua role boleh hapus).
+ *
+ * Pengecekan admin di destroy() pakai abort_unless+isAdmin() inline — konsisten
+ * dengan pola SuratKeluarController::destroy() (retrofit B1, 1 Sep 2026).
  */
 class SuratMasukController extends Controller
 {
@@ -59,7 +59,7 @@ class SuratMasukController extends Controller
     public function store(StoreSuratMasukRequest $request): RedirectResponse
     {
         $data = $request->validated();
-        $data['user_id'] = Auth::id();
+        $data['user_id'] = $request->user()->id;
         // Surat baru selalu masuk sebagai arsip aktif. Toggle ke "inaktif"
         // adalah bagian dari fitur retensi terpisah yang belum dikerjakan
         // (blocked by E1) — lihat AGENTS.md Bagian 10 & 11.
@@ -84,7 +84,7 @@ class SuratMasukController extends Controller
         $klasifikasiPrimer = KlasifikasiPrimer::orderBy('kode')->get();
 
         return view('surat-masuk.edit', [
-            'suratMasuk' => $surat_masuk,
+            'suratMasuk'       => $surat_masuk,
             'klasifikasiPrimer' => $klasifikasiPrimer,
         ]);
     }
@@ -98,9 +98,20 @@ class SuratMasukController extends Controller
             ->with('status', 'Surat masuk berhasil diperbarui.');
     }
 
-    public function destroy(SuratMasuk $surat_masuk): RedirectResponse
+    /**
+     * TODO(B2): "admin only" di sini masih ASUMSI SEMENTARA — B2 sendiri
+     * masih [WAJIB TANYA USER], belum final. Konfirmasi ulang ke user.
+     *
+     * Pakai abort_unless inline (bukan ensureAdmin() private) agar konsisten
+     * dengan SuratKeluarController::destroy() dan retrofit B1 (1 Sep 2026).
+     */
+    public function destroy(Request $request, SuratMasuk $surat_masuk): RedirectResponse
     {
-        $this->ensureAdmin();
+        abort_unless(
+            $request->user()->isAdmin(),
+            403,
+            'Hanya admin yang boleh menghapus arsip surat.'
+        );
 
         try {
             $surat_masuk->delete();
@@ -116,16 +127,5 @@ class SuratMasukController extends Controller
         return redirect()
             ->route('surat-masuk.index')
             ->with('status', 'Surat masuk berhasil dihapus.');
-    }
-
-    /**
-     * TODO(B1): ganti dengan middleware/policy resmi setelah matriks
-     * permission role (B1) dikonfirmasi user — lihat AGENTS.md Bagian 10.
-     * TODO(B2): "admin only" di sini masih ASUMSI SEMENTARA — B2 sendiri
-     * masih [WAJIB TANYA USER], belum final. Konfirmasi ulang ke user.
-     */
-    private function ensureAdmin(): void
-    {
-        abort_unless(Auth::user()->role === 'admin', 403, 'Hanya admin yang boleh menghapus arsip surat.');
     }
 }

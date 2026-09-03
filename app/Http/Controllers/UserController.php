@@ -6,7 +6,6 @@ use App\Http\Requests\StoreUserRequest;
 use App\Models\User;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 
 /**
@@ -17,25 +16,13 @@ use Illuminate\Support\Facades\Hash;
  * sesi ini (lihat A4/A5 di Bagian 10 — "reset PIN oleh admin" & "user ganti
  * PIN sendiri" — belum diimplementasikan).
  *
- * Admin-only manual check (ensureAdmin()) — TODO(B1), pola sama seperti
- * KlasifikasiPrimerController/dst, BUKAN middleware/Gate resmi karena B1
- * (matriks permission detail role) masih [WAJIB TANYA USER].
+ * Admin-only — ditangani oleh middleware('admin') di routes/web.php
+ * (retrofit B1, 1 Sep 2026).
  */
 class UserController extends Controller
 {
-    /**
-     * Dicek 28 Agu 2026 terhadap User.php asli: helper isAdmin() sudah ada
-     * di model, dipakai di sini alih-alih cek role manual.
-     */
-    private function ensureAdmin(): void
-    {
-        abort_unless(Auth::user()?->isAdmin(), 403, 'Hanya admin yang boleh mengelola user.');
-    }
-
     public function index(): View
     {
-        $this->ensureAdmin();
-
         $users = User::orderBy('nama_lengkap')->paginate(20);
 
         return view('users.index', compact('users'));
@@ -43,8 +30,6 @@ class UserController extends Controller
 
     public function create(): View
     {
-        $this->ensureAdmin();
-
         return view('users.create');
     }
 
@@ -58,15 +43,13 @@ class UserController extends Controller
      */
     public function store(StoreUserRequest $request): RedirectResponse
     {
-        $this->ensureAdmin();
-
         $validated = $request->validated();
 
         User::create([
             'nama_lengkap' => $validated['nama_lengkap'],
-            'email' => $validated['email'],
-            'pin' => Hash::make($validated['pin']),
-            'role' => $validated['role'],
+            'email'        => $validated['email'],
+            'pin'          => Hash::make($validated['pin']),
+            'role'         => $validated['role'],
         ]);
 
         return redirect()->route('users.index')->with('status', 'User baru berhasil ditambahkan.');

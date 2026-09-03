@@ -1,11 +1,13 @@
 <?php
 
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\CetakSuratKeluarController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\KlasifikasiPrimerController;
 use App\Http\Controllers\KlasifikasiSekunderController;
 use App\Http\Controllers\KlasifikasiTersierController;
 use App\Http\Controllers\LampiranController;
+use App\Http\Controllers\PencarianController;
 use App\Http\Controllers\PengajuanHapusLampiranController;
 use App\Http\Controllers\PengaturanInstansiController;
 use App\Http\Controllers\SuratKeluarController;
@@ -65,9 +67,20 @@ use Illuminate\Support\Facades\Route;
 |    (lihat A4/A5 di AGENTS.md Bagian 10, belum diimplementasikan).
 |
 | 7. `dashboard` (28 Agu 2026): widget statistik dipilih bebas dari skema,
-|    BUKAN spesifikasi eksplisit user — gampang diubah. Satu relasi dipakai
-|    tanpa verifikasi (`Aktivitas::user()`, model Aktivitas belum pernah
-|    di-upload). Belum ada view (`dashboard.index`). Detail: AGENTS.md 12.15.
+|    BUKAN spesifikasi eksplisit user — gampang diubah. ⚠️ **Koreksi 1 Sep
+|    2026**: baris ini sebelumnya bilang relasi `Aktivitas::user()` "dipakai
+|    tanpa verifikasi" — itu sudah basi, relasi itu SUDAH dicek 28 Agu 2026
+|    (model `Aktivitas.php` diupload & `belongsTo(User::class)` terkonfirmasi
+|    tepat, lihat AGENTS_HISTORY.md 12.15). Belum ada view (`dashboard.index`).
+|
+| 8. Route `surat-keluar/{surat_keluar}/cetak` (baru, 1 Sep 2026) — generate
+|    PDF surat keluar via `CetakSuratKeluarController` (dompdf, sesuai F2
+|    [DEFAULT]). `auth` polos, bukan admin-only (mencetak bukan aksi
+|    destruktif). Detail: AGENTS.md 12.20.
+|
+| 9. Route `pencarian` (baru, 1 Sep 2026) — pencarian arsip gabungan surat
+|    masuk+keluar via `PencarianController`. `auth` polos, semua role boleh
+|    akses. Detail: AGENTS.md 12.21.
 */
 
 Route::middleware('guest')->group(function () {
@@ -92,6 +105,14 @@ Route::middleware('auth')->group(function () {
 
     Route::resource('surat-masuk', SuratMasukController::class);
     Route::resource('surat-keluar', SuratKeluarController::class);
+
+    // Cetak PDF surat keluar (baru, 1 Sep 2026, lihat catatan #8 di atas & AGENTS.md 12.20)
+    Route::get('surat-keluar/{surat_keluar}/cetak', [CetakSuratKeluarController::class, 'cetak'])
+        ->name('surat-keluar.cetak');
+
+    // Pencarian arsip global (baru, 1 Sep 2026, lihat catatan #9 di atas & AGENTS.md 12.21)
+    Route::get('pencarian', [PencarianController::class, 'index'])
+        ->name('pencarian.index');
 
     // Lampiran (baru, 31 Agu 2026) — lihat catatan #2 di atas & AGENTS.md 12.16/12.17.
     Route::post('surat-masuk/{surat_masuk}/lampiran', [LampiranController::class, 'storeForSuratMasuk'])

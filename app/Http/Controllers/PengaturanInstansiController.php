@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\UpdatePengaturanInstansiRequest;
 use App\Models\PengaturanInstansi;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 
 /**
@@ -37,10 +36,8 @@ use Illuminate\Support\Facades\Storage;
  * - Baris pertama diasumsikan sudah dibuat oleh DatabaseSeeder (Bagian 3 menyebut
  *   seeder bikin "1 admin, pengaturan instansi, 2 contoh klasifikasi") → pakai
  *   firstOrFail(), BUKAN find($id) dengan ID hardcode.
- * - Admin-only di edit() DAN update() (mengikuti B4 [DEFAULT] "hanya admin boleh ubah
- *   pengaturan instansi"), lewat ensureAdmin() manual — TODO(B1), pola identik dengan
- *   KlasifikasiPrimerController dkk (12.11), BUKAN middleware/Gate resmi karena B1
- *   masih [WAJIB TANYA USER].
+ * - Admin-only di edit() DAN update() — ditangani oleh middleware('admin') di
+ *   routes/web.php (retrofit B1, 1 Sep 2026).
  * - Upload logo disimpan LOKAL (disk `public`, folder `logo/`), BUKAN lewat Google
  *   Drive — beda dari lampiran surat. Alasan: logo kop surat itu aset publik/statis
  *   untuk ditampilkan di header PDF/halaman, bukan dokumen arsip rahasia, jadi aturan
@@ -51,17 +48,11 @@ use Illuminate\Support\Facades\Storage;
  * - TIDAK memanggil Aktivitas::create() manual, konsisten dengan keputusan 12.8
  *   (logging aktivitas sengaja belum disambungkan ke controller manapun, menunggu
  *   Observer/Event terpisah supaya tidak tercatat dobel nanti).
- *
- * ⚠️ ROUTE BELUM DIGABUNG. `routes/web.php` asli juga tidak ada di sesi ini — route
- * untuk controller ini disediakan sebagai file snippet TERPISAH
- * (`routes-snippet-pengaturan-instansi.php`), BELUM digabung ke file asli.
  */
 class PengaturanInstansiController extends Controller
 {
     public function edit()
     {
-        $this->ensureAdmin();
-
         $pengaturanInstansi = PengaturanInstansi::firstOrFail();
 
         // TODO(G1): view belum dibuat — tergantung keputusan stack frontend
@@ -71,8 +62,6 @@ class PengaturanInstansiController extends Controller
 
     public function update(UpdatePengaturanInstansiRequest $request)
     {
-        $this->ensureAdmin();
-
         $pengaturanInstansi = PengaturanInstansi::firstOrFail();
 
         $pengaturanInstansi->fill($request->safe()->except('logo'));
@@ -91,18 +80,5 @@ class PengaturanInstansiController extends Controller
         return redirect()
             ->route('pengaturan-instansi.edit')
             ->with('success', 'Pengaturan instansi berhasil diperbarui.');
-    }
-
-    /**
-     * TODO(B1): pengecekan admin manual, sementara sampai ada middleware/Gate resmi.
-     * Pola identik dengan ensureAdmin() di KlasifikasiPrimerController dkk (12.11).
-     */
-    private function ensureAdmin(): void
-    {
-        abort_unless(
-            Auth::user()?->role === 'admin',
-            403,
-            'Hanya admin yang dapat mengubah pengaturan instansi.'
-        );
     }
 }

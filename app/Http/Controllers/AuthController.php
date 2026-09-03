@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\LoginRequest;
+use App\Models\PengaturanInstansi;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -18,17 +19,28 @@ use Illuminate\Support\Facades\Auth;
  * UserController, bukan self-register publik lewat controller ini — MASIH
  * belum dikonfirmasi user).
  *
- * Belum ada view (`auth.login`) — item roadmap terpisah, tergantung G1
- * (Blade+Bootstrap vs stack lain, juga masih [WAJIB TANYA USER]).
+ * View `auth.login` sudah dibuat (Blade+Bootstrap standalone, G1 [LOCKED #15]),
+ * lihat resources/views/auth/login.blade.php.
+ *
+ * `create()` mengirim `$instansi` (baris tunggal `pengaturan_instansi`, sesuai
+ * Bagian 5 AGENTS.md) supaya nama/logo instansi tampil di panel login —
+ * BUKAN dari AuthController::create() versi sebelumnya (dulu view() polos
+ * tanpa data). ⚠️ `PengaturanInstansi::first()` ASUMSI cara akses baris
+ * tunggal (konsisten dengan desain edit-only tanpa create/store, Bagian 5/8
+ * AGENTS.md) — belum di-cross-check langsung ke `PengaturanInstansiController`
+ * asli karena file itu tidak ada di sesi yang sama dengan perubahan ini.
+ * TODO: cocokkan pola akses ini kalau `PengaturanInstansiController.php` di-upload.
  */
 class AuthController extends Controller
 {
     /**
-     * Tampilkan form login. Placeholder sampai view dibuat & G1 dikonfirmasi.
+     * Tampilkan form login, sertakan data instansi (nama/logo) untuk branding.
      */
     public function create(): View
     {
-        return view('auth.login');
+        return view('auth.login', [
+            'instansi' => PengaturanInstansi::first(),
+        ]);
     }
 
     public function login(LoginRequest $request): RedirectResponse
