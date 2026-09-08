@@ -29,7 +29,21 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        $this->app->singleton(\App\Services\GoogleDriveService::class, function ($app) {
+            $client = new \Google\Client();
+            $client->setApplicationName('PRADANA Arsip Digital');
+
+            $credentialsPath = config('gdrive.credentials_path');
+            if ($credentialsPath && file_exists($credentialsPath)) {
+                $client->setAuthConfig($credentialsPath);
+            }
+
+            $client->addScope(\Google\Service\Drive::DRIVE);
+
+            $drive = new \Google\Service\Drive($client);
+
+            return new \App\Services\GoogleDriveService($drive);
+        });
     }
 
     /**

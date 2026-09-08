@@ -94,7 +94,7 @@ Route::middleware('auth')->group(function () {
 
     // Manajemen user — admin-only penuh (A3 [LOCKED], B1 [LOCKED #16], 1 Sep 2026)
     Route::resource('users', UserController::class)
-        ->only(['index', 'create', 'store'])
+        ->only(['index', 'create', 'store', 'destroy'])
         ->middleware('admin');
 
     // Klasifikasi: index() terbuka untuk semua role yang login;

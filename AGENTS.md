@@ -396,7 +396,20 @@ composer require google/apiclient:^2.15
 - 🔄 *(parsial, 1 Sep 2026)* Pencarian arsip global — `PencarianController` (berdiri sendiri) dibuat, **route sudah digabung ke `web.php` asli, view sudah `@extends('layouts.app')`** (12.24). BELUM: cross-check ke model asli.
 - [x] *(parsial)* Manajemen retensi/penyusutan — E1 **sudah terjawab** (5 tahun seragam, LOCKED #12), dan 1 mekanisme retensi (hapus lampiran via pengajuan+persetujuan setelah >5 tahun) **sudah jalan**, lihat baris "Pengajuan hapus lampiran" di atas & 12.17. Yang BELUM: toggle otomatis `status_arsip` surat ke "inaktif" setelah 5 tahun (masih manual, sesuai E2 [DEFAULT]), dan alur pemusnahan SURAT/arsip formal dengan berita acara (masih blocked by E3).
 - [x] Logging aktivitas otomatis di setiap aksi — trait `LogsAktivitas` + 9 Observer dibuat & **SUDAH AKTIF** (diregistrasikan ke `AppServiceProvider::boot()` asli 1 Sep 2026), lihat 12.22/12.24. Belum ada UI utk melihat log-nya (cuma penulisan) — item terpisah kalau dibutuhkan.
-- [ ] View/frontend (sesuai G1)
+- [x] **View/frontend selesai penuh 4 Sep 2026** (sesuai G1) — semua halaman MVP sudah ada:
+  - [x] Layout `layouts/app.blade.php` — ✅ selesai 31 Agu 2026
+  - [x] `auth/login.blade.php` — ✅
+  - [x] `dashboard/index.blade.php` — ✅ 3 Sep 2026
+  - [x] `pengaturan-instansi/edit.blade.php` — ✅
+  - [x] `pencarian/index.blade.php` — ✅
+  - [x] `surat-keluar/cetak.blade.php` — ✅
+  - [x] `surat-masuk/` (index, create, edit, show) — ✅ 3 Sep 2026
+  - [x] `surat-keluar/` (index, create, edit, show) — ✅ 4 Sep 2026
+  - [x] `klasifikasi-primer/` (index, create, edit) — ✅ 4 Sep 2026
+  - [x] `klasifikasi-sekunder/` (index, create, edit) — ✅ 4 Sep 2026
+  - [x] `klasifikasi-tersier/` (index, create, edit) — ✅ 4 Sep 2026
+  - [x] `users/` (index, create) — ✅ 4 Sep 2026 (+ destroy() ditambah ke controller & route)
+  - [x] `pengajuan-hapus-lampiran/index.blade.php` — ✅ 4 Sep 2026
 - [ ] Testing
 - [ ] Deployment (**blocked by K1**)
 - [ ] Script migrasi data lama (**kondisional, blocked by C4**)

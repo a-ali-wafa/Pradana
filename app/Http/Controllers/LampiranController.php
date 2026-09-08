@@ -63,6 +63,8 @@ class LampiranController extends Controller
      */
     public function download(Lampiran $lampiran): Response
     {
+        $this->authorize('view', $lampiran);
+
         $file = $this->drive->getFileContent($lampiran->google_drive_file_id);
 
         return response($file['content'])
@@ -83,29 +85,21 @@ class LampiranController extends Controller
         $folderId = $this->resolveFolderId($jenisSurat, $primer);
 
         foreach ($request->file('files') as $file) {
-            $uploaded = $this->drive->upload(
-                $folderId,
-                $file->getClientOriginalName(),
+            $originalName = $file->getClientOriginalName();
+            $extension = $file->getClientOriginalExtension();
+            $safeName = \Illuminate\Support\Str::slug(pathinfo($originalName, PATHINFO_FILENAME)) . '.' . $extension;
+
+            // Save temporarily to local storage
+            $localPath = $file->store('temp_lampiran');
+
+            \App\Jobs\UploadLampiranKeDriveJob::dispatch(
+                $localPath,
+                $safeName,
                 $file->getMimeType(),
-                file_get_contents($file->getRealPath())
+                $folderId,
+                $surat,
+                Auth::id()
             );
-
-            try {
-                $surat->lampiran()->create([
-                    'google_drive_file_id' => $uploaded['id'],
-                    'google_drive_folder_id' => $folderId,
-                    'nama_file' => $uploaded['name'],
-                    'mime_type' => $uploaded['mime_type'],
-                    'ukuran' => $uploaded['size'],
-                    'diunggah_oleh' => Auth::id(),
-                ]);
-            } catch (Throwable $e) {
-                // File sudah kepalang ke Drive tapi record DB gagal dibuat —
-                // hapus lagi supaya tidak jadi file yatim di Drive.
-                $this->drive->delete($uploaded['id']);
-
-                throw $e;
-            }
         }
     }
 

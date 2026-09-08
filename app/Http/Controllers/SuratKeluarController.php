@@ -27,11 +27,8 @@ use Illuminate\View\View;
  * - Create/edit isi draf_konten_surat_keluar & generate PDF — juga item roadmap
  *   terpisah ("Generate PDF surat keluar, DomPDF").
  *
- * CATATAN: model SuratKeluar yang di-upload masih punya 'file_path' di
- * $fillable, padahal keputusan locked #8 di AGENTS.md bilang kolom itu sudah
- * dihapus (diganti tabel `lampiran`). Kemungkinan itu sisa sebelum migrasi ke
- * skema baru — controller ini tidak memakai/mengisi 'file_path' sama sekali,
- * tapi baiknya dibersihkan juga dari model & migration.
+ * CATATAN: Atribut `file_path` sudah resmi dihapus sesuai dengan keputusan di Bagian 8.
+
  */
 class SuratKeluarController extends Controller
 {
@@ -117,7 +114,7 @@ class SuratKeluarController extends Controller
 
     public function show(SuratKeluar $surat_keluar): View
     {
-        $surat_keluar->load(['primer', 'sekunder', 'tersier', 'petugas', 'drafKonten']);
+        $surat_keluar->load(['primer', 'sekunder', 'tersier', 'petugas', 'drafKonten', 'lampiran']);
 
         return view('surat-keluar.show', ['suratKeluar' => $surat_keluar]);
     }
@@ -199,16 +196,19 @@ class SuratKeluarController extends Controller
 
         $romawi = $bulanRomawi[$bulan] ?? (string) $bulan;
 
-        for ($percobaan = 0; $percobaan < 3; $percobaan++) {
-            $urutan = SuratKeluar::whereYear('tanggal_surat', $tahun)->lockForUpdate()->count() + 1;
-            $nomor  = sprintf('%03d/%s/%s/%d', $urutan, $bagianKode, $romawi, $tahun);
+        DB::table('surat_counters')->upsert(
+            ['jenis_surat' => 'surat_keluar', 'tahun' => $tahun, 'current_value' => 1],
+            ['jenis_surat', 'tahun'],
+            ['current_value' => DB::raw('current_value + 1')]
+        );
 
-            if (! SuratKeluar::where('nomor_surat', $nomor)->exists()) {
-                return $nomor;
-            }
-        }
+        $counter = DB::table('surat_counters')
+            ->where('jenis_surat', 'surat_keluar')
+            ->where('tahun', $tahun)
+            ->first();
 
-        throw new \RuntimeException('Gagal generate nomor surat keluar yang unik setelah beberapa percobaan.');
+        $urutan = $counter->current_value;
+        return sprintf('%03d/%s/%s/%d', $urutan, $bagianKode, $romawi, $tahun);
     }
 }
 

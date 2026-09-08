@@ -23,6 +23,14 @@ class SuratMasukObserver
         $this->catatAktivitas("Mengubah surat masuk: {$suratMasuk->perihal}", $suratMasuk);
     }
 
+    public function deleting(SuratMasuk $suratMasuk): void
+    {
+        foreach ($suratMasuk->lampiran as $lampiran) {
+            \App\Jobs\HapusLampiranDariDriveJob::dispatch($lampiran->google_drive_file_id);
+            $lampiran->delete();
+        }
+    }
+
     public function deleted(SuratMasuk $suratMasuk): void
     {
         $this->catatAktivitas("Menghapus surat masuk: {$suratMasuk->perihal}", $suratMasuk);

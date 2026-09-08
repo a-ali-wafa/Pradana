@@ -432,3 +432,70 @@ Contoh: 001/01.01.01/IX/2026
 - Kode: diambil dari model `KlasifikasiPrimer/Sekunder/Tersier` → jika sekunder/tersier null, bagiannya dilewati
 - Implementasi: `SuratKeluarController::generateNomorSurat()` (lihat baris 154 dst)
 - Bisa disesuaikan user saat serah terima jika ada Perbup/Permendagri yang berbeda
+
+---
+
+### Tambahan Catatan 4 Sep 2026 — View Yang Dibuat di Riwayat 13 (lihat baris 3–4 Sep 2026)
+
+Semua view yang dibuat hari ini sudah melewati compile Blade (view:cache tanpa error). Relasi yang dipakai di view semua mengikuti nama relasi yang sudah diverifikasi di catatan 12.11/12.12.
+
+| 4 Sep 2026 | **View Surat Masuk** — 4 file (index, create, edit, show) + 1 partial JS cascade. `SuratMasukController::index()` diperbarui: filter cari/sifat/klasifikasi_primer_id, kirim `$klasifikasiPrimer` ke view. `create()`/`edit()` diperbarui: eager-load `sekunder.tersier` untuk cascade dropdown. View `show` menampilkan lampiran (upload baru + tombol ajukan hapus jika >5 tahun). Lihat 12.27. |
+| 4 Sep 2026 | **View Surat Keluar** — 4 file (index, create, edit, show) + 1 partial JS cascade. `SuratKeluarController::show()` diperbarui: tambah `lampiran` ke load(). View index memiliki filter tambahan: tahun & status_arsip. View edit: nomor surat bisa dikoreksi manual (warning banner). View show: tampilkan draf isi surat jika ada + tombol cetak PDF. Lihat 12.27. |
+| 4 Sep 2026 | **View Klasifikasi** (Primer/Sekunder/Tersier) — 9 file total (3 index + 3 create + 3 edit). Index Primer: kode+nama+jumlah-sekunder. Index Sekunder: kode+nama+primer-induk+jumlah-tersier. Index Tersier: kode+nama+sekunder-induk+primer-induk (hierarki lengkap terbaca sekaligus). Semua index: tombol edit/hapus hanya tampil untuk admin (blade `@if(isAdmin())`), SweetAlert2 konfirmasi hapus. Form create/edit: sederhana, cuma 2–3 field, card centered. Lihat 12.27. |
+
+---
+
+## 12.27 — Catatan Teknis Sesi 4 Sep 2026
+
+### Konteks
+Sesi lanjutan 4 Sep 2026 — fokus pembuatan view (frontend). Stack tetap sama (Laravel 10.50.2, PHP 8.2.12).
+
+### File Dibuat / Diubah 4 Sep 2026
+
+| File | Status | Keterangan |
+|---|---|---|
+| `resources/views/surat-masuk/index.blade.php` | **Baru** | Tabel + filter cari/sifat/klasifikasi, badge berwarna per sifat/status, hapus admin-only via SweetAlert2 |
+| `resources/views/surat-masuk/create.blade.php` | **Baru** | Form 4 seksi, cascade dropdown via partial JS |
+| `resources/views/surat-masuk/edit.blade.php` | **Baru** | Form pre-filled, cascade restore state dari existing model |
+| `resources/views/surat-masuk/show.blade.php` | **Baru** | Layout 2 kolom: detail + lampiran (upload + ajukan hapus >5thn) + klasifikasi sidebar |
+| `resources/views/surat-masuk/_klasifikasi_cascade_js.blade.php` | **Baru** | Partial JS Primer→Sekunder→Tersier cascade, dipakai create & edit |
+| `resources/views/surat-keluar/index.blade.php` | **Baru** | Tabel + filter cari/tahun/klasifikasi/status-arsip, tombol cetak PDF per baris |
+| `resources/views/surat-keluar/create.blade.php` | **Baru** | Form + banner info nomor auto-generate |
+| `resources/views/surat-keluar/edit.blade.php` | **Baru** | Nomor surat bisa dikoreksi manual, warning banner, status_arsip bisa diubah |
+| `resources/views/surat-keluar/show.blade.php` | **Baru** | Draf isi surat + tombol cetak PDF, lampiran |
+| `resources/views/surat-keluar/_klasifikasi_cascade_js.blade.php` | **Baru** | Partial JS cascade (identik polanya dengan surat-masuk) |
+| `resources/views/klasifikasi-primer/index.blade.php` | **Baru** | Tabel kode/nama/jml-sekunder, tombol admin-only |
+| `resources/views/klasifikasi-primer/create.blade.php` | **Baru** | Form 2 field: kode + nama |
+| `resources/views/klasifikasi-primer/edit.blade.php` | **Baru** | Form pre-filled |
+| `resources/views/klasifikasi-sekunder/index.blade.php` | **Baru** | Tabel kode/nama/primer-induk/jml-tersier |
+| `resources/views/klasifikasi-sekunder/create.blade.php` | **Baru** | Dropdown pilih primer + kode + nama |
+| `resources/views/klasifikasi-sekunder/edit.blade.php` | **Baru** | Form pre-filled + dropdown primer pre-selected |
+| `resources/views/klasifikasi-tersier/index.blade.php` | **Baru** | Tabel 4 kolom: kode/nama/sekunder-induk/primer-induk |
+| `resources/views/klasifikasi-tersier/create.blade.php` | **Baru** | Dropdown sekunder (dengan kode primer dalam kurung) + kode + nama |
+| `resources/views/klasifikasi-tersier/edit.blade.php` | **Baru** | Form pre-filled + dropdown sekunder pre-selected |
+| `app/Http/Controllers/SuratMasukController.php` | **Diperbarui** | `index()`: filter query + kirim `$klasifikasiPrimer`. `create()`/`edit()`: eager-load `sekunder.tersier` |
+| `app/Http/Controllers/SuratKeluarController.php` | **Diperbarui** | `show()`: tambah `lampiran` ke `load()` |
+| `AGENTS.md` | **Diperbarui** | Roadmap Bagian 11: baris `View/frontend` dipecah jadi sub-item granular dengan status tiap folder |
+| `AGENTS_HISTORY.md` | **Diperbarui** | Tambah baris riwayat 4 Sep 2026 + seksi 12.27 ini |
+
+### View yang Masih Belum Dibuat
+- `pengajuan-hapus-lampiran/index.blade.php`
+
+### Tambahan — View Users (4 Sep 2026, sesi yang sama)
+
+| File | Status | Keterangan |
+|---|---|---|
+| `resources/views/users/index.blade.php` | **Baru** | Tabel users: avatar inisial, badge role berwarna (admin=merah, kepala=kuning, perangkat=abu), badge aktif/nonaktif (soft-delete). Tombol hapus tidak muncul untuk diri sendiri. SweetAlert2 konfirmasi hapus. |
+| `resources/views/users/create.blade.php` | **Baru** | Form: nama lengkap, email, role (dengan keterangan hak akses), PIN 6 digit + toggle show/hide + konfirmasi PIN. Alert info A3. |
+| `app/Http/Controllers/UserController.php` | **Diperbarui** | Ditambah method `destroy()`: soft-delete + guard self-deletion (`abort_if` jika hapus diri sendiri). |
+| `routes/web.php` | **Diperbarui** | `users` resource: `only` diperluas dari `['index','create','store']` → `['index','create','store','destroy']`. |
+
+### Tambahan — View Pengajuan Hapus Lampiran (4 Sep 2026, sesi yang sama)
+
+| File | Status | Keterangan |
+|---|---|---|
+| `resources/views/pengajuan-hapus-lampiran/index.blade.php` | **Baru** | Daftar kartu (bukan tabel) per pengajuan menunggu. Tiap kartu: info file, link surat induk (masuk/keluar) dengan tanggal & diffForHumans, nama pengaju, alasan. Aksi: **Setujui** (SweetAlert2 konfirmasi hapus permanen dari Drive) + **Tolak** (toggle form inline dengan `catatan_admin` opsional). State kosong jika tidak ada pengajuan menunggu. Data: `$pengajuanList` collection dengan relasi `lampiran.lampiranable` dan `pengaju`. |
+| `AGENTS.md` | **Diperbarui** | Roadmap `View/frontend` berubah dari `🔄 parsial` ke `[x] selesai penuh`. |
+| `AGENTS_HISTORY.md` | **Diperbarui** | Entri ini. |
+
+> **Milestone**: Semua view halaman MVP telah selesai per 4 Sep 2026. Sisa roadmap: Testing & Deployment.

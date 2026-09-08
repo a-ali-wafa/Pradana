@@ -54,4 +54,25 @@ class UserController extends Controller
 
         return redirect()->route('users.index')->with('status', 'User baru berhasil ditambahkan.');
     }
+
+    /**
+     * Hapus (soft-delete) user.
+     * Admin tidak boleh menghapus akunnya sendiri — proteksi di view sudah
+     * menyembunyikan tombol, proteksi di sini untuk keamanan backend.
+     *
+     * TODO(B2): "siapa yang boleh hapus user" masih WAJIB TANYA USER — saat ini
+     * diasumsikan admin only (ditangani middleware('admin') di routes/web.php).
+     */
+    public function destroy(\Illuminate\Http\Request $request, User $user): RedirectResponse
+    {
+        abort_if(
+            $user->id === $request->user()->id,
+            403,
+            'Anda tidak bisa menghapus akun Anda sendiri.'
+        );
+
+        $user->delete(); // soft delete (model pakai SoftDeletes)
+
+        return redirect()->route('users.index')->with('status', "Akun {$user->nama_lengkap} berhasil dihapus.");
+    }
 }

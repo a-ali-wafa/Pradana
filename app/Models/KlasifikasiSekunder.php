@@ -8,6 +8,8 @@ class KlasifikasiSekunder extends Model
 {
     protected $table = 'klasifikasi_sekunder';
 
+    protected $with = ['tersier'];
+
     protected $fillable = ['klasifikasi_primer_id', 'kode', 'nama'];
 
     public function primer()

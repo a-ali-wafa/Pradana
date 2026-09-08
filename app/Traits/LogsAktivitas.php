@@ -30,11 +30,11 @@ trait LogsAktivitas
             return;
         }
 
-        Aktivitas::create([
-            'user_id' => Auth::id(),
-            'aksi' => $aksi,
-            'subjek_type' => $subjek->getMorphClass(),
-            'subjek_id' => $subjek->getKey(),
-        ]);
+        \App\Events\LogAktivitasEvent::dispatch(
+            Auth::id(),
+            $aksi,
+            $subjek->getMorphClass(),
+            $subjek->getKey()
+        );
     }
 }

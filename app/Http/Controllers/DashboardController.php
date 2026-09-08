@@ -29,23 +29,24 @@ class DashboardController extends Controller
 {
     public function index(): View
     {
-        $stats = [
-            'total_surat_masuk' => SuratMasuk::count(),
-            'total_surat_keluar' => SuratKeluar::count(),
-            'surat_masuk_bulan_ini' => SuratMasuk::whereMonth('tanggal_diterima', now()->month)
-                ->whereYear('tanggal_diterima', now()->year)
-                ->count(),
-            'surat_keluar_bulan_ini' => SuratKeluar::whereMonth('tanggal_surat', now()->month)
-                ->whereYear('tanggal_surat', now()->year)
-                ->count(),
-            'surat_masuk_aktif' => SuratMasuk::where('status_arsip', 'aktif')->count(),
-            'surat_masuk_inaktif' => SuratMasuk::where('status_arsip', 'inaktif')->count(),
-            'surat_keluar_aktif' => SuratKeluar::where('status_arsip', 'aktif')->count(),
-            'surat_keluar_inaktif' => SuratKeluar::where('status_arsip', 'inaktif')->count(),
-            // "Perlu perhatian": surat sifat mendesak yang arsipnya masih aktif
-            'surat_mendesak_aktif' => SuratMasuk::where('sifat', 'mendesak')->where('status_arsip', 'aktif')->count()
-                + SuratKeluar::where('sifat', 'mendesak')->where('status_arsip', 'aktif')->count(),
-        ];
+        $stats = \Illuminate\Support\Facades\Cache::remember('dashboard.stats', 60, function () {
+            return [
+                'total_surat_masuk' => SuratMasuk::count(),
+                'total_surat_keluar' => SuratKeluar::count(),
+                'surat_masuk_bulan_ini' => SuratMasuk::whereMonth('tanggal_diterima', now()->month)
+                    ->whereYear('tanggal_diterima', now()->year)
+                    ->count(),
+                'surat_keluar_bulan_ini' => SuratKeluar::whereMonth('tanggal_surat', now()->month)
+                    ->whereYear('tanggal_surat', now()->year)
+                    ->count(),
+                'surat_masuk_aktif' => SuratMasuk::where('status_arsip', 'aktif')->count(),
+                'surat_masuk_inaktif' => SuratMasuk::where('status_arsip', 'inaktif')->count(),
+                'surat_keluar_aktif' => SuratKeluar::where('status_arsip', 'aktif')->count(),
+                'surat_keluar_inaktif' => SuratKeluar::where('status_arsip', 'inaktif')->count(),
+                'surat_mendesak_aktif' => SuratMasuk::where('sifat', 'mendesak')->where('status_arsip', 'aktif')->count()
+                    + SuratKeluar::where('sifat', 'mendesak')->where('status_arsip', 'aktif')->count(),
+            ];
+        });
 
         $suratMasukTerbaru = SuratMasuk::with(['primer', 'petugas'])
             ->latest('tanggal_diterima')

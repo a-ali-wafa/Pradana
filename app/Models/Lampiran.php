@@ -23,4 +23,15 @@ class Lampiran extends Model
     {
         return $this->belongsTo(User::class, 'diunggah_oleh');
     }
+
+    public function isEligibleForDeletion(): bool
+    {
+        $surat = $this->lampiranable;
+        if (! $surat) {
+            return false;
+        }
+
+        $tanggalAcuan = $surat instanceof SuratMasuk ? $surat->tanggal_diterima : $surat->tanggal_surat;
+        return \Carbon\Carbon::parse($tanggalAcuan)->lt(now()->subYears(5));
+    }
 }

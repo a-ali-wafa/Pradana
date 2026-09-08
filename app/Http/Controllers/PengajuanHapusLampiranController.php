@@ -47,7 +47,7 @@ class PengajuanHapusLampiranController extends Controller
         ]);
 
         abort_unless(
-            $this->suratSudahLebihDari5Tahun($lampiran),
+            $lampiran->isEligibleForDeletion(),
             403,
             'Lampiran hanya bisa diajukan untuk dihapus kalau suratnya sudah berumur lebih dari 5 tahun.'
         );
@@ -72,40 +72,24 @@ class PengajuanHapusLampiranController extends Controller
 
     public function index(): View
     {
-        $this->ensureAdmin();
-
         $pengajuanList = PengajuanHapusLampiran::query()
             ->where('status', 'menunggu')
             ->with(['lampiran', 'pengaju'])
             ->latest()
             ->get();
 
-        // Belum ada view (`pengajuan-hapus-lampiran.index`) — tergantung G1, sama seperti modul lain.
         return view('pengajuan-hapus-lampiran.index', compact('pengajuanList'));
     }
 
     public function setujui(PengajuanHapusLampiran $pengajuan_hapus_lampiran): RedirectResponse
     {
-        $this->ensureAdmin();
-
         abort_unless($pengajuan_hapus_lampiran->status === 'menunggu', 422, 'Pengajuan ini sudah diproses sebelumnya.');
 
         $lampiran = $pengajuan_hapus_lampiran->lampiran;
 
         abort_if(! $lampiran, 410, 'Lampiran yang diajukan sudah tidak ada (mungkin sudah terhapus lewat pengajuan lain).');
 
-        try {
-            $this->drive->delete($lampiran->google_drive_file_id);
-        } catch (Throwable $e) {
-            // Jangan blokir persetujuan cuma karena file sudah tidak ada di
-            // Drive (mis. dihapus manual) atau Drive API error sesaat.
-            Log::warning('Gagal hapus file Drive saat menyetujui pengajuan hapus lampiran', [
-                'pengajuan_id' => $pengajuan_hapus_lampiran->id,
-                'lampiran_id' => $lampiran->id,
-                'google_drive_file_id' => $lampiran->google_drive_file_id,
-                'error' => $e->getMessage(),
-            ]);
-        }
+        \App\Jobs\HapusLampiranDariDriveJob::dispatch($lampiran->google_drive_file_id);
 
         $lampiran->delete();
 
@@ -120,8 +104,6 @@ class PengajuanHapusLampiranController extends Controller
 
     public function tolak(Request $request, PengajuanHapusLampiran $pengajuan_hapus_lampiran): RedirectResponse
     {
-        $this->ensureAdmin();
-
         abort_unless($pengajuan_hapus_lampiran->status === 'menunggu', 422, 'Pengajuan ini sudah diproses sebelumnya.');
 
         $request->validate([
@@ -136,27 +118,5 @@ class PengajuanHapusLampiranController extends Controller
         ]);
 
         return back()->with('success', 'Pengajuan hapus lampiran ditolak.');
-    }
-
-    /**
-     * ASUMSI (lihat AGENTS.md 12.17, belum eksplisit dikonfirmasi user):
-     * umur surat dihitung dari `tanggal_diterima` untuk surat_masuk (tanggal
-     * masuk ke arsip), dan `tanggal_surat` untuk surat_keluar (tidak punya
-     * kolom tanggal_diterima -- lihat skema Bagian 5).
-     */
-    private function suratSudahLebihDari5Tahun(Lampiran $lampiran): bool
-    {
-        $surat = $lampiran->lampiranable;
-
-        abort_if(! $surat, 410, 'Surat induk lampiran ini sudah tidak ada.');
-
-        $tanggalAcuan = $surat instanceof SuratMasuk ? $surat->tanggal_diterima : $surat->tanggal_surat;
-
-        return Carbon::parse($tanggalAcuan)->lt(now()->subYears(5));
-    }
-
-    private function ensureAdmin(): void
-    {
-        abort_unless(Auth::user()?->isAdmin(), 403, 'Hanya admin yang dapat mengelola pengajuan hapus lampiran.');
     }
 }

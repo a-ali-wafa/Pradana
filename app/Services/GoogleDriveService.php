@@ -8,21 +8,8 @@ use Google\Service\Drive\DriveFile;
 
 class GoogleDriveService
 {
-    protected Drive $service;
-
-    public function __construct()
+    public function __construct(protected Drive $service)
     {
-        $client = new Client();
-        $client->setApplicationName('PRADANA Arsip Digital');
-
-        $credentialsPath = config('gdrive.credentials_path');
-        if ($credentialsPath && file_exists($credentialsPath)) {
-            $client->setAuthConfig($credentialsPath);
-        }
-
-        $client->addScope(Drive::DRIVE);
-
-        $this->service = new Drive($client);
     }
 
     /**
@@ -40,25 +27,30 @@ class GoogleDriveService
             $parentId
         );
 
-        $result = $this->service->files->listFiles([
-            'q' => $query,
-            'fields' => 'files(id, name)',
-            'spaces' => 'drive',
-        ]);
+        // Use cache lock to prevent duplicate folder creation due to race conditions
+        $lockKey = "gdrive_folder_create_{$parentId}_{$safeName}";
+        
+        return \Illuminate\Support\Facades\Cache::lock($lockKey, 10)->block(5, function () use ($query, $name, $parentId) {
+            $result = $this->service->files->listFiles([
+                'q' => $query,
+                'fields' => 'files(id, name)',
+                'spaces' => 'drive',
+            ]);
 
-        if (count($result->getFiles()) > 0) {
-            return $result->getFiles()[0]->getId();
-        }
+            if (count($result->getFiles()) > 0) {
+                return $result->getFiles()[0]->getId();
+            }
 
-        $folder = new DriveFile([
-            'name' => $name,
-            'mimeType' => 'application/vnd.google-apps.folder',
-            'parents' => [$parentId],
-        ]);
+            $folder = new DriveFile([
+                'name' => $name,
+                'mimeType' => 'application/vnd.google-apps.folder',
+                'parents' => [$parentId],
+            ]);
 
-        $created = $this->service->files->create($folder, ['fields' => 'id']);
+            $created = $this->service->files->create($folder, ['fields' => 'id']);
 
-        return $created->getId();
+            return $created->getId();
+        });
     }
 
     /**
