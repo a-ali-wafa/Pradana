@@ -37,6 +37,13 @@ class LoginRequest extends FormRequest
         ];
     }
 
+    public function messages(): array
+    {
+        return [
+            'pin.digits' => 'PIN harus 6 digit angka.',
+        ];
+    }
+
     /**
      * Coba autentikasi, dibungkus rate limit sederhana per email+IP.
      * PIN 6 digit angka = cuma 1 juta kombinasi, jauh lebih lemah dari password

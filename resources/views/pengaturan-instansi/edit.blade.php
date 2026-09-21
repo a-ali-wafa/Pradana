@@ -23,7 +23,7 @@
     server (`public/storage` → `storage/app/public`) supaya logo bisa tampil — ini
     setup standar Laravel, belum tentu sudah dijalankan di server user, WAJIB dicek.
 --}}
-
+a
 @section('content')
 <div class="row justify-content-center">
     <div class="col-lg-8">
@@ -105,6 +105,7 @@
         </div>
     </div>
 </div>
+@endsection
 
 @push('scripts')
 <script>
