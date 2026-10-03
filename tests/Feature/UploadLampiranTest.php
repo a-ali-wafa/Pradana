@@ -106,7 +106,7 @@ class UploadLampiranTest extends TestCase
     {
         $this->actingAs($this->petugas)->post(
             route('surat-masuk.lampiran.store', $this->surat),
-            ['files' => [UploadedFile::fake()->createWithContent('bukti.pdf', 'konsep berkas')] ],
+            ['files' => [UploadedFile::fake()->createWithContent('bukti.pdf', 'konsep berkas')]],
         );
 
         $lampiran = Lampiran::sole();

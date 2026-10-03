@@ -7,9 +7,9 @@ use App\Models\KlasifikasiPrimer;
 use App\Models\KlasifikasiSekunder;
 use App\Models\KlasifikasiTersier;
 use App\Models\Lampiran;
+use App\Models\PemusnahanArsip;
 use App\Models\PengajuanHapusLampiran;
 use App\Models\PengaturanInstansi;
-use App\Models\PemusnahanArsip;
 use App\Models\SuratKeluar;
 use App\Models\SuratMasuk;
 use App\Models\User;
@@ -18,12 +18,17 @@ use App\Observers\KlasifikasiPrimerObserver;
 use App\Observers\KlasifikasiSekunderObserver;
 use App\Observers\KlasifikasiTersierObserver;
 use App\Observers\LampiranObserver;
+use App\Observers\PemusnahanArsipObserver;
 use App\Observers\PengajuanHapusLampiranObserver;
 use App\Observers\PengaturanInstansiObserver;
-use App\Observers\PemusnahanArsipObserver;
 use App\Observers\SuratKeluarObserver;
 use App\Observers\SuratMasukObserver;
 use App\Observers\UserObserver;
+use App\Services\GoogleDriveService;
+use Carbon\Carbon;
+use Google\Client;
+use Google\Service\Drive;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 
@@ -34,8 +39,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        $this->app->singleton(\App\Services\GoogleDriveService::class, function ($app) {
-            $client = new \Google\Client();
+        $this->app->singleton(GoogleDriveService::class, function ($app) {
+            $client = new Client;
             $client->setApplicationName('PRADANA Arsip Digital');
 
             $credentialsPath = config('gdrive.credentials_path');
@@ -43,11 +48,11 @@ class AppServiceProvider extends ServiceProvider
                 $client->setAuthConfig($credentialsPath);
             }
 
-            $client->addScope(\Google\Service\Drive::DRIVE);
+            $client->addScope(Drive::DRIVE);
 
-            $drive = new \Google\Service\Drive($client);
+            $drive = new Drive($client);
 
-            return new \App\Services\GoogleDriveService($drive);
+            return new GoogleDriveService($drive);
         });
     }
 
@@ -59,14 +64,14 @@ class AppServiceProvider extends ServiceProvider
         // Nama bulan & hari berbahasa Indonesia untuk semua `translatedFormat()`/
         // `diffForHumans()` di view dan PDF. Tanpa ini output-nya tetap bahasa
         // Inggris meskipun `config/app.locale` = 'id' (Carbon punya locale sendiri).
-        \Carbon\Carbon::setLocale('id');
+        Carbon::setLocale('id');
 
         // H1=b: satu-satunya "notifikasi" yang diminta kantor adalah antrian
         // pengajuan yang menunggu approval admin. Tidak ada email/WA (kantor
         // tanpa SMTP), jadi angkanya ditempel di menu sidebar admin — kalau
         // tidak, antrian itu tidak pernah terlihat.
         View::composer('layouts.app', function (\Illuminate\View\View $view) {
-            $user = \Illuminate\Support\Facades\Auth::user();
+            $user = Auth::user();
 
             if (! $user || ! $user->isAdmin()) {
                 $view->with(['antrianHapusLampiran' => 0, 'antrianPemusnahan' => 0]);

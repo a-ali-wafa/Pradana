@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Models\Aktivitas;
 use App\Models\PemusnahanArsip;
+use App\Models\PemusnahanArsipItem;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 
@@ -34,7 +35,7 @@ class BersihkanLogLama extends Command
 
         $subjekPemusnahan = [
             PemusnahanArsip::class,
-            \App\Models\PemusnahanArsipItem::class,
+            PemusnahanArsipItem::class,
         ];
 
         $terpilih = DB::table('aktivitas')

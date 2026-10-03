@@ -3,8 +3,8 @@
 namespace Tests\Feature;
 
 use App\Models\KlasifikasiPrimer;
-use App\Models\PengajuanHapusLampiran;
 use App\Models\PemusnahanArsip;
+use App\Models\PengajuanHapusLampiran;
 use App\Models\SuratKeluar;
 use App\Models\SuratMasuk;
 use App\Models\User;

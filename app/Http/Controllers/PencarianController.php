@@ -8,6 +8,7 @@ use App\Models\SuratMasuk;
 use Illuminate\Contracts\Database\Query\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
@@ -141,10 +142,10 @@ class PencarianController extends Controller
      * Baris hasil UNION (id + jenis) dibaca sebagai model lengkap, sekali query
      * per tabel, urutan gabungan dipertahankan.
      *
-     * @param  \Illuminate\Support\Collection<int, object>  $baris
-     * @return \Illuminate\Support\Collection<int, array<string, mixed>>
+     * @param  Collection<int, object>  $baris
+     * @return Collection<int, array<string, mixed>>
      */
-    private function muatModel($baris): \Illuminate\Support\Collection
+    private function muatModel($baris): Collection
     {
         $idMasuk = $baris->where('jenis', 'masuk')->pluck('id');
         $idKeluar = $baris->where('jenis', 'keluar')->pluck('id');

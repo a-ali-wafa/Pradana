@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Services\GoogleDriveService;
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
@@ -59,7 +60,7 @@ class Lampiran extends Model
             return false;
         }
 
-        return \Carbon\Carbon::parse($surat->tanggal_surat)->lt(now()->subYears(5));
+        return Carbon::parse($surat->tanggal_surat)->lt(now()->subYears(5));
     }
 
     /**

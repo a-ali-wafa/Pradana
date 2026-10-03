@@ -12,6 +12,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Symfony\Component\HttpFoundation\Response;
 
 /**
  * Upload & unduh lampiran surat masuk/keluar.
@@ -29,9 +30,7 @@ use Illuminate\Support\Str;
  */
 class LampiranController extends Controller
 {
-    public function __construct(private readonly GoogleDriveService $drive)
-    {
-    }
+    public function __construct(private readonly GoogleDriveService $drive) {}
 
     public function storeForSuratMasuk(StoreLampiranRequest $request, SuratMasuk $surat_masuk): JsonResponse|RedirectResponse
     {
@@ -54,7 +53,7 @@ class LampiranController extends Controller
      * menabrak keputusan itu — bug-nya tertutup saat dites sebagai pegawai,
      * sebelumnya tidak kelihatan karena semua uji jalan sebagai admin.
      */
-    public function download(Request $request, Lampiran $lampiran): \Symfony\Component\HttpFoundation\Response
+    public function download(Request $request, Lampiran $lampiran): Response
     {
         $disposition = $request->query('mode') === 'unduh' ? 'attachment' : 'inline';
 

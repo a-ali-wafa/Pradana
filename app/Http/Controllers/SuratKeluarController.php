@@ -225,4 +225,3 @@ class SuratKeluarController extends Controller
             ->with('status', 'Surat keluar dipulihkan dari tempat sampah.');
     }
 }
-

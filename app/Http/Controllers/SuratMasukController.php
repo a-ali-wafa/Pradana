@@ -43,8 +43,8 @@ class SuratMasukController extends Controller
             $kw = $request->input('cari');
             $query->where(function ($q) use ($kw) {
                 $q->where('perihal', 'like', "%{$kw}%")
-                  ->orWhere('nomor_surat', 'like', "%{$kw}%")
-                  ->orWhere('pengirim', 'like', "%{$kw}%");
+                    ->orWhere('nomor_surat', 'like', "%{$kw}%")
+                    ->orWhere('pengirim', 'like', "%{$kw}%");
             });
         }
 
@@ -73,7 +73,7 @@ class SuratMasukController extends Controller
             $query->where('tanggal_surat', '<', now()->subYears(5));
         }
 
-        $suratMasuk       = $query->orderByDesc('tanggal_diterima')->orderByDesc('id')->paginate(20)->withQueryString();
+        $suratMasuk = $query->orderByDesc('tanggal_diterima')->orderByDesc('id')->paginate(20)->withQueryString();
         $klasifikasiPrimer = KlasifikasiPrimer::orderBy('kode')->get();
 
         return view('surat-masuk.index', compact('suratMasuk', 'klasifikasiPrimer', 'melihatSampah', 'usang'));
@@ -114,7 +114,7 @@ class SuratMasukController extends Controller
         $klasifikasiPrimer = KlasifikasiPrimer::with('sekunder.tersier')->orderBy('kode')->get();
 
         return view('surat-masuk.edit', [
-            'suratMasuk'        => $surat_masuk,
+            'suratMasuk' => $surat_masuk,
             'klasifikasiPrimer' => $klasifikasiPrimer,
         ]);
     }

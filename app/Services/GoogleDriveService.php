@@ -2,15 +2,13 @@
 
 namespace App\Services;
 
-use Google\Client;
 use Google\Service\Drive;
 use Google\Service\Drive\DriveFile;
+use Illuminate\Support\Facades\Cache;
 
 class GoogleDriveService
 {
-    public function __construct(protected Drive $service)
-    {
-    }
+    public function __construct(protected Drive $service) {}
 
     /**
      * Cari subfolder dengan nama tertentu di dalam $parentId.
@@ -29,8 +27,8 @@ class GoogleDriveService
 
         // Use cache lock to prevent duplicate folder creation due to race conditions
         $lockKey = "gdrive_folder_create_{$parentId}_{$safeName}";
-        
-        return \Illuminate\Support\Facades\Cache::lock($lockKey, 10)->block(5, function () use ($query, $name, $parentId) {
+
+        return Cache::lock($lockKey, 10)->block(5, function () use ($query, $name, $parentId) {
             $result = $this->service->files->listFiles([
                 'q' => $query,
                 'fields' => 'files(id, name)',

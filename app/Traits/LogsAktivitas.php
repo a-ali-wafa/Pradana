@@ -2,6 +2,7 @@
 
 namespace App\Traits;
 
+use App\Events\LogAktivitasEvent;
 use App\Models\Aktivitas;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Auth;
@@ -30,7 +31,7 @@ trait LogsAktivitas
             return;
         }
 
-        \App\Events\LogAktivitasEvent::dispatch(
+        LogAktivitasEvent::dispatch(
             Auth::id(),
             $aksi,
             $subjek->getMorphClass(),

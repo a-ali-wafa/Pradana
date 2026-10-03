@@ -2,9 +2,13 @@
 
 namespace Tests\Feature;
 
+use App\Models\PengaturanInstansi;
 use App\Models\User;
+use Database\Seeders\DatabaseSeeder;
+use Database\Seeders\DevSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
 
 /**
@@ -70,7 +74,7 @@ class PinAkunTest extends TestCase
         // Kolom `remember_token` sudah dibuang dari skema (squash S11), jadi
         // tidak ada tempat untuk menyimpan token login-teringat.
         $this->assertFalse(
-            \Illuminate\Support\Facades\Schema::hasColumn('users', 'remember_token')
+            Schema::hasColumn('users', 'remember_token')
         );
     }
 
@@ -220,9 +224,9 @@ class PinAkunTest extends TestCase
         // I3: DatabaseSeeder tidak boleh membuat user (email pribadi + PIN
         // keras dulu ikut ter-commit ke repository).
         $sebelum = User::count();
-        \App\Models\PengaturanInstansi::query()->delete();
+        PengaturanInstansi::query()->delete();
 
-        $this->seed(\Database\Seeders\DatabaseSeeder::class);
+        $this->seed(DatabaseSeeder::class);
 
         $this->assertSame($sebelum, User::count());
         $this->assertDatabaseHas('pengaturan_instansi', ['nama_instansi' => '']);
@@ -232,7 +236,7 @@ class PinAkunTest extends TestCase
     {
         config(['app.env' => 'production']);
 
-        $this->seed(\Database\Seeders\DevSeeder::class);
+        $this->seed(DevSeeder::class);
 
         $this->assertDatabaseMissing('users', ['email' => 'dev-admin@example.test']);
     }

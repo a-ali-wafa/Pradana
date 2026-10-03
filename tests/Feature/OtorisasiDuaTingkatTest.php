@@ -7,6 +7,7 @@ use App\Models\Lampiran;
 use App\Models\SuratKeluar;
 use App\Models\SuratMasuk;
 use App\Models\User;
+use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
@@ -69,7 +70,7 @@ class OtorisasiDuaTingkatTest extends TestCase
     {
         // Dilarang diam-diam: menulis 'perangkat' setelah enum dipangkas harus
         // memecah database, bukan disimpan jadi string kosong.
-        $this->expectException(\Illuminate\Database\QueryException::class);
+        $this->expectException(QueryException::class);
 
         User::forceCreate([
             'nama_lengkap' => 'Kembali ke Masa Lalu',

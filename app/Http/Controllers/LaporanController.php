@@ -11,6 +11,7 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
@@ -135,7 +136,7 @@ class LaporanController extends Controller
      * Satu bentuk data untuk CSV dan PDF, jadi kedua keluaran tidak bisa
      * menyimpulkan hal berbeda dari database yang sama.
      *
-     * @return \Illuminate\Support\Collection<int, array<string, mixed>>
+     * @return Collection<int, array<string, mixed>>
      */
     private function baris(Request $request, $dari, $sampai)
     {

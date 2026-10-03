@@ -16,7 +16,7 @@ class LampiranTest extends TestCase
 {
     private function lampiranUntuk($surat): Lampiran
     {
-        $lampiran = new Lampiran();
+        $lampiran = new Lampiran;
         $lampiran->setRelation('lampiranable', $surat);
 
         return $lampiran;
@@ -48,11 +48,11 @@ class LampiranTest extends TestCase
 
     public function test_tidak_eligible_kalau_surat_induk_hilang(): void
     {
-        $this->assertFalse((new Lampiran())->isEligibleForDeletion());
+        $this->assertFalse((new Lampiran)->isEligibleForDeletion());
     }
 
     public function test_tidak_eligible_kalau_tanggal_surat_kosong(): void
     {
-        $this->assertFalse($this->lampiranUntuk(new SuratMasuk())->isEligibleForDeletion());
+        $this->assertFalse($this->lampiranUntuk(new SuratMasuk)->isEligibleForDeletion());
     }
 }

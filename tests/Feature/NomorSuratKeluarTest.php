@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\KlasifikasiPrimer;
 use App\Services\NomorSuratKeluarGenerator;
 use Illuminate\Database\QueryException;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
@@ -47,7 +48,7 @@ class NomorSuratKeluarTest extends TestCase
             $this->markTestSkipped('MariaDB (XAMPP) tidak berjalan — tes konkurensi penomoran dilewati.');
         }
 
-        \Illuminate\Support\Facades\Artisan::call('migrate', [
+        Artisan::call('migrate', [
             '--database' => 'mysql_test_a',
             '--force' => true,
         ]);

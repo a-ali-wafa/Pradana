@@ -22,7 +22,6 @@ class SuratMasuk extends Model
         'status_berkas', 'status_arsip', 'lokasi_fisik', 'user_id',
     ];
 
-
     protected $casts = [
         'tanggal_surat' => 'date',
         'tanggal_diterima' => 'date',

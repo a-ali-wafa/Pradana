@@ -6,6 +6,7 @@ use App\Models\KlasifikasiPrimer;
 use App\Models\Lampiran;
 use App\Models\SuratMasuk;
 use App\Models\User;
+use App\Services\GoogleDriveService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -79,7 +80,7 @@ class LampiranControllerTest extends TestCase
             'role' => 'pegawai',
         ]);
 
-        $this->mock(\App\Services\GoogleDriveService::class)
+        $this->mock(GoogleDriveService::class)
             ->shouldReceive('getFileContent')
             ->andReturn([
                 'content' => 'isi file',

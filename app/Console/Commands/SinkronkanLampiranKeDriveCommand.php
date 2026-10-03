@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Models\Lampiran;
 use App\Models\PengaturanInstansi;
+use App\Models\SuratMasuk;
 use App\Services\GoogleDriveService;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Storage;
@@ -99,7 +100,7 @@ class SinkronkanLampiranKeDriveCommand extends Command
         Lampiran $lampiran,
         array &$cache,
     ): string {
-        $adalahMasuk = $lampiran->lampiranable_type === \App\Models\SuratMasuk::class;
+        $adalahMasuk = $lampiran->lampiranable_type === SuratMasuk::class;
         $jenis = $adalahMasuk ? 'Surat Masuk' : 'Surat Keluar';
         $kolomCache = $adalahMasuk ? 'gdrive_folder_surat_masuk_id' : 'gdrive_folder_surat_keluar_id';
 

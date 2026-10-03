@@ -9,6 +9,7 @@ class SuratKeluar extends Model
 {
     // Lihat SuratMasuk: soft delete sesuai keputusan L-05.
     use SoftDeletes;
+
     protected $table = 'surat_keluar';
 
     protected $fillable = [
@@ -18,7 +19,6 @@ class SuratKeluar extends Model
         'tanggal_surat', 'perihal', 'ringkasan',
         'status_berkas', 'status_arsip', 'lokasi_fisik', 'user_id',
     ];
-
 
     protected $casts = [
         'tanggal_surat' => 'date',

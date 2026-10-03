@@ -1,7 +1,7 @@
 <?php
 
-use App\Http\Controllers\AuthController;
 use App\Http\Controllers\AktivitasController;
+use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CetakSuratKeluarController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DrafKontenSuratKeluarController;
@@ -10,10 +10,10 @@ use App\Http\Controllers\KlasifikasiSekunderController;
 use App\Http\Controllers\KlasifikasiTersierController;
 use App\Http\Controllers\LampiranController;
 use App\Http\Controllers\LaporanController;
+use App\Http\Controllers\PemusnahanArsipController;
 use App\Http\Controllers\PencarianController;
 use App\Http\Controllers\PengajuanHapusLampiranController;
 use App\Http\Controllers\PengaturanInstansiController;
-use App\Http\Controllers\PemusnahanArsipController;
 use App\Http\Controllers\ProfilController;
 use App\Http\Controllers\SuratKeluarController;
 use App\Http\Controllers\SuratMasukController;

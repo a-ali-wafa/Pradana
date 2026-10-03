@@ -7,6 +7,7 @@ use App\Http\Requests\StoreUserRequest;
 use App\Models\User;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 
 /**
@@ -48,9 +49,9 @@ class UserController extends Controller
 
         User::create([
             'nama_lengkap' => $validated['nama_lengkap'],
-            'email'        => $validated['email'],
-            'pin'          => Hash::make($validated['pin']),
-            'role'         => $validated['role'],
+            'email' => $validated['email'],
+            'pin' => Hash::make($validated['pin']),
+            'role' => $validated['role'],
         ]);
 
         return redirect()->route('users.index')->with('status', 'User baru berhasil ditambahkan.');
@@ -83,7 +84,7 @@ class UserController extends Controller
      * Admin tidak boleh menghapus akunnya sendiri — view menyembunyikan
      * tombolnya, cek di sini penjaga belakangnya.
      */
-    public function destroy(\Illuminate\Http\Request $request, User $user): RedirectResponse
+    public function destroy(Request $request, User $user): RedirectResponse
     {
         abort_if(
             $user->id === $request->user()->id,

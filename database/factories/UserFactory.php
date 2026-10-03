@@ -13,7 +13,7 @@ use Illuminate\Support\Facades\Hash;
  * `User::factory()->create()` akan selalu gagal. Diperbaiki supaya benar-benar
  * bisa dipakai; test yang perlu PIN tertentu tetap memakai forceCreate.
  *
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\User>
+ * @extends Factory<User>
  */
 class UserFactory extends Factory
 {

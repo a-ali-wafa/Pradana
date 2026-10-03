@@ -2,9 +2,9 @@
 
 namespace Tests\Feature;
 
+use App\Models\KlasifikasiPrimer;
 use App\Models\Lampiran;
 use App\Models\PemusnahanArsip;
-use App\Models\PemusnahanArsipItem;
 use App\Models\SuratMasuk;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -59,7 +59,7 @@ class PemusnahanArsipTest extends TestCase
 
     private function buatSurat(string $nomor, string $statusArsip, string $tanggal): SuratMasuk
     {
-        $primer = \App\Models\KlasifikasiPrimer::firstOrCreate(
+        $primer = KlasifikasiPrimer::firstOrCreate(
             ['kode' => '01'],
             ['nama' => 'Umum']
         );
