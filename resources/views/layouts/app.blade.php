@@ -158,10 +158,19 @@
                 @if (auth()->user()->isAdmin())
                     <a class="nav-link {{ request()->routeIs('pengajuan-hapus-lampiran.*') ? 'active' : '' }}" href="{{ route('pengajuan-hapus-lampiran.index') }}">
                         <i class="fas fa-trash-alt fa-fw"></i> Pengajuan Hapus Lampiran
+                        @if(($antrianHapusLampiran ?? 0) > 0)
+                            <span class="badge text-bg-warning ms-auto">{{ $antrianHapusLampiran }} menunggu</span>
+                        @endif
                     </a>
                 @endif
                 <a class="nav-link {{ request()->routeIs('pemusnahan-arsip.*') ? 'active' : '' }}" href="{{ route('pemusnahan-arsip.index') }}">
                     <i class="fas fa-fire fa-fw"></i> Pemusnahan Arsip
+                    @if (($antrianPemusnahan ?? 0) > 0 && auth()->user()->isAdmin())
+                        <span class="badge text-bg-warning ms-auto">{{ $antrianPemusnahan }} menunggu</span>
+                    @endif
+                </a>
+                <a class="nav-link {{ request()->routeIs('laporan.*') ? 'active' : '' }}" href="{{ route('laporan.index') }}">
+                    <i class="fas fa-file-alt fa-fw"></i> Laporan &amp; Agenda
                 </a>
                 <a class="nav-link {{ request()->routeIs('profil.*') ? 'active' : '' }}" href="{{ route('profil.pin.edit') }}">
                     <i class="fas fa-key fa-fw"></i> Ganti PIN

@@ -9,6 +9,7 @@ use App\Http\Controllers\KlasifikasiPrimerController;
 use App\Http\Controllers\KlasifikasiSekunderController;
 use App\Http\Controllers\KlasifikasiTersierController;
 use App\Http\Controllers\LampiranController;
+use App\Http\Controllers\LaporanController;
 use App\Http\Controllers\PencarianController;
 use App\Http\Controllers\PengajuanHapusLampiranController;
 use App\Http\Controllers\PengaturanInstansiController;
@@ -163,6 +164,11 @@ Route::middleware('auth')->group(function () {
 
     // Log aktivitas — read-only, admin only (L-22 / P3)
     Route::get('aktivitas', [AktivitasController::class, 'index'])->name('aktivitas.index');
+
+    // Laporan & Buku Agenda (I1=b + I2=b) — semua role yang login
+    Route::get('laporan', [LaporanController::class, 'index'])->name('laporan.index');
+    Route::get('laporan/rekap', [LaporanController::class, 'rekap'])->name('laporan.rekap');
+    Route::get('laporan/agenda', [LaporanController::class, 'agenda'])->name('laporan.agenda');
 
     // Lampiran (baru, 31 Agu 2026) — lihat catatan #2 di atas & AGENTS.md 12.16/12.17.
     Route::post('surat-masuk/{surat_masuk}/lampiran', [LampiranController::class, 'storeForSuratMasuk'])

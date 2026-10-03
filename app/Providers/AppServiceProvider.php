@@ -24,6 +24,7 @@ use App\Observers\PemusnahanArsipObserver;
 use App\Observers\SuratKeluarObserver;
 use App\Observers\SuratMasukObserver;
 use App\Observers\UserObserver;
+use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -59,6 +60,25 @@ class AppServiceProvider extends ServiceProvider
         // `diffForHumans()` di view dan PDF. Tanpa ini output-nya tetap bahasa
         // Inggris meskipun `config/app.locale` = 'id' (Carbon punya locale sendiri).
         \Carbon\Carbon::setLocale('id');
+
+        // H1=b: satu-satunya "notifikasi" yang diminta kantor adalah antrian
+        // pengajuan yang menunggu approval admin. Tidak ada email/WA (kantor
+        // tanpa SMTP), jadi angkanya ditempel di menu sidebar admin — kalau
+        // tidak, antrian itu tidak pernah terlihat.
+        View::composer('layouts.app', function (\Illuminate\View\View $view) {
+            $user = \Illuminate\Support\Facades\Auth::user();
+
+            if (! $user || ! $user->isAdmin()) {
+                $view->with(['antrianHapusLampiran' => 0, 'antrianPemusnahan' => 0]);
+
+                return;
+            }
+
+            $view->with([
+                'antrianHapusLampiran' => PengajuanHapusLampiran::where('status', 'menunggu')->count(),
+                'antrianPemusnahan' => PemusnahanArsip::where('status', 'menunggu')->count(),
+            ]);
+        });
 
         // Logging aktivitas otomatis (baru, 1 Sep 2026) — lihat AGENTS.md 12.22.
         // Kalau nanti ada isi boot() lain yang ditambahkan, taruh SETELAH baris

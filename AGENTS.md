@@ -31,9 +31,9 @@ Aplikasi arsip surat masuk/keluar untuk kantor kelurahan/desa. Migrasi dari Goog
 
 ## 3. Status pengerjaan
 
-Sudah ada & jalan: migration + model (kini **13 tabel**: 11 lama + `pemusnahan_arsip` + `pemusnahan_arsip_item`), Auth login/logout (email+PIN, rate limit), CRUD surat masuk/keluar, CRUD klasifikasi 3 level, Pengaturan Instansi (edit-only), Lampiran (upload/unduh), Pengajuan hapus lampiran, **Pemusnahan arsip + Berita Acara**, Dashboard + view, Pencarian, Cetak PDF + halaman draf, logging via 10 Observer, middleware `admin`.
+Sudah ada & jalan: migration + model (kini **13 tabel**: 11 lama + `pemusnahan_arsip` + `pemusnahan_arsip_item`), Auth login/logout (email+PIN, rate limit), CRUD surat masuk/keluar, CRUD klasifikasi 3 level, Pengaturan Instansi (edit-only), Lampiran (upload/unduh), Pengajuan hapus lampiran, **Pemusnahan arsip + Berita Acara**, Dashboard + view, Pencarian, Cetak PDF + halaman draf, **Ekspor laporan CSV + Buku Agenda PDF**, logging via 10 Observer, middleware `admin`.
 
-Langkah 1–8 Bagian 7 **selesai & terverifikasi** (4 Okt 2026):
+Langkah 1–9 Bagian 7 **selesai & terverifikasi** (4 Okt 2026):
 
 1. Laravel **12.69.3** (PHP 8.2), Sanctum/`routes/api.php`/welcome dihapus, `optimize-autoloader`.
 2. Lampiran ke **disk lokal `arsip`** (L-01) + upload sync AJAX multi-file (L-02/L-13/L-24) dengan duplikat-sha256 dilewati; queue + 2 Job dihapus; log sync; `arsip:sinkron-ke-drive` (backup harian, `--dry-run`) & `arsip:daftar-usang`.
@@ -47,8 +47,10 @@ Langkah 1–8 Bagian 7 **selesai & terverifikasi** (4 Okt 2026):
 
 8. **Pencarian, parsial, dan log** (L-15/L-22/P3/P4/H6/H7/E6): `PencarianController` ditulis ulang — `ringkasan` surat masuk dan `isi_surat` draf surat keluar ikut digali (L-15), filter disamakan dengan daftar surat (klasifikasi/sifat/status arsip/dari-sampai + jenis), dan hasilnya **di-pagination 20** lewat UNION `fromSub` + `LengthAwarePaginator` (sebelumnya `limit(50)` per tabel yang memotong diam-diam dan tidak bisa memberi halaman 2 yang benar). Surat yang sudah dihapus lunak tidak muncul (kerangka UNION memakai scope soft delete). Halaman **`/aktivitas`** (admin-only, read-only) + link sidebar; perintah `arsip:bersihkan-log [--tahun=2] [--dry-run]` dijadwalkan bulanan — catatan pemusnahan (subjek `PemusnahanArsip`/Item ATAU teks aksinya mengandung "musnahkan"/"pemusnahan"/"berita acara", dicek case-insensitive) tidak pernah dibuang karena Berita Acara butuh jejak itu (E6/L-22). H6: dua salinan `_klasifikasi_cascade_js.blade.php` (surat-masuk & surat-keluar, isinya sudah melenceng) digabung jadi `partials/klasifikasi-cascade.blade.php` dan dipakai 4 form.
 
-Test suite: **80 passed** (`php artisan test`, 13 class) — +11 `PencarianDanLogTest`. 3 tes penomoran (`NomorSuratKeluarTest`) jalan di **MariaDB sungguhan** pakai dua koneksi `mysql_test_a`/`mysql_test_b` dan mengunci baris betulan; sisanya SQLite in-memory.
-Diverifikasi lewat browser nyata di `http://127.0.0.1:8000`: alur pemusnahan penuh (ajukan → setujui → `surat_masuk` hilang dari DB, Berita Acara `BA-001/X/2026` ter-render 200 `application/pdf`, log urut), DOM halaman user/dashboard/form edit surat keluar (opsi role tinggal dua, nomor tetap bisa diedit admin), `/profil/pin` (3 field PIN), `/users` (3 form reset PIN inline), halaman login (checkbox "Ingat saya" hilang, `pattern=\d{8}`), dan `arsip:reset-pin`/`arsip:akun-pertama` dijalankan sungguhan di terminal.
+9. **Ekspor laporan, Buku Agenda, dan antrian approval** (L-17): `LaporanController` + halaman `/laporan` — satu filter (periode, jenis, klasifikasi primer, status arsip) dipakai tiga keluaran: halaman itu sendiri (dengan caption "N surat cocok" + peringatan eksplisit kalau 0, supaya rekap kosong tidak dibaca sebagai aplikasi rusak), **`/laporan/rekap` = CSV** (`;` + BOM UTF-8, dibuka di Excel/LibreOffice kantor; bukan `.xlsx` karena `maatwebsite/excel` butuh extension yang belum tentu ada di shared hosting K1=a), dan **`/laporan/agenda` = PDF Buku Agenda A4 landscape** (dompdf, kop instansi, kolom sesuai format agenda manual kantor, blok tanda tangan Kepala Instansi + Petugas Arsip). Kedua keluaran dibaca dari **satu method yang sama** (`baris()`) supaya tidak bisa berbeda kesimpulan. Surat di tempat sampah otomatis terluar (scope soft delete); periode terbalik dibalik, bukan menghasilkan dokumen kosong. H1=b "notifikasi" diwujudkan **badge jumlah pengajuan `menunggu` di sidebar admin** (2 sumber: hapus lampiran + pemusnahan) lewat `View::composer('layouts.app')` — kantor tanpa SMTP/WA, jadi tidak ada jalur kirim; angka 0 meniadakan query untuk non-admin.
+
+Test suite: **90 passed** (`php artisan test`, 14 class) — +11 `PencarianDanLogTest`, +10 `LaporanAgendaTest`. 3 tes penomoran (`NomorSuratKeluarTest`) jalan di **MariaDB sungguhan** pakai dua koneksi `mysql_test_a`/`mysql_test_b` dan mengunci baris betulan; sisanya SQLite in-memory.
+Diverifikasi lewat browser nyata di `http://127.0.0.1:8000`: alur pemusnahan penuh (ajukan → setujui → `surat_masuk` hilang dari DB, Berita Acara `BA-001/X/2026` ter-render 200 `application/pdf`, log urut), DOM halaman user/dashboard/form edit surat keluar (opsi role tinggal dua, nomor tetap bisa diedit admin), `/profil/pin` (3 field PIN), `/users` (3 form reset PIN inline), halaman login (checkbox "Ingat saya" hilang, `pattern=\d{8}`), `arsip:reset-pin`/`arsip:akun-pertama` dijalankan sungguhan di terminal, lalu `/laporan` (caption jumlah + peringatan periode kosong berbahasa Indonesia "01 Mei 2026"), unduhan CSV nyata (BOM `EF BB BF`, header 12 kolom `;`, baris surat masuk & keluar), dan `/laporan/agenda` 200 `application/pdf` `%PDF-1.7`.
 
 Catatan untuk user: karena PIN sekarang 8 digit, **PIN akun dev `aliwafa3575@gmail.com` sudah diganti menjadi `12345678`** — PIN lama yang 6 digit tidak bisa dipakai login lagi.
 
@@ -57,7 +59,11 @@ Bug nyata yang ditemukan tes (bukan dokumen) dan sudah diperbaiki:
 - `PemusnahanArsipItem::pemusnahan()` menebak FK `pemusnahan_id`, kolom sebenarnya `pemusnahan_arsip_id`.
 - `LampiranPolicy::view()` memberi 403 ke staf yang membuka lampiran bukan miliknya — tidak pernah kelihatan karena semua uji manual sebelumnya dijalankan sebagai admin.
 
-Yang belum ada / masih mati: halaman error 403/404/500, export laporan, buku agenda, notifikasi approval, multi-template PDF (F3), auto-lock arsip `terkunci_pada` (B10/L-19), squash migration + tabel `sessions`/`cache` + FULLTEXT + buang kolom mati (`remember_token`, `email_verified_at`, `pengaturan_instansi.gdrive_root_folder_id`, `surat_*.file_path`, `draf_konten_surat_keluar.lampiran`), README kantor + manual pemakaian, Larastan/Pint (L-24).
+Yang belum ada / masih mati: halaman error 403/404/500, squash migration + tabel `sessions`/`cache` + FULLTEXT + buang kolom mati (`remember_token`, `email_verified_at`, `pengaturan_instansi.gdrive_root_folder_id`, `surat_*.file_path`, `draf_konten_surat_keluar.lampiran`), README kantor + manual pemakaian, Larastan/Pint (L-24).
+
+Dua item **tidak bisa diselesaikan agent** dan butuh bahan/angka dari user — jangan ditebak:
+- **F3 multi-template PDF** (jawaban user: "nanti multi template, menyesuaikan dengan punya desa"): butuh kop/template resmi desa aslinya. Sekarang satu template umum di `resources/views/surat-keluar/cetak.blade.php`.
+- **B10/L-19 auto-lock arsip** (`terkunci_pada` setelah N hari): kolomnya belum ada dan **nilai N belum diputuskan user**.
 
 ## 4. Keputusan user [LOCKED]
 
@@ -79,7 +85,7 @@ Yang belum ada / masih mati: halaman error 403/404/500, export laporan, buku age
 | L-14 | Filter daftar surat **disamakan** untuk masuk & keluar: cari, tahun, sifat, status arsip, klasifikasi (H1=a). Pagination seragam 20/halaman (H2) |
 | L-15 | Pencarian ikut menjangkau **isi** (`ringkasan`, `isi_surat`) (P4=b) |
 | L-16 | Ada **halaman khusus untuk mengisi draf/generate PDF** surat keluar (form header + isi) (P1, jawaban user) |
-| L-17 | Notifikasi: hanya untuk "pengajuan hapus menunggu approval admin" (H1=b). Export laporan per periode (I1=b) dan cetak **Buku Agenda Surat** (I2=b) **dibuat** |
+| L-17 | Notifikasi: hanya untuk "pengajuan hapus menunggu approval admin" (H1=b). Export laporan per periode (I1=b) dan cetak **Buku Agenda Surat** (I2=b) **dibuat**. **Selesai 4 Okt 2026**: `/laporan` (CSV `;`+BOM + PDF agenda A4 landscape). ⚠️ H1=b **diinterpretasikan** sebagai badge jumlah antrian di sidebar admin (kantor tanpa SMTP/WA, jadi tidak ada jalur kirim sama sekali) — belum dikonfirmasi eksplisit ke user, sampaikan saat serah terima |
 | L-18 | Tombol cetak: **stream + download dua-duanya** (F5=c). Notasi "Lampiran" di PDF **otomatis** dari jumlah file (P6=a) |
 | L-19 | `status_arsip` bisa diubah lewat **tombol "Nyahkan" di halaman show** (E8+E9), dan dikunci otomatis setelah N hari (B10=c) — nilai N diputuskan nanti |
 | L-20 | Koreksi nomor surat manual: **hanya admin** (D7=b) — ditegakkan di `UpdateSuratKeluarRequest` (nomor harus sama dengan yang tersimpan kalau yang mengubah bukan admin) + input `readonly` di form edit. Gap nomor saat surat hilang **dibiarkan** (D8=a). `nomor_surat` surat masuk **boleh duplikat** (D9=a) |
@@ -115,7 +121,7 @@ cp .env.example .env && php artisan key:generate   # lalu isi DB_*, GOOGLE_*, DE
 php artisan migrate --seed                         # seeder produksi: cuma baris pengaturan instansi
 php artisan arsip:akun-pertama email@kantor.desa --nama="Kepala Desa"   # akun admin pertama
 php artisan serve            # http://127.0.0.1:8000
-php artisan test             # 69 tes (SQLite in-memory + 3 tes MariaDB, butuh DB_TEST_DATABASE)
+php artisan test             # 90 tes (SQLite in-memory + 3 tes MariaDB, butuh DB_TEST_DATABASE)
 
 # data contoh untuk pengembangan (TOLAK jalan kalau APP_ENV bukan local):
 php artisan db:seed --class=DevSeeder
@@ -134,6 +140,6 @@ Dokumen uji manual: `Obsidian Vault/Pradana/Manual_Testing_PRADANA.md`. Register
 6. ✅ **Role 2 tingkat + hak nyata admin + migration pemetaan enum** (L-07). Otorisasi sengaja tetap `isAdmin()` + middleware `admin` di route (BUKAN Policy per-model — lihat alasan di Bagian 3 langkah 6); `@can` tidak dipakai karena hanya ada satu cek.
 7. ✅ **PIN 8 digit, reset PIN admin, ganti PIN sendiri, hapus remember-me** (L-11, L-12) + **I3 DevSeeder**.
 8. **UI log aktivitas + retensi log**, perluasan pencarian (isi + FULLTEXT, pagination) (L-15, L-22). ✅ *(FULLTEXT sengaja ditunda ke S11 — lihat alasan LIKE di Bagian 3 langkah 8)*
-9. **Ekspor laporan + Buku Agenda + notifikasi approval** (L-17).
+9. **Ekspor laporan + Buku Agenda + notifikasi approval** (L-17). ✅ *(notifikasi = badge antrian di sidebar, bukan email/WA — kantor tanpa SMTP; lihat Bagian 3 langkah 9)*
 10. **Halaman error, README kantor, manual pemakaian** (K16, L-26, L-25).
 11. **Squash migration + kolom baru + index** (S11) — dikerjakan sekali, setelah skema fitur-final stabil.
