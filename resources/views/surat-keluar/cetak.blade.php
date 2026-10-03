@@ -50,7 +50,7 @@
             <table class="info">
                 <tr><td>Nomor</td><td>:</td><td>{{ $surat->nomor_surat }}</td></tr>
                 <tr><td>Sifat</td><td>:</td><td>{{ ucfirst($surat->sifat) }}</td></tr>
-                <tr><td>Lampiran</td><td>:</td><td>{{ $draf->lampiran ?? '-' }}</td></tr>
+                <tr><td>Lampiran</td><td>:</td><td>{{ $notasiLampiran }}</td></tr>
                 <tr><td>Perihal</td><td>:</td><td><strong>{{ $surat->perihal }}</strong></td></tr>
             </table>
         </td>

@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Models\DrafKontenSuratKeluar;
 use App\Models\KlasifikasiPrimer;
 use App\Models\KlasifikasiSekunder;
 use App\Models\KlasifikasiTersier;
@@ -11,6 +12,7 @@ use App\Models\PengaturanInstansi;
 use App\Models\SuratKeluar;
 use App\Models\SuratMasuk;
 use App\Models\User;
+use App\Observers\DrafKontenSuratKeluarObserver;
 use App\Observers\KlasifikasiPrimerObserver;
 use App\Observers\KlasifikasiSekunderObserver;
 use App\Observers\KlasifikasiTersierObserver;
@@ -63,5 +65,6 @@ class AppServiceProvider extends ServiceProvider
         PengajuanHapusLampiran::observe(PengajuanHapusLampiranObserver::class);
         PengaturanInstansi::observe(PengaturanInstansiObserver::class);
         User::observe(UserObserver::class);
+        DrafKontenSuratKeluar::observe(DrafKontenSuratKeluarObserver::class);
     }
 }

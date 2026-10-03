@@ -47,7 +47,7 @@ class CetakSuratKeluarController extends Controller
         if (! $surat_keluar->drafKonten) {
             return back()->with(
                 'error',
-                'Draf konten surat ini belum diisi. Lengkapi draf konten dulu sebelum mencetak.'
+                'Draf konten surat ini belum diisi. Buka menu "Isi Draf & Cetak" pada halaman surat untuk mengisinya.'
             );
         }
 
@@ -55,11 +55,17 @@ class CetakSuratKeluarController extends Controller
 
         $logoPath = $instansi?->logo_path ? public_path('storage/'.$instansi->logo_path) : null;
 
+        // Keputusan P6: baris "Lampiran" pada kop dihitung dari file yang benar-benar
+        // ada, bukan dari teks yang diketik tangan (kolom draf.lampiran jadi tidak dipakai).
+        $jumlahLampiran = $surat_keluar->lampiran()->count();
+
         $pdf = Pdf::loadView('surat-keluar.cetak', [
             'surat' => $surat_keluar,
             'draf' => $surat_keluar->drafKonten,
             'instansi' => $instansi,
             'logoPath' => ($logoPath && file_exists($logoPath)) ? $logoPath : null,
+            'jumlahLampiran' => $jumlahLampiran,
+            'notasiLampiran' => $jumlahLampiran.' Berkas',
             'tanggalSurat' => $this->formatTanggalIndonesia($surat_keluar->tanggal_surat),
         ])->setPaper('a4', 'portrait');
 

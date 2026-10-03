@@ -54,10 +54,16 @@
         </h4>
     </div>
     <div class="d-flex gap-2 flex-wrap">
+        <a href="{{ route('surat-keluar.draf.edit', $suratKeluar) }}"
+           class="btn btn-primary rounded-pill px-3">
+            <i class="fas fa-pen-nib me-1"></i> Isi Draf &amp; Cetak
+        </a>
+        @if($suratKeluar->drafKonten)
         <a href="{{ route('surat-keluar.cetak', $suratKeluar) }}"
            class="btn btn-outline-success rounded-pill px-3" target="_blank">
             <i class="fas fa-print me-1"></i> Cetak PDF
         </a>
+        @endif
         <a href="{{ route('surat-keluar.edit', $suratKeluar) }}" class="btn btn-outline-primary rounded-pill px-3">
             <i class="fas fa-pen me-1"></i> Edit
         </a>
@@ -160,10 +166,16 @@
         <div class="card mb-3">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <span><i class="fas fa-align-left me-2"></i>Isi Surat (Draf)</span>
-                <a href="{{ route('surat-keluar.cetak', $suratKeluar) }}"
-                   class="btn btn-sm btn-outline-success rounded-pill px-3" target="_blank">
-                    <i class="fas fa-file-pdf me-1"></i> Generate PDF
-                </a>
+                <div class="d-flex gap-2">
+                    <a href="{{ route('surat-keluar.draf.edit', $suratKeluar) }}"
+                       class="btn btn-sm btn-outline-primary rounded-pill px-3">
+                        <i class="fas fa-pen me-1"></i> Ubah Draf
+                    </a>
+                    <a href="{{ route('surat-keluar.cetak', $suratKeluar) }}"
+                       class="btn btn-sm btn-outline-success rounded-pill px-3" target="_blank">
+                        <i class="fas fa-file-pdf me-1"></i> Generate PDF
+                    </a>
+                </div>
             </div>
             <div class="card-body" style="white-space: pre-line; font-size: 0.9rem; line-height: 1.8;">
                 {{ $suratKeluar->drafKonten->isi_surat ?? '—' }}
@@ -173,10 +185,10 @@
         <div class="card mb-3">
             <div class="card-body text-center text-secondary py-4">
                 <i class="fas fa-file-alt fa-2x mb-2 opacity-25"></i>
-                <p class="small mb-2">Belum ada draf isi surat.</p>
-                <a href="{{ route('surat-keluar.cetak', $suratKeluar) }}"
-                   class="btn btn-sm btn-outline-success rounded-pill px-3" target="_blank">
-                    <i class="fas fa-print me-1"></i> Cetak dengan Template Default
+                <p class="small mb-2">Belum ada draf isi surat, jadi surat ini belum bisa dicetak.</p>
+                <a href="{{ route('surat-keluar.draf.edit', $suratKeluar) }}"
+                   class="btn btn-sm btn-primary rounded-pill px-3">
+                    <i class="fas fa-pen-nib me-1"></i> Isi Draf Sekarang
                 </a>
             </div>
         </div>

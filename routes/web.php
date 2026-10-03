@@ -3,6 +3,7 @@
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CetakSuratKeluarController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\DrafKontenSuratKeluarController;
 use App\Http\Controllers\KlasifikasiPrimerController;
 use App\Http\Controllers\KlasifikasiSekunderController;
 use App\Http\Controllers\KlasifikasiTersierController;
@@ -120,6 +121,13 @@ Route::middleware('auth')->group(function () {
     // Cetak PDF surat keluar (baru, 1 Sep 2026, lihat catatan #8 di atas & AGENTS.md 12.20)
     Route::get('surat-keluar/{surat_keluar}/cetak', [CetakSuratKeluarController::class, 'cetak'])
         ->name('surat-keluar.cetak');
+
+    // Draf konten surat keluar (L-16, baru 4 Okt 2026) — tanpa halaman ini tabel
+    // draf_konten_surat_keluar tidak pernah terisi, dan cetak PDF selalu menolak.
+    Route::get('surat-keluar/{surat_keluar}/draf', [DrafKontenSuratKeluarController::class, 'edit'])
+        ->name('surat-keluar.draf.edit');
+    Route::put('surat-keluar/{surat_keluar}/draf', [DrafKontenSuratKeluarController::class, 'update'])
+        ->name('surat-keluar.draf.update');
 
     // Pencarian arsip global (baru, 1 Sep 2026, lihat catatan #9 di atas & AGENTS.md 12.21)
     Route::get('pencarian', [PencarianController::class, 'index'])
