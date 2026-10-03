@@ -108,8 +108,8 @@ Route::middleware('auth')->group(function () {
         ->name('users.pin.update')
         ->middleware('admin');
 
-    // Ganti PIN milik sendiri (L-12 / A5) — semua role yang login.
-    Route::get('profil/pin', [ProfilController::class, 'editPin'])->name('profil.pin.edit');
+    // Ganti PIN milik sendiri (L-12 / A5) — semua role yang login. Sejak 4 Okt
+    // 2026 pop up dari menu "Akun" di topbar, jadi tidak ada halaman GET-nya lagi.
     Route::patch('profil/pin', [ProfilController::class, 'updatePin'])->name('profil.pin.update');
 
     // Klasifikasi: index() terbuka untuk semua role yang login;

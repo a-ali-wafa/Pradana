@@ -160,21 +160,53 @@ class PinAkunTest extends TestCase
         $this->assertTrue(Hash::check('11112222', $this->pegawai->fresh()->pin));
     }
 
-    public function test_halaman_ganti_pin_menampilkan_form(): void
+    public function test_popup_ganti_pin_ditemukan_lewat_menu_akun(): void
     {
-        $this->actingAs($this->pegawai)
-            ->get(route('profil.pin.edit'))
-            ->assertOk()
-            ->assertSee('Ganti PIN Saya')
+        // Sejak 4 Okt 2026 tidak ada halaman /profil/pin: formnya popup di menu
+        // "Akun" pada topbar, jadi markup-nya ikut dirender layouts.app di
+        // halaman mana pun yang sudah login.
+        $ini = $this->actingAs($this->pegawai)->get(route('dashboard'))->assertOk();
+
+        $ini->assertSee('data-bs-target="#modalGantiPin"', false)
+            ->assertSee('id="formGantiPin"', false)
             ->assertSee('name="pin_lama"', false);
+
+        // Popup juga tersedia untuk admin, bukan cuma staf.
+        $ini = $this->actingAs($this->admin)->get(route('dashboard'))->assertOk();
+        $ini->assertSee('id="modalGantiPin"', false);
+    }
+
+    public function test_ganti_pin_lewat_ajax_membalas_dengan_json(): void
+    {
+        // PIN lama salah -> 422 + nama kolom, sama seperti popup mengharapkan.
+        $this->actingAs($this->pegawai)
+            ->patchJson(route('profil.pin.update'), [
+                'pin_lama' => '99999999',
+                'pin' => '44445555',
+                'pin_confirmation' => '44445555',
+            ])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('pin_lama');
+
+        $this->assertTrue(Hash::check(self::PIN, $this->pegawai->fresh()->pin));
+
+        $ini = $this->actingAs($this->pegawai)
+            ->patchJson(route('profil.pin.update'), [
+                'pin_lama' => self::PIN,
+                'pin' => '44445555',
+                'pin_confirmation' => '44445555',
+            ])
+            ->assertOk()
+            ->assertJson(['status' => 'PIN Anda berhasil diganti.']);
+
+        $this->assertTrue(Hash::check('44445555', $this->pegawai->fresh()->pin));
     }
 
     // Sengaja test terpisah: `actingAs()` di atas membuat user tetap login
     // untuk sisa request di test yang sama, jadi cek "tamu ditolak" tidak bisa
     // digabung di situ.
-    public function test_tamu_ditolak_di_halaman_ganti_pin(): void
+    public function test_tamu_ditolak_di_popup_ganti_pin(): void
     {
-        $this->get(route('profil.pin.edit'))->assertRedirect(route('login'));
         $this->patch(route('profil.pin.update'), ['pin_lama' => '11111111', 'pin' => '22222222'])
             ->assertRedirect(route('login'));
     }

@@ -23,7 +23,7 @@
     server (`public/storage` → `storage/app/public`) supaya logo bisa tampil — ini
     setup standar Laravel, belum tentu sudah dijalankan di server user, WAJIB dicek.
 --}}
-a
+
 @section('content')
 <div class="row justify-content-center">
     <div class="col-lg-8">
@@ -87,9 +87,24 @@ a
                         <label class="form-label small fw-bold text-secondary">
                             {{ $pengaturanInstansi->logo_path ? 'Ganti Logo (opsional, biarkan kosong kalau tidak ingin ganti)' : 'Upload Logo' }}
                         </label>
-                        <input type="file" name="logo" class="form-control bg-light border-0" accept=".jpg,.jpeg,.png">
-                        <div class="form-text">Format jpg/jpeg/png, maks 2MB.</div>
+                        <input type="file" name="logo" id="logoBaru" class="form-control bg-light border-0" accept=".jpg,.jpeg,.png">
+                        <div class="form-text">Format jpg/jpeg/png, maks 2MB. Logo dipakai di kop PDF, Buku Agenda, Berita Acara, dan halaman login.</div>
                         @error('logo') <div class="text-danger small mt-1">{{ $message }}</div> @enderror
+
+                        {{-- Pratinjau langsung dari berkas yang dipilih — baru terlihat
+                             sebelum menyimpan, supaya kantor bisa memastikan logo tidak
+                             terbalik/pecah sebelum kop PDF-nya dicetak. --}}
+                        <div class="mt-3 d-none" id="logoPratinjau">
+                            <div class="small fw-bold text-secondary mb-1">
+                                Pratinjau logo baru
+                                <span class="fw-normal" id="logoUkuran"></span>
+                            </div>
+                            <img id="logoPratinjauGambar" alt="Pratinjau logo baru"
+                                 class="border rounded p-2 bg-light" style="max-height: 80px;">
+                            <div class="small text-secondary mt-1">
+                                Logo lama masih yang dipakai sampai perubahan disimpan.
+                            </div>
+                        </div>
                     </div>
 
                     <div class="d-none gap-2" id="submitWrap">
@@ -119,5 +134,32 @@ a
         document.getElementById('submitWrap').classList.add('d-flex');
         document.getElementById('btnToggleEdit').classList.add('d-none');
     }
+
+    // Pratinjau logo: berkas dibaca langsung di browser (URL objek), tidak
+    // dikirim ke server dulu, jadi gambar muncul seketika setelah dipilih.
+    let urlPratinjau = null;
+    const inputLogo = document.getElementById('logoBaru');
+
+    inputLogo.addEventListener('change', function () {
+        const kotak = document.getElementById('logoPratinjau');
+        const berkas = inputLogo.files && inputLogo.files[0];
+
+        if (urlPratinjau) {
+            URL.revokeObjectURL(urlPratinjau);
+            urlPratinjau = null;
+        }
+
+        if (! berkas) {
+            kotak.classList.add('d-none');
+
+            return;
+        }
+
+        urlPratinjau = URL.createObjectURL(berkas);
+        document.getElementById('logoPratinjauGambar').src = urlPratinjau;
+        document.getElementById('logoUkuran').textContent =
+            '— ' + berkas.name + ' (' + Math.round(berkas.size / 1024) + ' KB)';
+        kotak.classList.remove('d-none');
+    });
 </script>
 @endpush

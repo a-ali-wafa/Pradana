@@ -172,10 +172,6 @@
                 <a class="nav-link {{ request()->routeIs('laporan.*') ? 'active' : '' }}" href="{{ route('laporan.index') }}">
                     <i class="fas fa-file-alt fa-fw"></i> Laporan &amp; Agenda
                 </a>
-                <a class="nav-link {{ request()->routeIs('profil.*') ? 'active' : '' }}" href="{{ route('profil.pin.edit') }}">
-                    <i class="fas fa-key fa-fw"></i> Ganti PIN
-                </a>
-
                 <div class="nav-section-label">Administrator</div>
                 <a class="nav-link {{ request()->routeIs('klasifikasi-primer.*') ? 'active' : '' }}" href="{{ route('klasifikasi-primer.index') }}">
                     <i class="fas fa-tags fa-fw"></i> Klasifikasi Primer
@@ -211,9 +207,31 @@
 
                 <div class="d-flex align-items-center gap-3">
                     @auth
-                        <div class="text-end d-none d-md-block">
-                            <div class="fw-bold" style="color: var(--text-dark);">{{ Auth::user()->nama_lengkap }}</div>
-                            <div class="small text-secondary">{{ Auth::user()->labelRole() }}</div>
+                        {{-- "Akun" = satu tempat untuk hal-hal milik user yang login. Ganti PIN
+                            dibuka dari sini sebagai popup, bukan sebagai halaman sendiri (4 Okt 2026). --}}
+                        <div class="dropdown">
+                            <button type="button"
+                                    class="btn btn-light btn-sm rounded-pill px-3 d-flex align-items-center gap-2 border"
+                                    data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="fas fa-user-circle fa-lg text-secondary"></i>
+                                <span class="text-start d-none d-sm-block">
+                                    <span class="fw-bold d-block" style="color: var(--text-dark); line-height: 1.15">{{ Auth::user()->nama_lengkap }}</span>
+                                    <span class="small text-secondary d-block" style="line-height: 1.15">{{ Auth::user()->labelRole() }}</span>
+                                </span>
+                                <i class="fas fa-caret-down text-secondary"></i>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+                                <li class="px-3 py-2">
+                                    <div class="small fw-bold text-dark">{{ Auth::user()->nama_lengkap }}</div>
+                                    <div class="small text-secondary">{{ Auth::user()->email }}</div>
+                                </li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li>
+                                    <button type="button" class="dropdown-item" data-bs-toggle="modal" data-bs-target="#modalGantiPin">
+                                        <i class="fas fa-key me-2 text-secondary"></i> Ganti PIN
+                                    </button>
+                                </li>
+                            </ul>
                         </div>
                         <form method="POST" action="{{ route('logout') }}">
                             @csrf
@@ -249,7 +267,182 @@
         </div>
     </div>
 
+    @auth
+        {{-- Popup "Ganti PIN" (L-12/A5=a), dipanggil dari menu Akun di topbar.
+            4 Okt 2026: sebelumnya halaman sendiri di /profil/pin — atas permintaan
+            user, aksi milik akun dikumpulkan di menu Akun dan ditampilkan sebagai
+            popup. Formulirnya tetap <form> POST sungguhan: kalau JavaScript mati,
+            tombol Simpan masih bekerja biasa dan controller membalas redirect+flash. --}}
+        <div class="modal fade" id="modalGantiPin" tabindex="-1" aria-labelledby="modalGantiPinJudul" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <form id="formGantiPin" method="POST" action="{{ route('profil.pin.update') }}" autocomplete="off">
+                        @csrf
+                        @method('PATCH')
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="modalGantiPinJudul">
+                                <i class="fas fa-key me-2 text-primary"></i>Ganti PIN
+                            </h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div id="pinHasil" class="alert small d-none" role="alert"></div>
+
+                            <p class="text-secondary small">
+                                Login memakai <strong>{{ Auth::user()->email }}</strong>. PIN baru harus
+                                <strong>8 digit angka</strong> dan langsung berlaku — catat dan simpan baik-baik,
+                                PIN tidak bisa dilihat ulang setelah disimpan.
+                            </p>
+
+                            <div class="mb-3">
+                                <label for="pin_lama" class="form-label small fw-bold">PIN Lama <span class="text-danger">*</span></label>
+                                <input type="password" class="form-control font-monospace" id="pin_lama" name="pin_lama"
+                                       maxlength="8" pattern="\d{8}" inputmode="numeric" autocomplete="current-password" required>
+                                <div class="invalid-feedback" id="salah-pin_lama"></div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="pin" class="form-label small fw-bold">PIN Baru <span class="text-danger">*</span></label>
+                                <div class="input-group">
+                                    <input type="password" class="form-control font-monospace" id="pin" name="pin"
+                                           maxlength="8" pattern="\d{8}" inputmode="numeric" autocomplete="new-password" required>
+                                    <button class="btn btn-outline-secondary" type="button" data-tampilan-pin="pin" aria-label="Tampilkan PIN">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                </div>
+                                <div class="invalid-feedback" id="salah-pin"></div>
+                            </div>
+
+                            <div>
+                                <label for="pin_confirmation" class="form-label small fw-bold">Ulangi PIN Baru <span class="text-danger">*</span></label>
+                                <input type="password" class="form-control font-monospace" id="pin_confirmation" name="pin_confirmation"
+                                       maxlength="8" pattern="\d{8}" inputmode="numeric" autocomplete="new-password" required>
+                                <div class="invalid-feedback" id="salah-pin_confirmation"></div>
+                            </div>
+
+                            <div class="alert alert-light border small mt-3 mb-0">
+                                <i class="fas fa-info-circle me-1"></i>
+                                Lupa PIN lama? Popup ini tetap membutuhkannya. Kalau benar-benar lupa,
+                                minta admin mengresetnya di menu <strong>Manajemen User</strong>.
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-outline-secondary rounded-pill px-4" data-bs-dismiss="modal">Tutup</button>
+                            <button type="submit" class="btn btn-primary rounded-pill px-4" id="pinSimpan">
+                                <i class="fas fa-save me-1"></i> Simpan PIN Baru
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    @endauth
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    @auth
+    <script>
+    (function () {
+        const form = document.getElementById('formGantiPin');
+        if (! form) return;
+
+        const modal = document.getElementById('modalGantiPin');
+        const hasil = document.getElementById('pinHasil');
+        const tombol = document.getElementById('pinSimpan');
+        const kolom = ['pin_lama', 'pin', 'pin_confirmation'];
+
+        function bersihkan() {
+            hasil.className = 'alert small d-none';
+            hasil.textContent = '';
+            kolom.forEach(function (nama) {
+                const input = document.getElementById(nama);
+                input.classList.remove('is-invalid');
+                input.value = '';
+                document.getElementById('salah-' + nama).textContent = '';
+            });
+            tombol.disabled = false;
+            tombol.innerHTML = '<i class="fas fa-save me-1"></i> Simpan PIN Baru';
+        }
+
+        function tampilkan(tipe, teks) {
+            hasil.className = 'alert small ' + (tipe === 'ok' ? 'alert-success' : 'alert-danger');
+            hasil.textContent = teks;
+        }
+
+        function salah(errors) {
+            kolom.forEach(function (nama) {
+                if (! errors[nama]) return;
+                document.getElementById(nama).classList.add('is-invalid');
+                document.getElementById('salah-' + nama).textContent = errors[nama][0];
+            });
+        }
+
+        modal.addEventListener('shown.bs.modal', function () {
+            bersihkan();
+            document.getElementById('pin_lama').focus();
+        });
+
+        // Toggle terlihat/tersembunyi — PIN-nya milik orang yang sedang login,
+        // jadi dia boleh membacanya sendiri sebelum menyimpan.
+        form.querySelectorAll('[data-tampilan-pin]').forEach(function (tombol) {
+            tombol.addEventListener('click', function () {
+                const input = document.getElementById(tombol.dataset.tampilanPin);
+                const menampilkan = input.type === 'password';
+                input.type = menampilkan ? 'text' : 'password';
+                tombol.querySelector('i').className = 'fas fa-eye' + (menampilkan ? '-slash' : '');
+            });
+        });
+
+        form.addEventListener('submit', async function (e) {
+            e.preventDefault();
+
+            tombol.disabled = true;
+            tombol.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Menyimpan…';
+
+            try {
+                const respons = await fetch(form.action, {
+                    method: 'PATCH',
+                    credentials: 'same-origin',
+                    headers: {
+                        'Accept': 'application/json',
+                        'X-CSRF-TOKEN': form.querySelector('input[name="_token"]').value,
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        pin_lama: form.pin_lama.value,
+                        pin: form.pin.value,
+                        pin_confirmation: form.pin_confirmation.value,
+                    }),
+                });
+
+                if (respons.ok) {
+                    const data = await respons.json();
+                    tampilkan('ok', data.status || 'PIN Anda berhasil diganti.');
+                    kolom.forEach(function (nama) { document.getElementById(nama).value = ''; });
+                    return;
+                }
+
+                if (respons.status === 419) {
+                    tampilkan('gagal', 'Halaman sudah kedaluwarsa. Muat ulang halaman, lalu buka menu Akun lagi.');
+
+                    return;
+                }
+
+                const data = await respons.json();
+                if (data.errors) {
+                    salah(data.errors);
+                } else {
+                    tampilkan('gagal', data.message || 'PIN tidak bisa diganti.');
+                }
+            } catch (err) {
+                tampilkan('gagal', 'Koneksi terputus — PIN belum diganti.');
+            } finally {
+                tombol.disabled = false;
+                tombol.innerHTML = '<i class="fas fa-save me-1"></i> Simpan PIN Baru';
+            }
+        });
+    })();
+    </script>
+    @endauth
     @stack('scripts')
 </body>
 </html>

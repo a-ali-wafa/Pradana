@@ -21,7 +21,7 @@ Catatan penting:
 - Aplikasi keluar sendiri kalau tidak dipakai ± 2 jam. Lihat bagian 15 kalau muncul kode **419**.
 - Setiap orang pakai akun sendiri. Jangan pinjam-meminjam PIN: log aktivitas mencatat atas nama siapa sebuah surat diubah.
 
-Menu di kiri layar: **Dashboard, Surat Masuk, Surat Keluar, Pencarian Arsip, Pemusnahan Arsip, Laporan & Agenda, Ganti PIN**. Untuk admin ada tambahan: **Pengajuan Hapus Lampiran, Klasifikasi Primer/Sekunder/Tersier, Log Aktivitas, Manajemen User, Pengaturan Instansi**.
+Menu di kiri layar: **Dashboard, Surat Masuk, Surat Keluar, Pencarian Arsip, Pemusnahan Arsip, Laporan & Agenda**. Untuk admin ada tambahan: **Pengajuan Hapus Lampiran, Klasifikasi Primer/Sekunder/Tersier, Log Aktivitas, Manajemen User, Pengaturan Instansi**. Hal-hal milik akun Anda (nama, email, ganti PIN, keluar) ada di tombol **Akun** di kanan atas.
 
 ---
 
@@ -183,13 +183,15 @@ Reset PIN lewat tombol **Reset PIN** di baris user. Menghapus user boleh dilakuk
 Menu **Klasifikasi Primer / Sekunder / Tersier**, tambah lewat tombol **Tambah**. Hierarki: Primer → Sekunder → Tersier. Menghapus induk ikut menghapus yang di bawahnya, jadi sistem menolak menghapus klasifikasi yang sudah dipakai surat.
 
 ### 13.3 Pengaturan instansi
-Menu **Pengaturan Instansi**: nama instansi, jenis, alamat, telepon, email, dan **logo**. Semuanya muncul di kop PDF surat, Berita Acara, dan Buku Agenda, jadi isi dengan benar sekali di awal. Logo tersimpan di aplikasi (bukan di internet) dan bisa diganti kapan saja.
+Menu **Pengaturan Instansi**: nama instansi, jenis, alamat, telepon, email, dan **logo**. Semuanya muncul di kop PDF surat, Berita Acara, dan Buku Agenda, jadi isi dengan benar sekali di awal. Field-nya terkunci sampai tombol **Edit** ditekan, supaya tidak kepencet ubah tidak sengaja.
+
+Untuk logo: setelah **Edit**, kolom "Ganti Logo" muncul. Begitu berkas dipilih, **pratinjau logo baru** langsung tampil di layar (beserta nama berkas dan ukurannya) tanpa perlu menyimpan dulu — pakai itu untuk memastikan logo tidak terbalik, terpotong, atau pecah sebelum kop PDF dicetak. Logo lama tetap yang dipakai sampai perubahan disimpan. Logo tersimpan di aplikasi (bukan di internet) dan bisa diganti kapan saja.
 
 ### 13.4 Log aktivitas
 Menu **Log Aktivitas** (hanya admin): siapa melakukan apa dan kapan, disaring per orang, per kata, atau per rentang tanggal. Layar ini hanya membaca — tidak ada tombol hapus. Catatan lebih dari 2 tahun dibersihkan otomatis oleh sistem, **kecuali** jejak pemusnahan.
 
 ### 13.5 Ganti PIN sendiri
-Menu **Ganti PIN** (untuk semua orang): isi PIN lama, lalu PIN baru dua kali.
+Tekan tombol **Akun** di kanan atas → **Ganti PIN**. Popup berisi PIN lama, PIN baru, dan ulangi PIN baru. Popup tidak tertutup sendiri kalau isinya salah — perbaiki tulisan merah di kolomnya lalu simpan lagi.
 
 ---
 
