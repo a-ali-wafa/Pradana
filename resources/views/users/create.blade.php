@@ -51,14 +51,16 @@
                         <label class="form-label small fw-bold">Role <span class="text-danger">*</span></label>
                         <select name="role" class="form-select @error('role') is-invalid @enderror" required>
                             <option value="">-- Pilih Role --</option>
-                            <option value="admin"     {{ old('role') === 'admin'     ? 'selected' : '' }}>Admin</option>
-                            <option value="kepala"    {{ old('role') === 'kepala'    ? 'selected' : '' }}>Kepala</option>
-                            <option value="perangkat" {{ old('role') === 'perangkat' ? 'selected' : '' }}>Perangkat</option>
+                            @foreach(\App\Models\User::peranTersedia() as $nilai => $label)
+                                <option value="{{ $nilai }}" {{ old('role') === $nilai ? 'selected' : '' }}>{{ $label }}</option>
+                            @endforeach
                         </select>
                         @error('role') <div class="invalid-feedback">{{ $message }}</div> @enderror
                         <div class="form-text">
-                            <strong>Admin</strong>: akses penuh termasuk hapus &amp; konfigurasi.<br>
-                            <strong>Kepala/Perangkat</strong>: akses baca + input surat (non-admin).
+                            <strong>Admin (Kepala)</strong>: akses penuh — hapus/pulihkan arsip, setujui
+                            pemusnahan &amp; hapus lampiran, kelola user, klasifikasi, dan pengaturan instansi.<br>
+                            <strong>Pegawai</strong>: input &amp; ubah surat, unggah/unduh lampiran,
+                            ajukan penghapusan, ajukan pemusnahan.
                         </div>
                     </div>
 

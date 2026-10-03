@@ -65,7 +65,7 @@ class NomorSuratKeluarTest extends TestCase
                 'nama_lengkap' => 'Petugas Uji',
                 'email' => 'petugas.uji@example.test',
                 'pin' => bcrypt('12345678'),
-                'role' => 'perangkat',
+                'role' => 'pegawai',
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);

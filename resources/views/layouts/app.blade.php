@@ -198,7 +198,7 @@
                     @auth
                         <div class="text-end d-none d-md-block">
                             <div class="fw-bold" style="color: var(--text-dark);">{{ Auth::user()->nama_lengkap }}</div>
-                            <div class="small text-secondary text-uppercase">{{ Auth::user()->role }}</div>
+                            <div class="small text-secondary">{{ Auth::user()->labelRole() }}</div>
                         </div>
                         <form method="POST" action="{{ route('logout') }}">
                             @csrf

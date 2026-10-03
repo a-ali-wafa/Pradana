@@ -30,7 +30,7 @@ class DrafKontenSuratKeluarTest extends TestCase
             'nama_lengkap' => 'Petugas Draf',
             'email' => 'petugas.draf@example.test',
             'pin' => bcrypt('12345678'),
-            'role' => 'perangkat',
+            'role' => 'pegawai',
         ]);
 
         $klasifikasi = KlasifikasiPrimer::forceCreate(['kode' => '01', 'nama' => 'Keuangan']);

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Aktivitas;
+use App\Models\KlasifikasiPrimer;
 use App\Models\SuratKeluar;
 use App\Models\SuratMasuk;
 use Illuminate\Contracts\View\View;
@@ -14,9 +15,8 @@ use Illuminate\Support\Facades\DB;
  * berdasarkan skema yang tersedia (Bagian 5), BUKAN spesifikasi eksplisit
  * dari user. Kalau mau widget lain/beda, gampang disesuaikan.
  *
- * Tidak ada pembatasan role — mengikuti pola versi lama ("semua role akses
- * semua menu"), karena B1 (matriks permission detail) masih [WAJIB TANYA
- * USER] tanpa default aman. Cukup middleware('auth') polos di route.
+ * Tidak ada pembatasan role: dashboard dibaca semua yang login (L-07 — dua
+ * tingkat, dan melihat statistik bukan aksi destruktif).
  *
  * Nama relasi yang dipakai (`primer`, `petugas`, `user`) SUDAH dikonfirmasi
  * benar terhadap model asli — lihat AGENTS.md 12.11/12.12/12.13/12.15.
@@ -29,24 +29,22 @@ class DashboardController extends Controller
 {
     public function index(): View
     {
-        $stats = \Illuminate\Support\Facades\Cache::remember('dashboard.stats', 60, function () {
-            return [
-                'total_surat_masuk' => SuratMasuk::count(),
-                'total_surat_keluar' => SuratKeluar::count(),
-                'surat_masuk_bulan_ini' => SuratMasuk::whereMonth('tanggal_diterima', now()->month)
-                    ->whereYear('tanggal_diterima', now()->year)
-                    ->count(),
-                'surat_keluar_bulan_ini' => SuratKeluar::whereMonth('tanggal_surat', now()->month)
-                    ->whereYear('tanggal_surat', now()->year)
-                    ->count(),
-                'surat_masuk_aktif' => SuratMasuk::where('status_arsip', 'aktif')->count(),
-                'surat_masuk_inaktif' => SuratMasuk::where('status_arsip', 'inaktif')->count(),
-                'surat_keluar_aktif' => SuratKeluar::where('status_arsip', 'aktif')->count(),
-                'surat_keluar_inaktif' => SuratKeluar::where('status_arsip', 'inaktif')->count(),
-                'surat_mendesak_aktif' => SuratMasuk::where('sifat', 'mendesak')->where('status_arsip', 'aktif')->count()
-                    + SuratKeluar::where('sifat', 'mendesak')->where('status_arsip', 'aktif')->count(),
-            ];
-        });
+        $stats = [
+            'total_surat_masuk' => SuratMasuk::count(),
+            'total_surat_keluar' => SuratKeluar::count(),
+            'surat_masuk_bulan_ini' => SuratMasuk::whereMonth('tanggal_diterima', now()->month)
+                ->whereYear('tanggal_diterima', now()->year)
+                ->count(),
+            'surat_keluar_bulan_ini' => SuratKeluar::whereMonth('tanggal_surat', now()->month)
+                ->whereYear('tanggal_surat', now()->year)
+                ->count(),
+            'surat_masuk_aktif' => SuratMasuk::where('status_arsip', 'aktif')->count(),
+            'surat_masuk_inaktif' => SuratMasuk::where('status_arsip', 'inaktif')->count(),
+            'surat_keluar_aktif' => SuratKeluar::where('status_arsip', 'aktif')->count(),
+            'surat_keluar_inaktif' => SuratKeluar::where('status_arsip', 'inaktif')->count(),
+            'surat_mendesak_aktif' => SuratMasuk::where('sifat', 'mendesak')->where('status_arsip', 'aktif')->count()
+                + SuratKeluar::where('sifat', 'mendesak')->where('status_arsip', 'aktif')->count(),
+        ];
 
         $suratMasukTerbaru = SuratMasuk::with(['primer', 'petugas'])
             ->latest('tanggal_diterima')
@@ -60,12 +58,25 @@ class DashboardController extends Controller
 
         $aktivitasTerbaru = Aktivitas::with('user')->latest()->take(10)->get();
 
-        $klasifikasiTerpopuler = SuratMasuk::select('klasifikasi_primer_id', DB::raw('count(*) as total'))
+        // H3: hitung surat masuk DAN keluar bersama-sama. Sebelumnya hanya
+        // surat masuk, sehingga "klasifikasi terbanyak" di dashboard menyesatkan
+        // (kantor yang banyak bikin surat keluar melihat grafik yang salah).
+        $hitungPerPrimer = fn (string $model) => $model::select('klasifikasi_primer_id', DB::raw('count(*) as total'))
             ->groupBy('klasifikasi_primer_id')
-            ->with('primer')
-            ->orderByDesc('total')
-            ->take(5)
             ->get();
+
+        $primerById = KlasifikasiPrimer::all()->keyBy('id');
+
+        $klasifikasiTerpopuler = $hitungPerPrimer(SuratMasuk::class)
+            ->concat($hitungPerPrimer(SuratKeluar::class))
+            ->groupBy('klasifikasi_primer_id')
+            ->map(fn ($kelompok) => (object) [
+                'primer' => $primerById->get($kelompok->first()->klasifikasi_primer_id),
+                'total' => $kelompok->sum('total'),
+            ])
+            ->sortByDesc('total')
+            ->take(5)
+            ->values();
 
         return view('dashboard.index', compact(
             'stats',

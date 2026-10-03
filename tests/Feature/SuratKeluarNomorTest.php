@@ -32,7 +32,7 @@ class SuratKeluarNomorTest extends TestCase
             'nama_lengkap' => 'Petugas Nomor',
             'email' => 'petugas.nomor@example.test',
             'pin' => bcrypt('12345678'),
-            'role' => 'perangkat',
+            'role' => 'pegawai',
         ]);
 
         $this->primer = KlasifikasiPrimer::forceCreate(['kode' => '01', 'nama' => 'Keuangan']);

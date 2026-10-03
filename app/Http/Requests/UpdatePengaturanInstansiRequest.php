@@ -19,9 +19,9 @@ use Illuminate\Foundation\Http\FormRequest;
  * lebih kecil & khusus gambar (2MB, jpg/jpeg/png saja) karena ini cuma gambar kop
  * surat. Ini ASUMSI SAYA, bukan keputusan user — tandai untuk dikonfirmasi.
  *
- * Otorisasi admin-only sengaja TIDAK dicek di authorize() di sini — dilakukan lewat
- * ensureAdmin() manual di PengaturanInstansiController (TODO(B1)), authorize() cuma
- * jaring pengaman tambahan, konsisten dengan pola FormRequest lain di project ini.
+ * Otorisasi admin-only TIDAK dicek di authorize() di sini — route
+ * `pengaturan-instansi` sudah memakai `->middleware('admin')` (L-07), jadi
+ * authorize() cuma `true` supaya ada satu sumber kebenaran.
  */
 class UpdatePengaturanInstansiRequest extends FormRequest
 {

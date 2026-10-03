@@ -18,8 +18,14 @@
 
         <div class="alert alert-warning rounded-3 border-0 shadow-sm small mb-4">
             <i class="fas fa-exclamation-triangle me-1"></i>
-            <strong>Perhatian:</strong> Nomor surat <code>{{ $suratKeluar->nomor_surat }}</code> bisa dikoreksi manual jika ada kesalahan,
-            namun harus tetap unik. Mengubah klasifikasi <strong>tidak</strong> mengubah nomor surat yang sudah terbit.
+            @if (auth()->user()->isAdmin())
+                <strong>Perhatian:</strong> Nomor surat <code>{{ $suratKeluar->nomor_surat }}</code> bisa dikoreksi manual jika ada kesalahan,
+                namun harus tetap unik. Mengubah klasifikasi <strong>tidak</strong> mengubah nomor surat yang sudah terbit.
+            @else
+                Nomor surat <code>{{ $suratKeluar->nomor_surat }}</code> tidak bisa diubah staf —
+                hanya admin yang boleh mengoreksinya (laporkan kalau ada kesalahan ketik).
+                Mengubah klasifikasi <strong>tidak</strong> mengubah nomor surat yang sudah terbit.
+            @endif
         </div>
 
         <div class="card">
@@ -88,9 +94,14 @@
                                 <label class="form-label small fw-bold">Nomor Surat <span class="text-danger">*</span></label>
                                 <input type="text" name="nomor_surat"
                                        class="form-control @error('nomor_surat') is-invalid @enderror"
-                                       value="{{ old('nomor_surat', $suratKeluar->nomor_surat) }}" required>
+                                       value="{{ old('nomor_surat', $suratKeluar->nomor_surat) }}" required
+                                       @if(! auth()->user()->isAdmin()) readonly tabindex="-1" aria-readonly="true" @endif>
                                 @error('nomor_surat') <div class="invalid-feedback">{{ $message }}</div> @enderror
-                                <div class="form-text">Ubah hanya jika ada kesalahan — harus unik.</div>
+                                <div class="form-text">
+                                    {{ auth()->user()->isAdmin()
+                                        ? 'Ubah hanya jika ada kesalahan — harus unik.'
+                                        : 'Read-only: hanya admin yang bisa mengubah nomor.' }}
+                                </div>
                             </div>
                             <div class="col-md-3">
                                 <label class="form-label small fw-bold">Tanggal Surat <span class="text-danger">*</span></label>

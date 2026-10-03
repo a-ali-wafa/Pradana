@@ -43,7 +43,7 @@ class SuratTempatSampahTest extends TestCase
             'nama_lengkap' => 'Staf',
             'email' => 'staf.sampah@example.test',
             'pin' => bcrypt('12345678'),
-            'role' => 'perangkat',
+            'role' => 'pegawai',
         ]);
 
         $klasifikasi = KlasifikasiPrimer::forceCreate(['kode' => '01', 'nama' => 'Umum']);

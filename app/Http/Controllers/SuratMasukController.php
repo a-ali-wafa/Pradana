@@ -129,11 +129,8 @@ class SuratMasukController extends Controller
     }
 
     /**
-     * TODO(B2): "admin only" di sini masih ASUMSI SEMENTARA — B2 sendiri
-     * masih [WAJIB TANYA USER], belum final. Konfirmasi ulang ke user.
-     *
-     * Pakai abort_unless inline (bukan ensureAdmin() private) agar konsisten
-     * dengan SuratKeluarController::destroy() dan retrofit B1 (1 Sep 2026).
+     * L-05: hapus = soft delete, dan hanya admin (L-07). Baris + lampiran +
+     * file fisiknya tetap utuh supaya bisa dipulihkan lewat `restore()`.
      */
     public function destroy(Request $request, SuratMasuk $surat_masuk): RedirectResponse
     {

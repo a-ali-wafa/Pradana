@@ -8,26 +8,18 @@ use Illuminate\Support\Facades\Auth;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
- * BARU — 1 Sep 2026. Implementasi B1 [LOCKED #16, lihat Bagian 8 AGENTS.md]
- * versi disederhanakan: HANYA 2 tingkat (admin vs non-admin), dikonfirmasi
- * user 1 Sep 2026. `kepala` dan `perangkat` diperlakukan SAMA (non-admin) —
- * kolom `users.role` TETAP 3 nilai (skema Bagian 5 tidak berubah), middleware
- * ini cuma mengecek satu hal: apakah user yang login itu admin atau bukan.
+ * Gerbang "hanya admin" untuk route admin (L-07 / lama B1 [LOCKED #16]).
  *
- * Menggantikan pola ad-hoc `ensureAdmin()`/`abort_unless(...->role==='admin',403,...)`
- * yang tersebar di beberapa controller (Klasifikasi ×3 sejak 12.11, Pengaturan
- * Instansi sejak 12.18, kemungkinan SuratMasukController::destroy() untuk B2) —
- * SEMUA `// TODO(B1)` di file-file itu sekarang bisa diganti middleware ini,
- * TAPI retrofit-nya BELUM dilakukan di sesi ini (controller aslinya tidak
- * diupload) — lihat 12.23 di AGENTS_HISTORY.md.
+ * Isinya sengaja cuma satu pengecekan biner `User::isAdmin()`, BUKAN matriks
+ * per-modul×per-role: user memutuskan (3 Okt 2026) bahwa role dipangkas jadi
+ * 2 tingkat — `admin` (= kepala, berhak nyata) dan `pegawai`. Karena itu juga
+ * tidak ada Policy per-model: semuanya akan cuma mengulang satu cek yang sama
+ * sebelas kali. `app/Policies/LampiranPolicy.php` (scaffold kosong + aturan
+ * kepemilikan yang ternyata bertentangan dengan L-09/L-10) sudah dihapus 4 Okt 2026.
  *
- * Pakai helper `User::isAdmin()` yang sudah terkonfirmasi ada di model asli
- * (28 Agu 2026, lihat 12.14) — bukan tebakan baru.
- *
- * CARA PAKAI setelah diregistrasikan (lihat snippet-registrasi-observer-1sep2026.php):
- *   Route::middleware(['auth', 'admin'])->group(function () { ... });
- * atau per-route:
- *   Route::delete('klasifikasi-primer/{klasifikasi_primer}', [...])->middleware('admin');
+ * Dipakai di `routes/web.php` sebagai alias `admin` (didaftarkan di
+ * `app/Http/Kernel.php`, lihat catatan K3 AGENTS.md — project ini masih
+ * pakai struktur bootstrap lama).
  */
 class EnsureIsAdmin
 {

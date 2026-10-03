@@ -11,10 +11,8 @@ use Illuminate\Validation\Rule;
 class StoreSuratKeluarRequest extends FormRequest
 {
     /**
-     * Otorisasi dasar cukup "sudah login" (middleware `auth` di controller).
-     * TODO(B1): matriks permission per-role belum dikonfirmasi user. Kalau nanti
-     * ternyata cuma role tertentu yang boleh input surat keluar, tambahkan
-     * pengecekan role di sini atau pindah ke Policy.
+     * Otorisasi: cukup "sudah login" (middleware `auth`). L-07 memutuskan input
+     * surat boleh dilakukan semua role, jadi tidak ada cek role di sini.
      */
     public function authorize(): bool
     {
@@ -48,9 +46,11 @@ class StoreSuratKeluarRequest extends FormRequest
             'lokasi_fisik' => ['nullable', 'string', 'max:255'],
 
             // 'nomor_surat' SENGAJA tidak ada di sini. Nomor di-generate otomatis
-            // oleh SuratKeluarController::generateNomorSurat() (lihat D2/D3 di
-            // AGENTS.md — nomor global per tahun, reset tiap tahun, tanpa duplikat).
-            // Formatnya sendiri masih placeholder, lihat TODO(D1) di controller.
+            // oleh NomorSuratKeluarGenerator (dipanggil SuratKeluarController di
+            // dalam transaksi) — format L-20 `{urutan}/{kodeP.kodeS.kodeT}/{bulan
+            // romawi}/{tahun}`, urutan global per tahun dan reset tiap tahun.
+            // Staf biasa tidak mengisinya; koreksi manual hanya lewat update()
+            // dan hanya untuk admin (L-20).
 
             // 'user_id' juga tidak divalidasi dari input — diisi dari auth()->id()
             // di controller, bukan dari form.

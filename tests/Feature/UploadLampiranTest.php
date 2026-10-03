@@ -33,7 +33,7 @@ class UploadLampiranTest extends TestCase
             'nama_lengkap' => 'Petugas Satu',
             'email' => 'petugas1@example.test',
             'pin' => bcrypt('12345678'),
-            'role' => 'perangkat',
+            'role' => 'pegawai',
         ]);
 
         $klasifikasi = KlasifikasiPrimer::forceCreate(['kode' => '01', 'nama' => 'Keuangan']);

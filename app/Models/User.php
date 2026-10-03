@@ -11,6 +11,10 @@ class User extends Authenticatable
 {
     use HasFactory, Notifiable, SoftDeletes;
 
+    public const ROLE_ADMIN = 'admin';
+
+    public const ROLE_PEGAWAI = 'pegawai';
+
     protected $fillable = [
         'nama_lengkap',
         'email',
@@ -50,6 +54,27 @@ class User extends Authenticatable
 
     public function isAdmin(): bool
     {
-        return $this->role === 'admin';
+        return $this->role === self::ROLE_ADMIN;
+    }
+
+    /**
+     * L-07: hanya 2 tingkat. `admin` adalah kepala desa/lurah dan punya hak
+     * nyata (hapus user, approval pemusnahan, koreksi nomor, pengaturan);
+     * `pegawai` adalah staf. Label dipakai bersama oleh form user, daftar
+     * user, dan topbar supaya tidak ada dua tempat yang bisa tidak cocok.
+     *
+     * @return array<string, string> nilai enum => label untuk manusia
+     */
+    public static function peranTersedia(): array
+    {
+        return [
+            self::ROLE_ADMIN => 'Admin (Kepala)',
+            self::ROLE_PEGAWAI => 'Pegawai',
+        ];
+    }
+
+    public function labelRole(): string
+    {
+        return self::peranTersedia()[$this->role] ?? ucfirst($this->role);
     }
 }

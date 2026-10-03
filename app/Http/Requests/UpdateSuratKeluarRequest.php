@@ -10,10 +10,6 @@ use Illuminate\Validation\Rule;
 
 class UpdateSuratKeluarRequest extends FormRequest
 {
-    /**
-     * TODO(B1): sama seperti StoreSuratKeluarRequest — sesuaikan kalau matriks
-     * permission per-role sudah dikonfirmasi.
-     */
     public function authorize(): bool
     {
         return true;
@@ -48,10 +44,8 @@ class UpdateSuratKeluarRequest extends FormRequest
 
             'lokasi_fisik' => ['nullable', 'string', 'max:255'],
 
-            // Beda dari Store: di update nomor_surat boleh dikoreksi manual
-            // (misal salah ketik saat generate), tapi tetap wajib unik.
-            // TODO(D1): tinjau ulang aturan ini kalau format resmi nomor surat
-            // ternyata tidak boleh diedit bebas setelah terbit.
+            // Beda dari Store: nomor boleh dikoreksi manual (misal salah ketik
+            // saat generate), tapi tetap wajib unik.
             'nomor_surat' => [
                 'required',
                 'string',
@@ -63,7 +57,31 @@ class UpdateSuratKeluarRequest extends FormRequest
 
     public function withValidator(Validator $validator): void
     {
-        $validator->after(fn (Validator $validator) => $this->validateHierarkiKlasifikasi($validator));
+        $validator->after(function (Validator $validator): void {
+            $this->validateHierarkiKlasifikasi($validator);
+            $this->validateKoreksiNomorOlehAdmin($validator);
+        });
+    }
+
+    /**
+     * L-20 (D7=b): hanya admin yang boleh MENGUBAH nomor surat keluar yang sudah
+     * terbit. Form tetap mengirim nilai nomor aslinya untuk semua role, jadi
+     * yang dilarang adalah deltasnya — bukan field-nya.
+     */
+    protected function validateKoreksiNomorOlehAdmin(Validator $validator): void
+    {
+        if ($this->user()?->isAdmin()) {
+            return;
+        }
+
+        $lama = $this->route('surat_keluar')?->nomor_surat;
+
+        if ($lama !== null && $this->input('nomor_surat') !== $lama) {
+            $validator->errors()->add(
+                'nomor_surat',
+                'Hanya admin yang bisa mengubah nomor surat keluar yang sudah terbit.'
+            );
+        }
     }
 
     protected function validateHierarkiKlasifikasi(Validator $validator): void

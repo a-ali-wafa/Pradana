@@ -56,12 +56,14 @@ class UserController extends Controller
     }
 
     /**
-     * Hapus (soft-delete) user.
-     * Admin tidak boleh menghapus akunnya sendiri — proteksi di view sudah
-     * menyembunyikan tombol, proteksi di sini untuk keamanan backend.
+     * Hapus (soft-delete) user — admin only (middleware `admin` di route).
+     * L-10/B8: user boleh dihapus walau sudah punya surat, karena tidak ada
+     * sistem kepemilikan (semua arsip milik kantor); log aktivitas yang jadi
+     * penjaga jejaknya. Relasi `petugas()` di model surat sudah `withTrashed()`
+     * sehingga nama petugas lama tetap terbaca di daftar surat.
      *
-     * TODO(B2): "siapa yang boleh hapus user" masih WAJIB TANYA USER — saat ini
-     * diasumsikan admin only (ditangani middleware('admin') di routes/web.php).
+     * Admin tidak boleh menghapus akunnya sendiri — view menyembunyikan
+     * tombolnya, cek di sini penjaga belakangnya.
      */
     public function destroy(\Illuminate\Http\Request $request, User $user): RedirectResponse
     {

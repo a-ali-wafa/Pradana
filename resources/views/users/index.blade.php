@@ -53,16 +53,9 @@
                             </td>
                             <td class="text-secondary">{{ $user->email }}</td>
                             <td>
-                                @php
-                                    $roleColor = match($user->role) {
-                                        'admin'    => 'danger',
-                                        'kepala'   => 'warning',
-                                        'perangkat'=> 'secondary',
-                                        default    => 'secondary',
-                                    };
-                                @endphp
-                                <span class="badge text-bg-{{ $roleColor }} rounded-pill px-3">
-                                    {{ ucfirst($user->role) }}
+                                {{-- L-07: 2 tingkat saja (admin = kepala, pegawai) --}}
+                                <span class="badge text-bg-{{ $user->isAdmin() ? 'danger' : 'secondary' }} rounded-pill px-3">
+                                    {{ $user->labelRole() }}
                                 </span>
                             </td>
                             <td>

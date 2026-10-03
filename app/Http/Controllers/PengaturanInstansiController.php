@@ -55,8 +55,6 @@ class PengaturanInstansiController extends Controller
     {
         $pengaturanInstansi = PengaturanInstansi::firstOrFail();
 
-        // TODO(G1): view belum dibuat — tergantung keputusan stack frontend
-        // (Blade+Bootstrap vs Livewire/Inertia+Vue/React), masih [WAJIB TANYA USER].
         return view('pengaturan-instansi.edit', compact('pengaturanInstansi'));
     }
 

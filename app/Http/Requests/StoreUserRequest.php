@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Models\User;
 use Illuminate\Foundation\Http\FormRequest;
 
 /**
@@ -14,15 +15,16 @@ use Illuminate\Foundation\Http\FormRequest;
  * ✅ Dicek 28 Agu 2026 terhadap User.php asli: rules di bawah cocok 100%
  * dengan $fillable model (`nama_lengkap`, `email`, `pin`, `role`).
  *
- * Otorisasi admin-only dicek manual di UserController::ensureAdmin() (pakai
- * helper User::isAdmin() yang sudah ada di model) — TODO(B1), belum ada
- * middleware/Gate role resmi karena B1 masih blocked.
+ * Otorisasi: route `users.*` sudah memakai `->middleware('admin')` sejak
+ * 3 Sep 2026 (lihat AGENTS_HISTORY.md 12.26), jadi `authorize()` di sini
+ * sengaja `true` — jangan dipindah ke FormRequest supaya satu sumber kebenaran
+ * (middleware) tidak bersaing dengan sumber kedua.
  */
 class StoreUserRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return true; // dicek di controller (ensureAdmin()), konsisten dgn pola controller lain
+        return true;
     }
 
     public function rules(): array
@@ -31,7 +33,9 @@ class StoreUserRequest extends FormRequest
             'nama_lengkap' => ['required', 'string', 'max:150'],
             'email' => ['required', 'string', 'email', 'max:150', 'unique:users,email'],
             'pin' => ['required', 'digits:6', 'confirmed'],
-            'role' => ['required', 'in:admin,perangkat,kepala'], // sesuai enum Bagian 5
+            // L-07: hanya role yang dikenal model — jangan tulis daftar kedua
+            // di sini supaya pemangkasan enum tidak bisa terlewat di validasi.
+            'role' => ['required', 'in:'.implode(',', array_keys(User::peranTersedia()))],
         ];
     }
 

@@ -33,7 +33,7 @@ Aplikasi arsip surat masuk/keluar untuk kantor kelurahan/desa. Migrasi dari Goog
 
 Sudah ada & jalan: migration + model (kini **13 tabel**: 11 lama + `pemusnahan_arsip` + `pemusnahan_arsip_item`), Auth login/logout (email+PIN, rate limit), CRUD surat masuk/keluar, CRUD klasifikasi 3 level, Pengaturan Instansi (edit-only), Lampiran (upload/unduh), Pengajuan hapus lampiran, **Pemusnahan arsip + Berita Acara**, Dashboard + view, Pencarian, Cetak PDF + halaman draf, logging via 10 Observer, middleware `admin`.
 
-Langkah 1–5 Bagian 7 **selesai & terverifikasi** (4 Okt 2026):
+Langkah 1–6 Bagian 7 **selesai & terverifikasi** (4 Okt 2026):
 
 1. Laravel **12.69.3** (PHP 8.2), Sanctum/`routes/api.php`/welcome dihapus, `optimize-autoloader`.
 2. Lampiran ke **disk lokal `arsip`** (L-01) + upload sync AJAX multi-file (L-02/L-13/L-24) dengan duplikat-sha256 dilewati; queue + 2 Job dihapus; log sync; `arsip:sinkron-ke-drive` (backup harian, `--dry-run`) & `arsip:daftar-usang`.
@@ -41,12 +41,17 @@ Langkah 1–5 Bagian 7 **selesai & terverifikasi** (4 Okt 2026):
 4. Penomoran surat keluar jadi **`NomorSuratKeluarGenerator`** + tabel `surat_counters` + `lockForUpdate()` di dalam transaksi; dibuktikan dengan **dua koneksi MariaDB nyata** (bukan cuma docblock) + retry 3× di `store()` (L-20).
 5. **Soft delete surat** (`deleted_at` di kedua tabel) + tombol **"Nyahkan"** (ubah `status_arsip`) + **tempat sampah admin** (`?sampah=1`, `?usang=1`, `Pulihkan`) + **modul Pemusnahan Arsip** (pengajuan → approval admin → `forceDelete` baris & file + **Berita Acara** PDF bernomor `BA-###/romawi/tahun`). Parsial `partials/arsip-aksi.blade.php` dipakai kedua halaman show (menghilangkan duplikasi H6). Sidebar kini menyaring link admin (`isAdmin()`).
 
-Test suite: **45 passed** (`php artisan test`, 9 class) — termasuk 11 tes alur pemusnahan dan 9 tes tempat sampah. 3 tes penomoran (`NomorSuratKeluarTest`) jalan di **MariaDB sungguhan** pakai dua koneksi `mysql_test_a`/`mysql_test_b` dan mengunci baris betulan; sisanya SQLite in-memory (L-24/Q1 baru tertutup sebagian — alur otorisasi belum diuji di MariaDB).
-Diverifikasi lewat browser nyata di `http://127.0.0.1:8000`: ajukan → setujui → `surat_masuk` hilang dari DB, Berita Acara `BA-001/X/2026` ter-render (200, `application/pdf`), log aktivitas tersusun urut.
+6. **Role 2 tingkat + hak nyata admin** (L-07): migration pemetaan enum (`kepala`→`admin`, `perangkat`→`pegawai`, dijalankan & diverifikasi di MariaDB dev — urutannya harus "perluas enum → ubah data → persempit enum"; percobaan pertama gagal karena `pegawai` belum ada di enum lama), satu sumber label role (`User::peranTersedia()`/`labelRole()`) dipakai form user, daftar user, dan topbar; `StoreUserRequest` cuma menerima 2 nilai. Kebijakan otorisasi **sengaja tidak** dipindah ke Policy per-model: dengan 2 tingkat semuanya cuma mengulang `isAdmin()`. `app/Policies/LampiranPolicy.php` dihapus (scaffold kosong + aturan kepemilikan yang justru melarang staf membuka arsip kantor, menabrak L-09/L-10) beserta `authorize('view')` di `LampiranController::download()`. L-20 ikut ditutup: nomor surat keluar tidak bisa diubah non-admin (divalidasi di server, input `readonly` di form). H3: kartu "klasifikasi terbanyak" dashboard kini menghitung surat masuk **dan** keluar (dulu hanya masuk), cache 60 detik dashboard dihapus supaya angka tidak tertinggal sesudah input surat.
 
-Bug nyata yang ditemukan tes langkah 5 (sudah diperbaiki): `$model->forceDeleting` di Observer melempar `BadMethodCallException` (properti protected; magic getter malah memanggil method statis `forceDeleting($callback)` yang butuh argumen) → **hapus surat masuk/keluar sebelumnya selalu 500**. Ganti ke `isForceDeleting()`.
+Test suite: **55 passed** (`php artisan test`, 10 class) — 11 alur pemusnahan, 9 tempat sampah, 11 otorisasi dua tingkat. 3 tes penomoran (`NomorSuratKeluarTest`) jalan di **MariaDB sungguhan** pakai dua koneksi `mysql_test_a`/`mysql_test_b` dan mengunci baris betulan; sisanya SQLite in-memory.
+Diverifikasi lewat browser nyata di `http://127.0.0.1:8000`: alur pemusnahan penuh (ajukan → setujui → `surat_masuk` hilang dari DB, Berita Acara `BA-001/X/2026` ter-render 200 `application/pdf`, log urut), plus DOM halaman user/dashboard/form edit surat keluar (opsi role tinggal dua, nomor tetap bisa diedit admin).
 
-Yang belum ada / masih mati: halaman error 403/404/500, UI log aktivitas, export laporan, buku agenda, notifikasi approval, reset/ganti PIN, remember-me masih ada, role masih enum 3 nilai (pemangkasan L-07 belum dikerjakan), pencarian belum menjangkau isi, `terkunci_pada` (auto-lock B10), squash migration + `sessions`/`cache` table + FULLTEXT.
+Bug nyata yang ditemukan tes (bukan dokumen) dan sudah diperbaiki:
+- `$model->forceDeleting` di Observer melempar `BadMethodCallException` (propertinya protected; magic getter malah mencocokkan namanya dengan method statis `forceDeleting($callback)` yang butuh 1 argumen) → **hapus surat masuk/keluar selalu 500**, bahkan sebelum modul pemusnahan ada. Ganti `isForceDeleting()`.
+- `PemusnahanArsipItem::pemusnahan()` menebak FK `pemusnahan_id`, kolom sebenarnya `pemusnahan_arsip_id`.
+- `LampiranPolicy::view()` memberi 403 ke staf yang membuka lampiran bukan miliknya — tidak pernah kelihatan karena semua uji manual sebelumnya dijalankan sebagai admin.
+
+Yang belum ada / masih mati: halaman error 403/404/500, UI log aktivitas, export laporan, buku agenda, notifikasi approval, reset/ganti PIN, PIN masih 6 digit (target 8, L-12), remember-me masih ada di form login, pencarian belum menjangkau isi, `terkunci_pada` (auto-lock B10), squash migration + tabel `sessions`/`cache` + FULLTEXT, `DatabaseSeeder` masih berisi email pribadi + PIN keras (pindah ke `DevSeeder`, I3).
 
 ## 4. Keputusan user [LOCKED]
 
@@ -58,8 +63,8 @@ Yang belum ada / masih mati: halaman error 403/404/500, UI log aktivitas, export
 | L-04 | Retensi tetap **5 tahun seragam** semua jenis, tapi **sistem hanya memberi DAFTAR surat berumur >5 tahun**; keputusan men-*inaktif*-kan tetap di tangan user (E5, diturunkan dari locked lama #12) |
 | L-05 | **Hapus arsip permanen: tidak boleh** (B2=d). Penghapusan jadi **soft delete** (B9=a) — arsip & lampirannya tetap utuh, bisa dipulihkan admin |
 | L-06 | **Modul pemusnahan arsip (surat) + Berita Acara dibuat** (E3=a), pola pengajuan→approval seperti lampiran. File fisik baru hilang pada jalur pemusnahan ini (bukan lewat `destroy()`) |
-| L-07 | Role dipangkas jadi **2**: `admin` = **kepala** (diberi hak nyata) dan `pegawai`. Jawaban eksplisit user: "admin adalah kepala dan diberikan hak nyata". Enum lama 3 nilai → migrasi pemetaan `kepala`→`admin`, `perangkat`→`pegawai` |
-| L-08 | Klasifikasi boleh diedit semua yang login **tapi tercatat di log aktivitas** (B5=c) — catatan: ini memperluas B1, lihat catatan di bawah |
+| L-07 | Role dipangkas jadi **2**: `admin` = **kepala** (diberi hak nyata) dan `pegawai`. Jawaban eksplisit user: "admin adalah kepala dan diberikan hak nyata". **Selesai 4 Okt 2026**: migration `2026_10_04_000003_pangkas_role_menjadi_dua_tingkat` memetakan `kepala`→`admin`, `perangkat`→`pegawai` lalu mempersempit enum; label role ada satu sumber (`User::peranTersedia()`/`labelRole()`) dipakai form user, daftar user, dan topbar |
+| L-08 | Surat boleh **diubah siapa pun yang login** (B5=c "semua boleh, tapi tercatat di log aktivitas") — `update()` memang cuma `middleware('auth')`, dan observer sudah mencatatnya, jadi tidak ada perubahan kode diperlukan. **Koreksi 4 Okt 2026**: baris ini dulu tertulis salah ("klasifikasi boleh diedit semua yang login") — yang ditanyakan di B5 itu surat, bukan klasifikasi. B3 (klasifikasi hanya admin) di register user jawabannya **"Lanjut"**, jadi mutasi klasifikasi tetap admin-only seperti sekarang |
 | L-09 | Surat `rahasia`: akses **sama untuk semua yang login** (B6=a) — tidak ada pembatasan khusus |
 | L-10 | User boleh dihapus walau punya surat (B8=a, "tidak ada sistem kepemilikan, semua milik kantor") — log aktivitas jadi penjaga |
 | L-11 | Tidak ada 2FA (A6=a), **remember-me dihapus** dari form login (H4=a), login tetap email+PIN (A1=a) |
@@ -71,7 +76,7 @@ Yang belum ada / masih mati: halaman error 403/404/500, UI log aktivitas, export
 | L-17 | Notifikasi: hanya untuk "pengajuan hapus menunggu approval admin" (H1=b). Export laporan per periode (I1=b) dan cetak **Buku Agenda Surat** (I2=b) **dibuat** |
 | L-18 | Tombol cetak: **stream + download dua-duanya** (F5=c). Notasi "Lampiran" di PDF **otomatis** dari jumlah file (P6=a) |
 | L-19 | `status_arsip` bisa diubah lewat **tombol "Nyahkan" di halaman show** (E8+E9), dan dikunci otomatis setelah N hari (B10=c) — nilai N diputuskan nanti |
-| L-20 | Koreksi nomor surat manual: **hanya admin** (D7=b). Gap nomor saat surat hilang **dibiarkan** (D8=a). `nomor_surat` surat masuk **boleh duplikat** (D9=a) |
+| L-20 | Koreksi nomor surat manual: **hanya admin** (D7=b) — ditegakkan di `UpdateSuratKeluarRequest` (nomor harus sama dengan yang tersimpan kalau yang mengubah bukan admin) + input `readonly` di form edit. Gap nomor saat surat hilang **dibiarkan** (D8=a). `nomor_surat` surat masuk **boleh duplikat** (D9=a) |
 | L-21 | Acuan umur arsip **diseragamkan ke `tanggal_surat`** untuk kedua jenis surat (E7=c) |
 | L-22 | Log aktivitas: sync + **ada halaman UI untuk admin** (S4=a, P3=a). Retensi log: hapus >2 tahun **kecuali** log pengajuan/pemusnahan (E6=b) |
 | L-23 | UI riwayat pengajuan hapus: filter status, default **tampilkan semua** (P2=a) |
@@ -79,7 +84,7 @@ Yang belum ada / masih mati: halaman error 403/404/500, UI log aktivitas, export
 | L-25 | Aplikasi **dipakai sungguhan oleh kantor** (W1=d). Setelah user berhenti: user kantor mengoperasikan, user tetap bertanggung jawab (X4) → **manual pemakaian + pelatihan diperlukan** (X3=a) |
 | L-26 | `AGENTS.md` ditulis ulang ringkas (X1=a) dan README ditujukan untuk orang kantor, sisa boilerplate dihapus (X2=a) |
 
-**Catatan L-07/L-08:** jawaban user untuk #16 (pangkas role + admin = kepala berhak nyata) dan B5 (klasifikasi boleh diedit semua yang login) saling menempel dengan B1 lama. Interpretasi yang dipakai: `admin` punya hak lebih (hapus user, koreksi nomor, approval, pengaturan); `pegawai` tetap boleh mutasi klasifikasi dengan pencatatan log. Kalau kantor menolak "pegawai boleh ubah master data", ini yang pertama harus direvisi.
+**Catatan L-07:** `admin` = kepala desa/lurah dan punya hak nyata: hapus/pulihkan arsip, setujui pemusnahan & hapus lampiran, kelola user, mutasi klasifikasi (B3 "Lanjut"), pengaturan instansi, dan koreksi nomor surat keluar (L-20). `pegawai` = staf: input & ubah surat, unggah/unduh lampiran, nyahkan/aktifkan arsip, dan mengajukan penghapusan/pemusnahan. Kalau kantor nanti ingin membedakan "kepala" dari "perangkat" lagi, itu keputusan baru — jangan diam-diam mengembalikan enum 3 nilai.
 
 ## 5. Keputusan yang saya ambilkan ([DEFAULT-agent], user bilang "atur yang terbaik")
 
@@ -115,7 +120,7 @@ Dokumen uji manual: `Obsidian Vault/Pradana/Manual_Testing_PRADANA.md`. Register
 3. ✅ **CRUD draf konten / halaman generate PDF** (L-16) — membuka fitur PDF yang sekarang mati.
 4. ✅ **Fix `generateNomorSurat()`** (race: docblock menyebut `lockForUpdate()`+retry padahal keduanya tidak ada) + tes MariaDB-nya.
 5. ✅ **Soft delete + tombol "Nyahkan" + modul pemusnahan + Berita Acara** (L-05/L-06/L-19).
-6. **Role 2 tingkat + hak nyata admin + migration pemetaan enum** (L-07), konsolidasi otorisasi ke policy/`@can`.
+6. ✅ **Role 2 tingkat + hak nyata admin + migration pemetaan enum** (L-07). Otorisasi sengaja tetap `isAdmin()` + middleware `admin` di route (BUKAN Policy per-model — lihat alasan di Bagian 3 langkah 6); `@can` tidak dipakai karena hanya ada satu cek.
 7. **PIN 8 digit, reset PIN admin, ganti PIN sendiri, hapus remember-me** (L-07, L-11, L-12).
 8. **UI log aktivitas + retensi log**, perluasan pencarian (isi + FULLTEXT, pagination) (L-15, L-22).
 9. **Ekspor laporan + Buku Agenda + notifikasi approval** (L-17).

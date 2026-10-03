@@ -46,11 +46,16 @@ class LampiranController extends Controller
     /**
      * Stream file ke browser. Default inline (preview), `?mode=unduh`
      * memaksa attachment — keputusan F5 (dua-duanya dipakai).
+     *
+     * Tidak ada cek kepemilikan di sini: route ini sudah `middleware('auth')`,
+     * dan L-09/B5/L-10 memutuskan arsip kantor boleh dibaca/DIUNDUH semua yang
+     * login tanpa regard siapa pengunggahnya. `LampiranPolicy` lama (yang
+     * melarang staf membuka file milik staf lain) dihapus 4 Okt 2026 karena
+     * menabrak keputusan itu — bug-nya tertutup saat dites sebagai pegawai,
+     * sebelumnya tidak kelihatan karena semua uji jalan sebagai admin.
      */
     public function download(Request $request, Lampiran $lampiran): \Symfony\Component\HttpFoundation\Response
     {
-        $this->authorize('view', $lampiran);
-
         $disposition = $request->query('mode') === 'unduh' ? 'attachment' : 'inline';
 
         if ($lampiran->adaDiLokal()) {

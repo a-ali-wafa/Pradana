@@ -49,7 +49,7 @@ class PemusnahanArsipTest extends TestCase
             'nama_lengkap' => 'Staf Arsip',
             'email' => 'staf@example.test',
             'pin' => bcrypt('12345678'),
-            'role' => 'perangkat',
+            'role' => 'pegawai',
         ]);
 
         $this->layak = $this->buatSurat('001/01/I/2019', 'inaktif', '2019-01-10');
