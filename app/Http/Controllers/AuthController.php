@@ -10,26 +10,21 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
 /**
- * Login & logout — sesuai A1 [DEFAULT]: email + PIN, BUKAN password konvensional.
- * Dicek 28 Agu 2026 terhadap User.php asli: getAuthPassword() sudah benar,
- * kredensial 'pin' di LoginRequest cocok tanpa perubahan.
+ * Login & logout — email + PIN 8 digit, BUKAN password konvensional (L-11).
+ * `User::getAuthPassword()` di-override ke kolom `pin`, jadi `Auth::attempt()`
+ * tetap pakai kredensial biasa (dicek ke `User.php` asli 28 Agu 2026).
  *
- * "Registrasi" user baru SENGAJA dipisah ke UserController, bukan di sini —
- * lihat A3 [WAJIB TANYA USER] (asumsi sementara "approval admin" dipakai di
- * UserController, bukan self-register publik lewat controller ini — MASIH
- * belum dikonfirmasi user).
+ * Tanpa "ingat saya": computer kantor dipakai bersama, dan kolom
+ * `remember_token` sudah dibuang dari skema (L-11 + squash S11).
  *
- * View `auth.login` sudah dibuat (Blade+Bootstrap standalone, G1 [LOCKED #15]),
- * lihat resources/views/auth/login.blade.php.
+ * Pembuatan akun SENGAJA tidak di sini: admin yang membuatkan akun lewat
+ * `UserController@store` (L-10/A3 sudah final 28 Agu 2026, bukan self-register).
  *
- * `create()` mengirim `$instansi` (baris tunggal `pengaturan_instansi`, sesuai
- * Bagian 5 AGENTS.md) supaya nama/logo instansi tampil di panel login —
- * BUKAN dari AuthController::create() versi sebelumnya (dulu view() polos
- * tanpa data). ⚠️ `PengaturanInstansi::first()` ASUMSI cara akses baris
- * tunggal (konsisten dengan desain edit-only tanpa create/store, Bagian 5/8
- * AGENTS.md) — belum di-cross-check langsung ke `PengaturanInstansiController`
- * asli karena file itu tidak ada di sesi yang sama dengan perubahan ini.
- * TODO: cocokkan pola akses ini kalau `PengaturanInstansiController.php` di-upload.
+ * View `auth.login` berdiri sendiri (tidak pakai `layouts.app`) supaya halaman
+ * login bisa dibuka tanpa sesi. `$instansi` (baris tunggal `pengaturan_instansi`)
+ * dikirim ke view untuk nama + logo instansi — pola akses baris tunggal yang sama
+ * dengan `PengaturanInstansiController` (`first()`/`firstOrFail()`, sudah
+ * di-cross-check 31 Agu 2026).
  */
 class AuthController extends Controller
 {
@@ -49,7 +44,7 @@ class AuthController extends Controller
 
         $request->session()->regenerate();
 
-        // Route 'dashboard' sudah ada per 28 Agu 2026 (DashboardController), lihat AGENTS.md 12.15
+        // Route 'dashboard' sudah ada per 28 Agu 2026 (DashboardController), lihat AGENTS_HISTORY.md 12.15
         return redirect()->intended(route('dashboard'));
     }
 

@@ -3,6 +3,9 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class SuratKeluar extends Model
@@ -24,32 +27,32 @@ class SuratKeluar extends Model
         'tanggal_surat' => 'date',
     ];
 
-    public function petugas()
+    public function petugas(): BelongsTo
     {
         return $this->belongsTo(User::class, 'user_id')->withTrashed();
     }
 
-    public function primer()
+    public function primer(): BelongsTo
     {
         return $this->belongsTo(KlasifikasiPrimer::class, 'klasifikasi_primer_id');
     }
 
-    public function sekunder()
+    public function sekunder(): BelongsTo
     {
         return $this->belongsTo(KlasifikasiSekunder::class, 'klasifikasi_sekunder_id');
     }
 
-    public function tersier()
+    public function tersier(): BelongsTo
     {
         return $this->belongsTo(KlasifikasiTersier::class, 'klasifikasi_tersier_id');
     }
 
-    public function drafKonten()
+    public function drafKonten(): HasOne
     {
         return $this->hasOne(DrafKontenSuratKeluar::class);
     }
 
-    public function lampiran()
+    public function lampiran(): MorphMany
     {
         return $this->morphMany(Lampiran::class, 'lampiranable');
     }

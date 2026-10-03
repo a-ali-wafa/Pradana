@@ -19,7 +19,7 @@ use Illuminate\Support\Facades\DB;
  * tingkat, dan melihat statistik bukan aksi destruktif).
  *
  * Nama relasi yang dipakai (`primer`, `petugas`, `user`) SUDAH dikonfirmasi
- * benar terhadap model asli — lihat AGENTS.md 12.11/12.12/12.13/12.15.
+ * benar terhadap model asli — lihat AGENTS_HISTORY.md 12.11/12.12/12.13/12.15.
  * `Aktivitas::user()` sempat jadi satu-satunya relasi belum terverifikasi
  * (ditebak `belongsTo(User::class)`, BUKAN `petugas()` seperti di
  * surat_masuk/surat_keluar) — dicek 28 Agu 2026 terhadap `Aktivitas.php`

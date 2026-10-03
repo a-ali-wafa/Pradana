@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class DrafKontenSuratKeluar extends Model
 {
@@ -16,7 +17,7 @@ class DrafKontenSuratKeluar extends Model
         'atas_nama', 'jabatan_penandatangan', 'nip_nik', 'tembusan',
     ];
 
-    public function suratKeluar()
+    public function suratKeluar(): BelongsTo
     {
         return $this->belongsTo(SuratKeluar::class);
     }

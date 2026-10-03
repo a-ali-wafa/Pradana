@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class KlasifikasiPrimer extends Model
 {
@@ -12,17 +13,17 @@ class KlasifikasiPrimer extends Model
 
     protected $fillable = ['kode', 'nama'];
 
-    public function sekunder()
+    public function sekunder(): HasMany
     {
         return $this->hasMany(KlasifikasiSekunder::class);
     }
 
-    public function suratMasuk()
+    public function suratMasuk(): HasMany
     {
         return $this->hasMany(SuratMasuk::class);
     }
 
-    public function suratKeluar()
+    public function suratKeluar(): HasMany
     {
         return $this->hasMany(SuratKeluar::class);
     }

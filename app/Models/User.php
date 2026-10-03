@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -36,17 +37,17 @@ class User extends Authenticatable
         return $this->pin;
     }
 
-    public function suratMasuk()
+    public function suratMasuk(): HasMany
     {
         return $this->hasMany(SuratMasuk::class);
     }
 
-    public function suratKeluar()
+    public function suratKeluar(): HasMany
     {
         return $this->hasMany(SuratKeluar::class);
     }
 
-    public function aktivitas()
+    public function aktivitas(): HasMany
     {
         return $this->hasMany(Aktivitas::class);
     }

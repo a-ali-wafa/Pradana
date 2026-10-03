@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
  * Alur pengajuan-persetujuan hapus lampiran (keputusan user, 31 Agu 2026,
@@ -23,17 +24,17 @@ class PengajuanHapusLampiran extends Model
         'diproses_pada' => 'datetime',
     ];
 
-    public function lampiran()
+    public function lampiran(): BelongsTo
     {
         return $this->belongsTo(Lampiran::class);
     }
 
-    public function pengaju()
+    public function pengaju(): BelongsTo
     {
         return $this->belongsTo(User::class, 'diajukan_oleh');
     }
 
-    public function pemroses()
+    public function pemroses(): BelongsTo
     {
         return $this->belongsTo(User::class, 'diproses_oleh');
     }

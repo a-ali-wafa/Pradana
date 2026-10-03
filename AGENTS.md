@@ -1,7 +1,7 @@
 # AGENTS.md — PRADANA (konteks teknis untuk AI agent)
 
-> Untuk agent, bukan stakeholder. Riwayat detail (Bagian 12/13 lama) ada di `AGENTS_HISTORY.md` — buka on-demand kalau ada rujukan spesifik.
-> Diperbarui: **3 Okt 2026** — ditulis ulang dari hasil review kode + register keputusan user (`Obsidian Vault/Pradana/Daftar Keputusan PRADANA.md`, diisi 3 Okt 2026).
+> Untuk agent, bukan stakeholder. Riwayat detail (Bagian 12/13 lama) ada di `AGENTS_HISTORY.md` — buka on-demand kalau ada rujukan spesifik. **Rujukan lama berbentuk "AGENTS.md Bagian 5/8/9/10/11" atau "lihat 12.x" menunjuk ke nomor bagian versi sebelum 3 Okt 2026** (skema database lengkap + daftar keputusan [LOCKED]/[WAJIB TANYA] yang lama); isinya sekarang di `AGENTS_HISTORY.md`, kecuali keputusan yang tetap berlaku — lihat Bagian 4 file ini.
+> Diperbarui: **4 Okt 2026** — ditulis ulang dari hasil review kode + register keputusan user (`Obsidian Vault/Pradana/Daftar Keputusan PRADANA.md`, diisi 3 Okt 2026).
 
 ## 0. Aturan main
 
@@ -53,6 +53,8 @@ Langkah 1–11 Bagian 7 **selesai & terverifikasi** (4 Okt 2026):
 
 11. **Squash migration** (S11): 20 file → **13 file** `2026_10_04_100001..100013`, dijalankan `migrate:fresh --seed` di MariaDB dev dan dibangun ulang di kedua koneksi tes. Kolom mati dibuang; `jobs`/`failed_jobs`/`personal_access_tokens` hilang. Diverifikasi: 95 tes lolos, lalu lewat browser nyata — login akun hasil pemulihan, 11 halaman 200, buat surat masuk (`UJI-001` dua kali, terbukti boleh duplikat sesuai D9) dan surat keluar (`001/01/X/2026`, `002/01/X/2026` + baris `surat_counters`), 4 baris log aktivitas tertulis. Artefak tes sudah dibersihkan (0 surat, 0 log, 3 user, 2 klasifikasi, nama instansi "PEMERINTAH DESA UREK-UREK" dipulihkan dari snapshot).
 
+Alat quality (L-24 / Q2=a) dipasang 4 Okt 2026: **Pint** (preset `laravel`, 142 file lolos `--test` setelah 34 file dirapikan) dan **Larastan ^3.12 level 5** lewat `phpstan.neon` (path: `app`, `database`, `routes`). Perubahan nyata dari analisisnya: **27 method relasi di 10 model kini punya return type** (`BelongsTo`/`HasMany`/`MorphMany`/…) — sebelumnya tidak ada, akibatnya Larastan (dan IDE) buta terhadap `$surat->primer`, `$surat->lampiran`, dst; dan `PencarianController::kerangka()` memakai type `Illuminate\Database\Eloquent\Builder` yang benar (sebelumnya `Contracts\...\Builder`, yang tidak punya `orWhereHas`), sementara `DevSeeder` baca `DEV_PIN` lewat `getenv()` karena `env()` mengembalikan null begitu `config:cache` aktif. Sisanya 29 temuan masuk `phpstan-baseline.neon` — semuanya keterbatasan analisis statis atas relasi polymorphic + `catch (QueryException)` yang memang dilempar PDO runtime, sudah dibaca satu-satu, BUKAN dibungkam massal. Regenerasi baseline kalau file itu berubah: `vendor/bin/phpstan analyse --generate-baseline`.
+
 Test suite: **95 passed** (`php artisan test`, 15 class) — +11 `PencarianDanLogTest`, +10 `LaporanAgendaTest`, +5 `HalamanErrorTest`. 3 tes penomoran (`NomorSuratKeluarTest`) jalan di **MariaDB sungguhan** pakai dua koneksi `mysql_test_a`/`mysql_test_b` dan mengunci baris betulan; sisanya SQLite in-memory.
 Diverifikasi lewat browser nyata di `http://127.0.0.1:8000`: alur pemusnahan penuh (ajukan → setujui → `surat_masuk` hilang dari DB, Berita Acara `BA-001/X/2026` ter-render 200 `application/pdf`, log urut), DOM halaman user/dashboard/form edit surat keluar (opsi role tinggal dua, nomor tetap bisa diedit admin), `/profil/pin` (3 field PIN), `/users` (3 form reset PIN inline), halaman login (checkbox "Ingat saya" hilang, `pattern=\d{8}`), `arsip:reset-pin`/`arsip:akun-pertama` dijalankan sungguhan di terminal, lalu `/laporan` (caption jumlah + peringatan periode kosong berbahasa Indonesia "01 Mei 2026"), unduhan CSV nyata (BOM `EF BB BF`, header 12 kolom `;`, baris surat masuk & keluar), dan `/laporan/agenda` 200 `application/pdf` `%PDF-1.7`. Halaman error juga diambil betulan lewat browser: `/AlamatTidakAda123` → 404 dengan kode "404" di layar, tanpa sidebar, dan tanpa halaman debugger; tes mengesahkan 403 dari middleware admin + 503 dari `artisan down` benar-benar lewat view baru (file `storage/framework/down` dipastikan bersih lagi sesudah tes).
 
@@ -66,7 +68,7 @@ Bug nyata yang ditemukan tes (bukan dokumen) dan sudah diperbaiki:
 - `2026_09_04_174904_drop_unused_columns...` bermaksud membuang kolom mati `draf_konten_surat_keluar.lampiran` tapi menargetkan `surat_masuk`/`surat_keluar` — kolomnya tetap ada 1 bulan. Tidak ada yang membacanya sejak P6, jadi hilang di squash tidak mengubah perilaku.
 - `database/factories/UserFactory.php` masih murni boilerplate Laravel (`name`, `password`, `email_verified_at`, `remember_token`) padahal modelnya pakai `nama_lengkap`/`pin` → `User::factory()->create()` pasti gagal. Ditulis ulang supaya benar-benar bisa dipakai.
 
-Yang belum ada / masih mati: Larastan + Pint (L-24, sedang dipasang), dan uji pulih backup + deploy sungguhan ke hosting kantor (butuh server dulu; K1/S14 belum diputuskan).
+Yang belum ada / masih mati: deploy sungguhan ke hosting kantor + uji pulih backup (butuh server dulu; K1/S14 belum diputuskan user).
 
 Dua item **tidak bisa diselesaikan agent** dan butuh bahan/angka dari user — jangan ditebak:
 - **F3 multi-template PDF** (jawaban user: "nanti multi template, menyesuaikan dengan punya desa"): butuh kop/template resmi desa aslinya. Sekarang satu template umum di `resources/views/surat-keluar/cetak.blade.php`.
@@ -99,7 +101,7 @@ Dua item **tidak bisa diselesaikan agent** dan butuh bahan/angka dari user — j
 | L-21 | Acuan umur arsip **diseragamkan ke `tanggal_surat`** untuk kedua jenis surat (E7=c) |
 | L-22 | Log aktivitas: sync + **ada halaman UI untuk admin** (S4=a, P3=a). Retensi log: hapus >2 tahun **kecuali** log pengajuan/pemusnahan (E6=b) |
 | L-23 | UI riwayat pengajuan hapus: filter status, default **tampilkan semua** (P2=a) |
-| L-24 | Upload **multi-file sekaligus** (P5=a). Testing: tambah tes concurrency nomor surat, penolakan non-admin di route admin, alur >5 tahun — **dijalankan di MariaDB** (Q1=b). Pasang **Larastan + Pint** (Q2=a) |
+| L-24 | Upload **multi-file sekaligus** (P5=a). Testing: tambah tes concurrency nomor surat, penolakan non-admin di route admin, alur >5 tahun — **dijalankan di MariaDB** (Q1=b). Pasang **Larastan + Pint** (Q2=a) — **selesai 4 Okt 2026**, lihat paragraf "Alat quality" di Bagian 3 |
 | L-25 | Aplikasi **dipakai sungguhan oleh kantor** (W1=d). Setelah user berhenti: user kantor mengoperasikan, user tetap bertanggung jawab (X4) → **manual pemakaian + pelatihan diperlukan** (X3=a) |
 | L-26 | `AGENTS.md` ditulis ulang ringkas (X1=a) dan README ditujukan untuk orang kantor, sisa boilerplate dihapus (X2=a) |
 
@@ -129,6 +131,8 @@ php artisan migrate --seed                         # seeder produksi: cuma baris
 php artisan arsip:akun-pertama email@kantor.desa --nama="Kepala Desa"   # akun admin pertama
 php artisan serve            # http://127.0.0.1:8000
 php artisan test             # 95 tes (SQLite in-memory + 3 tes MariaDB, butuh DB_TEST_DATABASE)
+vendor/bin/pint --test       # gaya kode (preset laravel) — hapus --test untuk memperbaiki
+vendor/bin/phpstan analyse   # Larastan level 5; temuan lama ada di phpstan-baseline.neon
 
 # data contoh untuk pengembangan (TOLAK jalan kalau APP_ENV bukan local):
 php artisan db:seed --class=DevSeeder

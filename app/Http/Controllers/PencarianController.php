@@ -116,7 +116,7 @@ class PencarianController extends Controller
             ->whereNull('deleted_at');
 
         if ($kataKunci !== '') {
-            $q->where(function (Builder $dalam) use ($kataKunci, $kolomLawan, $jenis) {
+            $q->where(function (\Illuminate\Database\Eloquent\Builder $dalam) use ($kataKunci, $kolomLawan, $jenis) {
                 $dalam->where('nomor_surat', 'like', "%{$kataKunci}%")
                     ->orWhere('perihal', 'like', "%{$kataKunci}%")
                     ->orWhere($kolomLawan, 'like', "%{$kataKunci}%");

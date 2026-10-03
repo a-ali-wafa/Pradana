@@ -11,7 +11,7 @@ use Illuminate\View\View;
 
 /**
  * Alur pengajuan-persetujuan hapus lampiran — keputusan user 31 Agu 2026
- * (lihat AGENTS.md 12.17), MENGGANTIKAN `LampiranController::destroy()`
+ * (lihat AGENTS_HISTORY.md 12.17), MENGGANTIKAN `LampiranController::destroy()`
  * admin-langsung yang dibuat sebelumnya (lihat 12.16 poin 6, sekarang
  * dihapus/superseded).
  *

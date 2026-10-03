@@ -27,7 +27,10 @@ class DevSeeder extends Seeder
             return;
         }
 
-        $pin = (string) env('DEV_PIN', '12345678');
+        // getenv(), bukan env(): helper env() mengembalikan null begitu config
+        // di-cache (`php artisan config:cache`), dan DevSeeder harus tetap bisa
+        // dipakai di mesin pengembangan setelah developer menjalankan itu.
+        $pin = (string) (getenv('DEV_PIN') ?: '12345678');
 
         foreach ([
             ['Abdullah Ali Wafa', 'dev-admin@example.test', 'admin'],

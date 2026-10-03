@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Services\GoogleDriveService;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Support\Facades\Storage;
@@ -25,7 +26,7 @@ class Lampiran extends Model
         return $this->morphTo();
     }
 
-    public function pengunggah()
+    public function pengunggah(): BelongsTo
     {
         return $this->belongsTo(User::class, 'diunggah_oleh');
     }
