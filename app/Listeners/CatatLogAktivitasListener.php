@@ -3,25 +3,18 @@
 namespace App\Listeners;
 
 use App\Events\LogAktivitasEvent;
-use Illuminate\Contracts\Queue\ShouldQueue;
-use Illuminate\Queue\InteractsWithQueue;
+use App\Models\Aktivitas;
 
-class CatatLogAktivitasListener implements ShouldQueue
+/**
+ * Pencatatan log aktivitas SENGAJA sinkron (keputusan L-22 / S4): arsip resmi
+ * harus menjamin riwayat tercatat, dan sistem ini berjalan di shared hosting
+ * tanpa queue worker — lewat queue berarti log bisa hilang tanpa suara.
+ */
+class CatatLogAktivitasListener
 {
-    /**
-     * Create the event listener.
-     */
-    public function __construct()
-    {
-        //
-    }
-
-    /**
-     * Handle the event.
-     */
     public function handle(LogAktivitasEvent $event): void
     {
-        \App\Models\Aktivitas::create([
+        Aktivitas::create([
             'user_id' => $event->userId,
             'aksi' => $event->aksi,
             'subjek_type' => $event->subjekType,

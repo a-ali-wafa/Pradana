@@ -5,7 +5,7 @@ namespace App\Observers;
 use App\Models\SuratKeluar;
 use App\Traits\LogsAktivitas;
 
-/** BARU — 1 Sep 2026. Belum diregistrasikan, lihat CATATAN.md. */
+/** Baru 1 Sep 2026; diregistrasikan di AppServiceProvider::boot(). */
 class SuratKeluarObserver
 {
     use LogsAktivitas;
@@ -20,10 +20,18 @@ class SuratKeluarObserver
         $this->catatAktivitas("Mengubah surat keluar: {$suratKeluar->perihal}", $suratKeluar);
     }
 
-    public function deleting(\App\Models\SuratKeluar $suratKeluar): void
+    public function deleting(SuratKeluar $suratKeluar): void
     {
+        // Sama seperti SuratMasukObserver: berkas fisik hanya ikut hilang kalau
+        // penghapusan benar-benar permanen, bukan saat surat di-nyahkan (L-05).
+        $hapusPermanen = $suratKeluar->forceDeleting ?? true;
+
+        if (! $hapusPermanen) {
+            return;
+        }
+
         foreach ($suratKeluar->lampiran as $lampiran) {
-            \App\Jobs\HapusLampiranDariDriveJob::dispatch($lampiran->google_drive_file_id);
+            $lampiran->hapusBerkasFisik();
             $lampiran->delete();
         }
     }

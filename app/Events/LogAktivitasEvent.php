@@ -2,17 +2,15 @@
 
 namespace App\Events;
 
-use Illuminate\Broadcasting\Channel;
-use Illuminate\Broadcasting\InteractsWithSockets;
-use Illuminate\Broadcasting\PresenceChannel;
-use Illuminate\Broadcasting\PrivateChannel;
-use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
 use Illuminate\Foundation\Events\Dispatchable;
-use Illuminate\Queue\SerializesModels;
 
+/**
+ * Event internal (bukan broadcast) untuk mencatat satu aksi ke tabel `aktivitas`.
+ * Dipancarkan oleh trait LogsAktivitas, ditangani CatatLogAktivitasListener.
+ */
 class LogAktivitasEvent
 {
-    use Dispatchable, InteractsWithSockets, SerializesModels;
+    use Dispatchable;
 
     public function __construct(
         public int $userId,
@@ -20,16 +18,4 @@ class LogAktivitasEvent
         public string $subjekType,
         public int $subjekId
     ) {}
-
-    /**
-     * Get the channels the event should broadcast on.
-     *
-     * @return array<int, \Illuminate\Broadcasting\Channel>
-     */
-    public function broadcastOn(): array
-    {
-        return [
-            new PrivateChannel('channel-name'),
-        ];
-    }
 }

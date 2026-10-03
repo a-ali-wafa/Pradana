@@ -161,13 +161,13 @@
                 <span class="badge bg-primary rounded-pill">{{ $surat_masuk->lampiran->count() }}</span>
             </div>
             <div class="card-body">
+                <div class="d-flex flex-column gap-2" id="daftar-lampiran">
                 @if($surat_masuk->lampiran->isEmpty())
-                    <div class="text-center text-secondary py-3">
+                    <div class="text-center text-secondary py-3" data-kosong>
                         <i class="fas fa-paperclip fa-2x mb-2 opacity-25"></i>
                         <p class="small mb-0">Belum ada lampiran untuk surat ini.</p>
                     </div>
                 @else
-                    <div class="d-flex flex-column gap-2">
                         @foreach($surat_masuk->lampiran as $lamp)
                         <div class="lampiran-card">
                             <i class="fas fa-file text-primary fa-lg"></i>
@@ -199,23 +199,14 @@
                             @endif
                         </div>
                         @endforeach
-                    </div>
                 @endif
+                </div>
 
                 {{-- Upload lampiran baru --}}
-                <hr class="text-secondary opacity-25 my-3">
-                <form method="POST" action="{{ route('surat-masuk.lampiran.store', $surat_masuk) }}"
-                      enctype="multipart/form-data" class="d-flex gap-2 align-items-end">
-                    @csrf
-                    <div class="flex-grow-1">
-                        <label class="form-label small fw-bold mb-1">Unggah Lampiran Baru</label>
-                        <input type="file" name="file" class="form-control @error('file') is-invalid @enderror" required>
-                        @error('file') <div class="invalid-feedback">{{ $message }}</div> @enderror
-                    </div>
-                    <button type="submit" class="btn btn-outline-primary rounded-pill px-3" style="white-space:nowrap;">
-                        <i class="fas fa-upload me-1"></i> Unggah
-                    </button>
-                </form>
+                @include('partials.lampiran-upload', [
+                    'action' => route('surat-masuk.lampiran.store', $surat_masuk),
+                    'suratId' => $surat_masuk->id,
+                ])
             </div>
         </div>
 

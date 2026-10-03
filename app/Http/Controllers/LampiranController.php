@@ -3,38 +3,29 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreLampiranRequest;
-use App\Models\KlasifikasiPrimer;
 use App\Models\Lampiran;
-use App\Models\PengaturanInstansi;
 use App\Models\SuratKeluar;
 use App\Models\SuratMasuk;
 use App\Services\GoogleDriveService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Response;
-use Illuminate\Support\Facades\Auth;
-use Throwable;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 /**
- * LampiranController — upload & unduh (stream) lampiran untuk surat_masuk &
- * surat_keluar. File fisik disimpan di Google Drive lewat Service Account;
- * DB HANYA menyimpan `google_drive_file_id` (keputusan locked #8/#9,
- * Bagian 2 "Aturan file di DB") — tidak pernah link publik.
+ * Upload & unduh lampiran surat masuk/keluar.
  *
- * ⚠️ DIBUAT 31 Agu 2026 — file ini BENAR-BENAR BARU, bukan revisi.
- * AGENTS.md sebelumnya (keliru) sempat mengklaim controller ini sudah ada
- * bareng GoogleDriveService — dikonfirmasi langsung oleh user file ini
- * belum pernah dibuat sama sekali, yang ada cuma migration `lampiran`.
- * Lihat AGENTS.md Bagian 3 & 12.16 untuk detail koreksi.
+ * Keputusan L-01: file fisik disimpan di DISK LOKAL (disk `arsip`, root
+ * storage/app/private/arsip — di luar public/), bukan lagi Google Drive.
+ * Drive turun jadi target sinkronisasi backup terjadwal
+ * (php artisan arsip:sinkron-ke-drive), jadi upload tidak lagi bergantung
+ * pada kuota/API pihak ketiga maupun pada queue worker (L-02: semua sync).
  *
- * ⚠️ **Update 31 Agu 2026**: method `destroy()` (hapus langsung admin-only)
- * yang sebelumnya ada di sini SUDAH DIHAPUS — digantikan alur pengajuan
- * & persetujuan di `PengajuanHapusLampiranController` sesuai keputusan user
- * (lihat AGENTS.md 12.17). Controller ini sekarang HANYA urus upload+unduh.
- *
- * Route (didaftarkan di web.php, grup middleware 'auth'):
- * - POST   surat-masuk/{surat_masuk}/lampiran   -> storeForSuratMasuk()
- * - POST   surat-keluar/{surat_keluar}/lampiran -> storeForSuratKeluar()
- * - GET    lampiran/{lampiran}/unduh            -> download()
+ * Kolom `google_drive_file_id` tetap dipertahankan untuk (a) data lama yang
+ * cuma punya file Drive supaya masih bisa diunduh, dan (b) catatan hasil
+ * backup. Aturan lama tetap berlaku: TIDAK PERNAH simpan/serve link publik —
+ * akses selalu lewat controller ber-middleware auth.
  */
 class LampiranController extends Controller
 {
@@ -42,116 +33,128 @@ class LampiranController extends Controller
     {
     }
 
-    public function storeForSuratMasuk(StoreLampiranRequest $request, SuratMasuk $surat_masuk): RedirectResponse
+    public function storeForSuratMasuk(StoreLampiranRequest $request, SuratMasuk $surat_masuk): JsonResponse|RedirectResponse
     {
-        $this->simpanLampiran($request, $surat_masuk, 'surat_masuk');
-
-        return back()->with('success', 'Lampiran berhasil diunggah.');
+        return $this->simpanLampiran($request, $surat_masuk, 'surat-masuk');
     }
 
-    public function storeForSuratKeluar(StoreLampiranRequest $request, SuratKeluar $surat_keluar): RedirectResponse
+    public function storeForSuratKeluar(StoreLampiranRequest $request, SuratKeluar $surat_keluar): JsonResponse|RedirectResponse
     {
-        $this->simpanLampiran($request, $surat_keluar, 'surat_keluar');
-
-        return back()->with('success', 'Lampiran berhasil diunggah.');
+        return $this->simpanLampiran($request, $surat_keluar, 'surat-keluar');
     }
 
     /**
-     * Stream isi file dari Drive API lewat backend — TIDAK PERNAH lewat
-     * link publik Drive (keputusan locked #9). Middleware 'auth' sudah
-     * dipasang di route group, jadi cukup diandalkan di sini.
+     * Stream file ke browser. Default inline (preview), `?mode=unduh`
+     * memaksa attachment — keputusan F5 (dua-duanya dipakai).
      */
-    public function download(Lampiran $lampiran): Response
+    public function download(Request $request, Lampiran $lampiran): \Symfony\Component\HttpFoundation\Response
     {
         $this->authorize('view', $lampiran);
+
+        $disposition = $request->query('mode') === 'unduh' ? 'attachment' : 'inline';
+
+        if ($lampiran->adaDiLokal()) {
+            // $disposition di-handle framework (makeDisposition) jadi nama file
+            // dengan karakter aneh di-encode benar, bukan disuntik ke header.
+            return Storage::disk($lampiran->disk ?? 'arsip')->response(
+                $lampiran->path,
+                $lampiran->nama_file,
+                ['Content-Type' => $lampiran->mime_type ?: 'application/octet-stream'],
+                $disposition,
+            );
+        }
+
+        // Jalur hanya untuk data lama (sebelum L-01) yang file-nya masih di Drive.
+        abort_unless(filled($lampiran->google_drive_file_id), 404, 'Berkas arsip ini tidak ditemukan.');
 
         $file = $this->drive->getFileContent($lampiran->google_drive_file_id);
 
         return response($file['content'])
             ->header('Content-Type', $file['mime_type'] ?: ($lampiran->mime_type ?: 'application/octet-stream'))
-            ->header('Content-Disposition', 'inline; filename="'.($file['name'] ?: $lampiran->nama_file).'"');
+            ->header('Content-Disposition', $disposition.'; filename="'.$this->namaUntukHeader($file['name'] ?: $lampiran->nama_file).'"');
     }
 
     /**
-     * Upload semua file dalam request ke folder Drive yang sesuai, lalu
-     * simpan masing-masing sebagai baris `lampiran` polymorphic milik $surat
-     * (pakai relasi lampiran() yang sudah dikonfirmasi ada di kedua model,
-     * lihat AGENTS.md 12.9/12.10).
+     * Simpan semua file dari request ke disk lokal, satu baris `lampiran`
+     * per file. File yang isinya identik dengan yang sudah ada di surat yang
+     * sama dilewati dan dilaporkan balik sebagai duplikat (keputusan I1).
      */
-    private function simpanLampiran(StoreLampiranRequest $request, SuratMasuk|SuratKeluar $surat, string $jenisSurat): void
+    private function simpanLampiran(StoreLampiranRequest $request, SuratMasuk|SuratKeluar $surat, string $folderJenis): JsonResponse|RedirectResponse
     {
-        // Relasi primer() sudah terverifikasi untuk SuratMasuk (12.12) & SuratKeluar (12.13).
         $primer = $surat->primer;
-        $folderId = $this->resolveFolderId($jenisSurat, $primer);
+        $folderJenisKlasifikasi = $folderJenis.'/'.($primer
+            ? Str::slug("{$primer->kode} - {$primer->nama}")
+            : 'tanpa-klasifikasi').'/'.$surat->id;
+
+        $tersimpan = [];
+        $duplikat = [];
 
         foreach ($request->file('files') as $file) {
-            $originalName = $file->getClientOriginalName();
-            $extension = $file->getClientOriginalExtension();
-            $safeName = \Illuminate\Support\Str::slug(pathinfo($originalName, PATHINFO_FILENAME)) . '.' . $extension;
+            $hash = hash_file('sha256', $file->getRealPath());
 
-            // Save temporarily to local storage
-            $localPath = $file->store('temp_lampiran');
+            $sudahAda = Lampiran::query()
+                ->where('lampiranable_type', $surat::class)
+                ->where('lampiranable_id', $surat->id)
+                ->where('hash_file', $hash)
+                ->exists();
 
-            \App\Jobs\UploadLampiranKeDriveJob::dispatch(
-                $localPath,
-                $safeName,
-                $file->getMimeType(),
-                $folderId,
-                $surat,
-                Auth::id()
-            );
+            if ($sudahAda) {
+                $duplikat[] = $file->getClientOriginalName();
+
+                continue;
+            }
+
+            $path = $file->store($folderJenisKlasifikasi, ['disk' => 'arsip']);
+
+            if (! $path) {
+                continue;
+            }
+
+            $tersimpan[] = $lampiran = Lampiran::create([
+                'lampiranable_id' => $surat->id,
+                'lampiranable_type' => $surat::class,
+                'disk' => 'arsip',
+                'path' => $path,
+                'hash_file' => $hash,
+                'nama_file' => $file->getClientOriginalName(),
+                'mime_type' => $file->getMimeType(),
+                'ukuran' => $file->getSize(),
+                'diunggah_oleh' => $request->user()->id,
+            ]);
+
+            unset($lampiran);
         }
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'sukses' => count($tersimpan),
+                'lampiran' => collect($tersimpan)->map(fn (Lampiran $l) => [
+                    'id' => $l->id,
+                    'nama_file' => $l->nama_file,
+                    'ukuran' => $l->ukuran,
+                    'unduh' => route('lampiran.download', $l),
+                ]),
+                'duplikat' => $duplikat,
+            ]);
+        }
+
+        $pesan = count($tersimpan) > 0
+            ? count($tersimpan).' lampiran berhasil diunggah.'
+            : 'Tidak ada file baru yang diunggah.';
+
+        if (count($duplikat) > 0) {
+            $pesan .= ' File berikut sudah ada di surat ini, jadi dilewati: '.implode(', ', $duplikat).'.';
+        }
+
+        return back()->with('success', $pesan);
     }
 
     /**
-     * Resolusi folder Drive tujuan, sesuai AGENTS.md Bagian 7 & C3/C6 [LOCKED]
-     * ("Arsip_PRADANA / Surat Masuk|Keluar / [Klasifikasi Primer] / file").
-     *
-     * ✅ **Dikonfirmasi user 31 Agu 2026** (lihat AGENTS.md 12.17, kode C6 baru
-     * di Bagian 9 [DEFAULT]) — sebelumnya ini masih asumsi (12.16), sekarang final:
-     * 1. `config('gdrive.root_folder_id')` DIPERLAKUKAN SAMA DENGAN folder
-     *    "Arsip_PRADANA" itu sendiri — TIDAK ada folder "Arsip_PRADANA"
-     *    terpisah dibuat di dalamnya.
-     * 2. Level klasifikasi untuk subfolder CUKUP PRIMER saja
-     *    ("{kode} - {nama}"), TIDAK turun ke sekunder/tersier.
-     *
-     * Masih belum jelas / belum disentuh: kolom `pengaturan_instansi.gdrive_root_folder_id`
-     * (di skema Bagian 5) tidak dipakai di sini, cuma dua kolom cache
-     * `gdrive_folder_surat_masuk_id`/`gdrive_folder_surat_keluar_id` sesuai
-     * instruksi Bagian 7 langkah 4. Model `PengaturanInstansi.php` belum
-     * pernah di-cross-check (lihat Bagian 4) — cache folder ID ditulis lewat
-     * assignment atribut langsung + save(), BUKAN update([...]), supaya
-     * tidak bergantung pada $fillable yang belum pasti.
+     * Nama file masuk ke HTTP header, jadi karakter berisiko (quote, newline)
+     * harus dibuang — bukan cuma soal tampilan.
      */
-    private function resolveFolderId(string $jenisSurat, ?KlasifikasiPrimer $primer): string
+    private function namaUntukHeader(string $nama): string
     {
-        $rootFolderId = config('gdrive.root_folder_id');
-
-        abort_if(blank($rootFolderId), 500, 'GOOGLE_DRIVE_ROOT_FOLDER_ID belum diisi di .env.');
-
-        $pengaturan = PengaturanInstansi::query()->first();
-        $kolomCache = $jenisSurat === 'surat_masuk' ? 'gdrive_folder_surat_masuk_id' : 'gdrive_folder_surat_keluar_id';
-        $namaFolder = $jenisSurat === 'surat_masuk' ? 'Surat Masuk' : 'Surat Keluar';
-
-        $folderJenisId = $pengaturan?->{$kolomCache};
-
-        if (! $folderJenisId) {
-            $folderJenisId = $this->drive->getOrCreateFolder($namaFolder, $rootFolderId);
-
-            if ($pengaturan) {
-                $pengaturan->{$kolomCache} = $folderJenisId;
-                $pengaturan->save();
-            }
-        }
-
-        if (! $primer) {
-            return $folderJenisId;
-        }
-
-        // Tidak di-cache — tidak ada kolom di skema untuk folder per-klasifikasi.
-        return $this->drive->getOrCreateFolder(
-            "{$primer->kode} - {$primer->nama}",
-            $folderJenisId
-        );
+        return str_replace(['"', "\r", "\n", '\\'], '', $nama);
     }
 }

@@ -6,8 +6,7 @@ use App\Models\SuratMasuk;
 use App\Traits\LogsAktivitas;
 
 /**
- * BARU — 1 Sep 2026. Belum otomatis aktif hanya dengan membuat file ini —
- * WAJIB diregistrasikan manual (lihat CATATAN.md di paket ini / routes-snippet).
+ * Registrasi observer ada di AppServiceProvider::boot() — aktif sejak 1 Sep 2026.
  */
 class SuratMasukObserver
 {
@@ -25,8 +24,18 @@ class SuratMasukObserver
 
     public function deleting(SuratMasuk $suratMasuk): void
     {
+        // `forceDeleting` hanya ada pada model bertingkah SoftDeletes. Untuk
+        // model tanpa soft delete hasilnya null -> dianggap hapus permanen.
+        // Saat surat cuma di-nyahkan (soft delete, L-05), berkas & baris
+        // lampiran sengaja dibiarkan utuh supaya masih bisa dipulihkan.
+        $hapusPermanen = $suratMasuk->forceDeleting ?? true;
+
+        if (! $hapusPermanen) {
+            return;
+        }
+
         foreach ($suratMasuk->lampiran as $lampiran) {
-            \App\Jobs\HapusLampiranDariDriveJob::dispatch($lampiran->google_drive_file_id);
+            $lampiran->hapusBerkasFisik();
             $lampiran->delete();
         }
     }

@@ -25,13 +25,24 @@
             <i class="fas fa-trash-alt me-2 text-danger"></i>Pengajuan Hapus Lampiran
         </h4>
         <p class="text-secondary small mb-0">
-            @if($pengajuanList->isEmpty())
-                Tidak ada pengajuan yang menunggu persetujuan.
-            @else
-                <span class="fw-semibold text-danger">{{ $pengajuanList->count() }}</span>
+            @if($statusAktif === 'menunggu')
+                <span class="fw-semibold text-danger">{{ $pengajuanList->total() }}</span>
                 pengajuan menunggu persetujuan Anda.
+            @else
+                Menampilkan pengajuan berstatus <strong>{{ $statusAktif }}</strong>
+                ({{ $pengajuanList->total() }} data).
             @endif
         </p>
+    </div>
+
+    {{-- L-23: riwayat yang sudah diputuskan tetap bisa dibuka, tidak hilang dari layar. --}}
+    <div class="btn-group" role="group" aria-label="Filter status pengajuan">
+        @foreach(['semua' => 'Semua', 'menunggu' => 'Menunggu', 'disetujui' => 'Disetujui', 'ditolak' => 'Ditolak'] as $nilai => $label)
+            <a href="{{ route('pengajuan-hapus-lampiran.index', ['status' => $nilai]) }}"
+               class="btn btn-sm {{ $statusAktif === $nilai ? 'btn-primary' : 'btn-outline-secondary' }}">
+                {{ $label }}
+            </a>
+        @endforeach
     </div>
 </div>
 
@@ -39,8 +50,8 @@
     <div class="card">
         <div class="card-body text-center py-5 text-secondary">
             <i class="fas fa-check-circle fa-3x mb-3 text-success opacity-50"></i>
-            <p class="mb-0 fw-semibold">Tidak ada pengajuan yang menunggu.</p>
-            <p class="small mt-1">Semua pengajuan hapus lampiran sudah diproses.</p>
+            <p class="mb-0 fw-semibold">Tidak ada pengajuan berstatus "{{ $statusAktif }}".</p>
+            <p class="small mt-1">Ganti filter di kanan atas untuk melihat riwayat yang sudah diproses.</p>
         </div>
     </div>
 @else
@@ -121,9 +132,25 @@
                     </div>
                 </div>
 
-                {{-- Kolom kanan: aksi --}}
+                {{-- Kolom kanan: aksi (hanya untuk pengajuan yang belum diputuskan) --}}
                 <div class="col-lg-4">
                     <div class="d-flex flex-column gap-2">
+                        @if($item->status !== 'menunggu')
+                            <span class="badge rounded-pill {{ $item->status === 'disetujui' ? 'text-bg-danger' : 'text-bg-secondary' }} align-self-start">
+                                <i class="fas fa-{{ $item->status === 'disetujui' ? 'trash' : 'ban' }} me-1"></i>
+                                Sudah {{ $item->status }}
+                            </span>
+                            <div class="lampiran-meta">
+                                Diproses oleh <strong>{{ $item->pemroses?->nama_lengkap ?? '—' }}</strong>
+                                · {{ $item->diproses_pada?->translatedFormat('d M Y, H:i') ?? '—' }}
+                            </div>
+                            @if($item->catatan_admin)
+                                <div class="p-2 rounded" style="background:#f8fafc; border-left:3px solid #cbd5e1;">
+                                    <span class="lampiran-meta fw-semibold">Catatan admin:</span>
+                                    <div class="lampiran-meta">{{ $item->catatan_admin }}</div>
+                                </div>
+                            @endif
+                        @else
                         {{-- Tombol Setujui --}}
                         <form method="POST"
                               action="{{ route('pengajuan-hapus-lampiran.setujui', $item) }}"
@@ -153,6 +180,7 @@
                                 </button>
                             </form>
                         </div>
+                        @endif
                     </div>
                 </div>
 
@@ -160,6 +188,10 @@
         </div>
         @endforeach
     </div>
+
+    @if($pengajuanList->hasPages())
+        <div class="mt-4">{{ $pengajuanList->links() }}</div>
+    @endif
 @endif
 
 @endsection
@@ -169,7 +201,7 @@
 function pradanaConfirmSetujui(form, namaFile) {
     Swal.fire({
         title: 'Setujui Penghapusan?',
-        html: `File <strong>${namaFile}</strong> akan dihapus permanen dari Google Drive dan tidak bisa dipulihkan.`,
+        html: `File <strong>${namaFile}</strong> akan dihapus dari penyimpanan arsip dan tidak bisa dipulihkan.`,
         icon: 'warning',
         showCancelButton: true,
         confirmButtonColor: '#dc2626',

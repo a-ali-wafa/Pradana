@@ -12,7 +12,14 @@ class Kernel extends ConsoleKernel
      */
     protected function schedule(Schedule $schedule): void
     {
-        $schedule->command('app:cleanup-records')->daily();
+        // Backup arsip ke Google Drive (L-01). tanpaOverlapping: kalau sinkron
+        // sebelumnya masih jalan (file besar/jaringan lambat), jadwal tidak menimpa.
+        $schedule->command('arsip:sinkron-ke-drive')
+            ->daily()
+            ->withoutOverlapping();
+
+        // Sekali seminggu ke staf, daftar arsip yang sudah lewat retensi (L-04).
+        $schedule->command('arsip:daftar-usang')->weekly();
     }
 
     /**

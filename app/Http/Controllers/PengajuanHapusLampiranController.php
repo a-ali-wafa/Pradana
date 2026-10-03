@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Models\Lampiran;
 use App\Models\PengajuanHapusLampiran;
 use App\Models\SuratMasuk;
-use App\Services\GoogleDriveService;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -36,10 +35,6 @@ use Throwable;
  */
 class PengajuanHapusLampiranController extends Controller
 {
-    public function __construct(private readonly GoogleDriveService $drive)
-    {
-    }
-
     public function store(Request $request, Lampiran $lampiran): RedirectResponse
     {
         $request->validate([
@@ -70,15 +65,23 @@ class PengajuanHapusLampiranController extends Controller
         return back()->with('success', 'Pengajuan hapus lampiran terkirim, menunggu persetujuan admin.');
     }
 
-    public function index(): View
+    public function index(Request $request): View
     {
-        $pengajuanList = PengajuanHapusLampiran::query()
-            ->where('status', 'menunggu')
-            ->with(['lampiran', 'pengaju'])
-            ->latest()
-            ->get();
+        // L-23: riwayat pengajuan yang sudah diputuskan tidak boleh hilang dari
+        // layar — seluruh alasan kolom lampiran_id di-set nullOnDelete adalah audit.
+        $status = $request->query('status', 'semua');
 
-        return view('pengajuan-hapus-lampiran.index', compact('pengajuanList'));
+        $pengajuanList = PengajuanHapusLampiran::query()
+            ->when($status !== 'semua', fn ($q) => $q->where('status', $status))
+            ->with(['lampiran.lampiranable', 'pengaju', 'pemroses'])
+            ->latest()
+            ->paginate(20)
+            ->withQueryString();
+
+        return view('pengajuan-hapus-lampiran.index', [
+            'pengajuanList' => $pengajuanList,
+            'statusAktif' => $status,
+        ]);
     }
 
     public function setujui(PengajuanHapusLampiran $pengajuan_hapus_lampiran): RedirectResponse
@@ -89,8 +92,8 @@ class PengajuanHapusLampiranController extends Controller
 
         abort_if(! $lampiran, 410, 'Lampiran yang diajukan sudah tidak ada (mungkin sudah terhapus lewat pengajuan lain).');
 
-        \App\Jobs\HapusLampiranDariDriveJob::dispatch($lampiran->google_drive_file_id);
-
+        // L-02: penghapusan berkas dilakukan sinkron, tanpa queue worker.
+        $lampiran->hapusBerkasFisik();
         $lampiran->delete();
 
         $pengajuan_hapus_lampiran->update([

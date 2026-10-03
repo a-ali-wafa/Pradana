@@ -36,6 +36,14 @@ return [
             'throw' => false,
         ],
 
+        // Prime storage arsip surat (keputusan L-01). root-nya di luar public/
+        // jadi tidak bisa diambil lewat URL langsung — hanya lewat LampiranController.
+        'arsip' => [
+            'driver' => 'local',
+            'root' => storage_path('app/private/arsip'),
+            'throw' => false,
+        ],
+
         'public' => [
             'driver' => 'local',
             'root' => storage_path('app/public'),
