@@ -5,10 +5,15 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * Keputusan L-06 (E3): pemusnahan arsip SURAT memakai pola yang sama dengan
- * pengajuan hapus lampiran — staf mengajukan, admin menyetujui — tapi dengan
- * Berita Acara sebagai dokumen resmi. Hanya jalur ini yang boleh menghapus
- * berkas secara permanen (L-05 menutup penghancuran langsung).
+ * SQUASH S11. Modul pemusnahan arsip (L-06): pengajuan -> approval admin ->
+ * `forceDelete()` baris surat + file fisiknya, lalu Berita Acara PDF
+ * (`BA-003/X/2026`). Syarat diajukan: umur >5 tahun, sudah inaktif, dan belum
+ * ada pengajuan menunggu (divalidasi ulang di server, bukan cuma di form).
+ *
+ * `pemusnahan_arsip_item` SENGAJA tidak memakai foreign key ke surat: baris
+ * suratnya memang akan dihapus permanen, jadi identitasnya disimpan sebagai
+ * snapshot pada saat pengajuan. Relasi ke arsipnya polymorphic TANPA constraint
+ * supaya riwayat tetap terbaca selamanya.
  */
 return new class extends Migration
 {
@@ -31,10 +36,9 @@ return new class extends Migration
             $table->id();
             $table->foreignId('pemusnahan_arsip_id')->constrained('pemusnahan_arsip')->cascadeOnDelete();
 
-            // Snapshot nomor & perihal: setelah arsip dimusnahkan (force delete),
-            // Berita Acara tetap harus bisa dibaca isinya.
             $table->string('arsipable_type', 120);
             $table->unsignedBigInteger('arsipable_id');
+
             $table->string('nomor_surat_snapshot', 100)->nullable();
             $table->string('perihal_snapshot', 255)->nullable();
             $table->date('tanggal_surat_snapshot')->nullable();

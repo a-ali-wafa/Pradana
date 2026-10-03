@@ -2,43 +2,40 @@
 
 namespace Database\Factories;
 
+use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Str;
 
 /**
+ * SQUASH S11 (4 Okt 2026): versi sebelumnya masih milik boilerplate Laravel —
+ * mengisi `name` dan `password` (kolom riilnya `nama_lengkap` dan `pin`) plus
+ * `email_verified_at`/`remember_token` yang sudah dibuang dari skema, jadi
+ * `User::factory()->create()` akan selalu gagal. Diperbaiki supaya benar-benar
+ * bisa dipakai; test yang perlu PIN tertentu tetap memakai forceCreate.
+ *
  * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\User>
  */
 class UserFactory extends Factory
 {
-    /**
-     * The current password being used by the factory.
-     */
-    protected static ?string $password;
+    protected $model = User::class;
 
     /**
-     * Define the model's default state.
-     *
      * @return array<string, mixed>
      */
     public function definition(): array
     {
         return [
-            'name' => fake()->name(),
+            'nama_lengkap' => fake()->name(),
             'email' => fake()->unique()->safeEmail(),
-            'email_verified_at' => now(),
-            'password' => static::$password ??= Hash::make('password'),
-            'remember_token' => Str::random(10),
+            'pin' => Hash::make('12345678'),
+            'role' => User::ROLE_PEGAWAI,
         ];
     }
 
-    /**
-     * Indicate that the model's email address should be unverified.
-     */
-    public function unverified(): static
+    public function admin(): static
     {
         return $this->state(fn (array $attributes) => [
-            'email_verified_at' => null,
+            'role' => User::ROLE_ADMIN,
         ]);
     }
 }

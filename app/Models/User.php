@@ -24,12 +24,11 @@ class User extends Authenticatable
 
     protected $hidden = [
         'pin',
-        'remember_token',
     ];
 
-    protected $casts = [
-        'email_verified_at' => 'datetime',
-    ];
+    // `remember_token` dan `email_verified_at` sudah dibuang dari skema (L-11 +
+    // squash S11): login tinggal email+PIN tanpa "ingat saya", dan tidak ada
+    // verifikasi email karena kantor tanpa SMTP.
 
     // PIN dipakai sebagai kredensial login, menggantikan kolom "password" bawaan Laravel
     public function getAuthPassword()

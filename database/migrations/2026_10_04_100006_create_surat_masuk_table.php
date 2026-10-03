@@ -4,6 +4,14 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
+/**
+ * SQUASH S11. `file_path` (sisa satu-file-per-surat jaman Apps Script) dibuang:
+ * lampiran sudah pindah ke tabel `lampiran` (polymorphic, L-01).
+ * `deleted_at` = tempat sampah admin (L-05); hapus permanen hanya lewat alur
+ * Pemusnahan Arsip (L-06) yang meninggalkan Berita Acara.
+ * `nomor_surat` sengaja TIDAK unique di sini: satu surat bisa dicatat lebih dari
+ * sekali kalau dikirim ke beberapa instansi (D9=a).
+ */
 return new class extends Migration
 {
     public function up(): void
@@ -30,14 +38,16 @@ return new class extends Migration
             $table->enum('status_berkas', ['asli', 'salinan'])->default('asli');
             $table->enum('status_arsip', ['aktif', 'inaktif'])->default('aktif');
             $table->string('lokasi_fisik', 150)->nullable();
-            $table->string('file_path')->nullable();
 
             $table->foreignId('user_id')->constrained('users')->restrictOnDelete();
             $table->timestamps();
+            $table->softDeletes();
 
             $table->index('nomor_surat');
             $table->index('tanggal_surat');
+            $table->index('tanggal_diterima');
             $table->index('status_arsip');
+            $table->index('deleted_at');
         });
     }
 

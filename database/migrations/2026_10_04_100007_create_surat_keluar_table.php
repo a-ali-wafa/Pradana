@@ -4,6 +4,13 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
+/**
+ * SQUASH S11. Beda dengan surat_masuk: `nomor_surat` **unique** (dibuat
+ * otomatis oleh NomorSuratKeluarGenerator + `surat_counters` + lockForUpdate,
+ * L-20), tidak ada `tanggal_diterima`, dan nama kolomnya "tujuan/penerima".
+ * Nomor yang sudah terbit tidak boleh diubah non-admin — ditegakkan di
+ * `UpdateSuratKeluarRequest`, bukan di skema.
+ */
 return new class extends Migration
 {
     public function up(): void
@@ -29,13 +36,14 @@ return new class extends Migration
             $table->enum('status_berkas', ['asli', 'salinan'])->default('asli');
             $table->enum('status_arsip', ['aktif', 'inaktif'])->default('aktif');
             $table->string('lokasi_fisik', 150)->nullable();
-            $table->string('file_path')->nullable();
 
             $table->foreignId('user_id')->constrained('users')->restrictOnDelete();
             $table->timestamps();
+            $table->softDeletes();
 
             $table->index('tanggal_surat');
             $table->index('status_arsip');
+            $table->index('deleted_at');
         });
     }
 

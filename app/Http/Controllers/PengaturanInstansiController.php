@@ -7,47 +7,26 @@ use App\Models\PengaturanInstansi;
 use Illuminate\Support\Facades\Storage;
 
 /**
- * CRUD Pengaturan Instansi — dibuat 31 Agu 2026.
+ * Pengaturan Instansi — kop surat, alamat, kontak, dan logo (dibuat 31 Agu 2026,
+ * di-cross-check terhadap model `PengaturanInstansi` asli di hari yang sama;
+ * $fillable cocok 100%, lihat AGENTS_HISTORY 12.18).
  *
- * ⚠️ KONTEKS SESI: dibuat di sesi yang SAMA SEKALI TIDAK punya file project (tidak ada
- * model/controller/zip lain yang diupload, cuma AGENTS.md itu sendiri). Task ini
- * sebelumnya SENGAJA DITUNDA atas permintaan user (26 Agu 2026, lihat AGENTS.md
- * Bagian 3 "CRUD Pengaturan Instansi" — "nanti aja di agent lain", perlu dikonfirmasi
- * ulang sebelum dikerjakan). Dikerjakan lagi 31 Agu 2026 setelah user secara umum
- * bilang "kerjakan yang bisa dikerjakan" — dianggap sebagai konfirmasi ulang tsb.
- * TODO: user tetap perlu menegaskan ini memang yang dimaksud.
- *
- * ⚠️ MODEL ASLI TIDAK ADA. `PengaturanInstansi.php` (dibuat 24 Agu 2026 di
- * pradana-laravel-schema.zip) TIDAK diupload ke sesi ini dan menurut AGENTS.md
- * Bagian 4 "masih belum pernah di-cross-check" sejak awal dibuat. Controller ini
- * ditulis MURNI dari skema Bagian 5 [LOCKED], $fillable DIASUMSIKAN:
- * ['nama_instansi', 'jenis_instansi', 'alamat_instansi', 'no_telp', 'email', 'logo_path']
- * — SENGAJA TIDAK termasuk gdrive_root_folder_id / gdrive_folder_surat_masuk_id /
- * gdrive_folder_surat_keluar_id, karena 3 kolom itu di-cache oleh LampiranController
- * lewat assignment atribut langsung (bukan lewat form ini) — lihat AGENTS.md 12.16
- * poin 3-4. WAJIB verifikasi $fillable begitu model asli diupload — pola sama persis
- * seperti kasus Klasifikasi (12.11) & Surat Masuk (12.12) yang sempat salah tebak.
- *
- * Keputusan desain BARU (belum tercatat di Bagian 8/9 AGENTS.md — perlu di-lock kalau
- * disetujui user, lihat 12.18 untuk detail lengkap):
- * - Tabel single-row (1 instansi saja) → controller ini HANYA edit()+update(), TIDAK
- *   ada index/show/create/store/destroy. Konsisten dengan pola "route show sengaja
- *   tidak didaftarkan" di Klasifikasi (12.11) untuk tabel referensi sederhana.
- * - Baris pertama diasumsikan sudah dibuat oleh DatabaseSeeder (Bagian 3 menyebut
- *   seeder bikin "1 admin, pengaturan instansi, 2 contoh klasifikasi") → pakai
- *   firstOrFail(), BUKAN find($id) dengan ID hardcode.
- * - Admin-only di edit() DAN update() — ditangani oleh middleware('admin') di
- *   routes/web.php (retrofit B1, 1 Sep 2026).
- * - Upload logo disimpan LOKAL (disk `public`, folder `logo/`), BUKAN lewat Google
- *   Drive — beda dari lampiran surat. Alasan: logo kop surat itu aset publik/statis
- *   untuk ditampilkan di header PDF/halaman, bukan dokumen arsip rahasia, jadi aturan
- *   "akses privat lewat Drive" di Bagian 2 tidak relevan untuk file ini. Ini ASUMSI
- *   DESAIN saya, BUKAN keputusan eksplisit user — tandai untuk dikonfirmasi.
- * - Logo lama dihapus dari storage saat diganti logo baru, supaya tidak menumpuk file
- *   yatim di disk.
- * - TIDAK memanggil Aktivitas::create() manual, konsisten dengan keputusan 12.8
- *   (logging aktivitas sengaja belum disambungkan ke controller manapun, menunggu
- *   Observer/Event terpisah supaya tidak tercatat dobel nanti).
+ * Desain yang disengaja:
+ * - Tabel single-row (aplikasi satu kantor, L-26/J1) → HANYA edit()+update(),
+ *   tidak ada index/show/create/store/destroy. Barisnya dijamin ada oleh
+ *   `DatabaseSeeder`, jadi `firstOrFail()` — bukan ID hardcode.
+ * - Admin-only lewat middleware `admin` di route (B4 + L-07), bukan di controller.
+ * - Logo disimpan di disk LOKAL (`public`, folder `logo/`), bukan Drive —
+ *   dikonfirmasi eksplisit user 31 Agu 2026 (C7): kop surat itu aset statis,
+ *   bukan dokumen arsip. Logo lama dihapus saat diganti supaya tidak menumpuk
+ *   file yatim.
+ * - `PengaturanInstansi::$fillable` sengaja TIDAK memuat kolom cache folder Drive
+ *   (`gdrive_folder_surat_masuk_id`/`_keluar_id`): keduanya ditulis oleh perintah
+ *   `arsip:sinkron-ke-drive` lewat assignment atribut, bukan lewat form ini.
+ *   `gdrive_root_folder_id` sudah dibuang dari skema saat squash S11 — root folder
+ *   dibaca dari `.env`.
+ * - Logging aktivitas tidak dipanggil manual: `PengaturanInstansiObserver` yang
+ *   mencatatnya (aktif sejak 1 Sep 2026).
  */
 class PengaturanInstansiController extends Controller
 {

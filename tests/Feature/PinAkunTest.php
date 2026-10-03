@@ -67,9 +67,11 @@ class PinAkunTest extends TestCase
             fn ($c) => str_starts_with($c->getName(), 'remember')
         )));
 
-        // Column remember_token tetap ada di skema (dibersihkan saat squash S11),
-        // tapi tidak pernah dipakai.
-        $this->assertNull($this->admin->fresh()->remember_token);
+        // Kolom `remember_token` sudah dibuang dari skema (squash S11), jadi
+        // tidak ada tempat untuk menyimpan token login-teringat.
+        $this->assertFalse(
+            \Illuminate\Support\Facades\Schema::hasColumn('users', 'remember_token')
+        );
     }
 
     public function test_form_buat_user_menolak_pin_enam_digit(): void
