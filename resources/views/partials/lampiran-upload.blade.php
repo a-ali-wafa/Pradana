@@ -144,6 +144,7 @@
             e.preventDefault();
             panel.style.display = 'block';
             berjalan = berkas.length;
+            const duplikatTerlewat = [];
             setel(0, 'Mengunggah ' + berkas.length + ' berkas…', 'Jangan tutup halaman ini.');
 
             let indeks = 0;
@@ -151,21 +152,30 @@
                 if (indeks >= berkas.length) return Promise.resolve();
                 return unggahSatu(form, berkas[indeks], indeks, berkas.length)
                     .then(function (hasil) {
-                        (hasil.lampiran || []).forEach(barisLampiran);
-                        if (hasil.duplikat && hasil.duplikat.length) {
-                            setel(Math.round(((indeks + 1) / berkas.length) * 100), 'Mengunggah…',
-                                '"' + hasil.duplikat[0] + '" sudah ada di surat ini, dilewati.');
+                        const baru = hasil.lampiran || [];
+                        baru.forEach(barisLampiran);
+
+                        const badge = document.getElementById('hitung-lampiran');
+                        if (badge && baru.length) {
+                            badge.textContent = (parseInt(badge.textContent, 10) || 0) + baru.length;
                         }
+
+                        (hasil.duplikat || []).forEach(function (nama) { duplikatTerlewat.push(nama); });
                     })
                     .then(function () { indeks++; berjalan--; return lanjutan(); });
             };
 
             lanjutan().then(function () {
-                setel(100, 'Selesai', document.getElementById('daftar-lampiran') ? '' : 'Memuat ulang daftar…');
+                const pesan = duplikatTerlewat.length
+                    ? duplikatTerlewat.length + ' berkas dilewati karena isinya sudah ada di surat ini: '
+                        + duplikatTerlewat.join(', ')
+                    : '';
+                setel(100, pesan ? 'Selesai — ada berkas yang dilewati' : 'Selesai',
+                    pesan || (document.getElementById('daftar-lampiran') ? '' : 'Memuat ulang daftar…'));
                 setTimeout(function () {
                     panel.style.display = 'none';
                     if (!document.getElementById('daftar-lampiran')) window.location.reload();
-                }, 1200);
+                }, pesan ? 6000 : 1200);
             }).catch(function (err) {
                 berjalan = 0;
                 setel(100, 'Gagal mengunggah', err.message);

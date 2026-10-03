@@ -32,8 +32,9 @@ Aplikasi arsip surat masuk/keluar untuk kantor kelurahan/desa. Migrasi dari Goog
 ## 3. Status pengerjaan
 
 Sudah ada & jalan: migration + model 11 tabel, Auth login/logout (email+PIN, rate limit), CRUD surat masuk/keluar, CRUD klasifikasi 3 level, Pengaturan Instansi (edit-only), Lampiran (upload/unduh), Pengajuan hapus lampiran, Dashboard + view, Pencarian, Cetak PDF, logging via 9 Observer, middleware `admin`, 40 view Blade.
-Test suite: 6 tes lolos (`php artisan test`, SQLite in-memory) — cakupan sempit, **tidak menguji MariaDB maupun bug nomor surat**.
-Yang belum ada / mati: **CRUD `draf_konten_surat_keluar`** (→ fitur cetak PDF selalu menolak, TC-85), halaman error 403/404/500, UI log aktivitas, export laporan, buku agenda, modul pemusnahan arsip, reset/ganti PIN, tombol nyahkan arsip untuk surat masuk, storage lokal.
+**Selesai 4 Okt 2026 (branch `upgrade/laravel-12`):** framework upgrade ke Laravel 12.69.3; lampiran pindah ke **disk lokal** (L-01) dengan upload **sync** + AJAX floating progress bar (L-02, diverifikasi lewat browser: tulis file, lewati duplikat, unduh inline & attachment); queue + 2 Job dihapus; log aktivitas kini **sync** dan terbukti menulis (`Mengunggah lampiran: ...`); daftar pengajuan hapus diberi filter status + pagination (L-23); tipe file diperluas ke Word/Excel + batas 25MB (L-13); `arsip:sinkron-ke-drive` (backup harian, `--dry-run`) dan `arsip:daftar-usang` menggantikan `CleanupRecordsCommand`. Tes: **12 passed**.
+Test suite: 12 tes lolos (`php artisan test`, SQLite in-memory) — cakupan masih sempit, **tes yang jalan di MariaDB belum dibuat** (L-24/Q1).
+Yang belum ada / masih mati: **CRUD `draf_konten_surat_keluar`** (→ fitur cetak PDF selalu menolak, TC-85), halaman error 403/404/500, UI log aktivitas, export laporan, buku agenda, modul pemusnahan arsip, reset/ganti PIN, tombol nyahkan untuk surat masuk, soft delete arsip, fix race `generateNomorSurat()`, role 2 tingkat.
 
 ## 4. Keputusan user [LOCKED]
 

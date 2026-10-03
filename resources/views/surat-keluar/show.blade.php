@@ -186,7 +186,7 @@
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <span><i class="fas fa-paperclip me-2"></i>Lampiran</span>
-                <span class="badge bg-primary rounded-pill">{{ $suratKeluar->lampiran->count() }}</span>
+                <span class="badge bg-primary rounded-pill" id="hitung-lampiran">{{ $suratKeluar->lampiran->count() }}</span>
             </div>
             <div class="card-body">
                 <div class="d-flex flex-column gap-2" id="daftar-lampiran">
