@@ -10,8 +10,9 @@ use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 /**
- * Validasi + eksekusi login: email + PIN 6 digit angka, sesuai A1 [DEFAULT]
- * (Auth::attempt(['email' => ..., 'password' => $pin])).
+ * Validasi + eksekusi login: email + PIN 8 digit angka (A1 + A11/L-12).
+ * Pola tetap `Auth::attempt(['email' => ..., 'password' => $pin])` — kolom
+ * `pin` dipakai lewat override `User::getAuthPassword()`, bukan guard khusus.
  *
  * Ini bekerja TANPA perlu ubah config/auth.php — EloquentUserProvider selalu
  * memanggil User::getAuthPassword() untuk ambil hash pembanding, jadi cukup
@@ -33,21 +34,21 @@ class LoginRequest extends FormRequest
     {
         return [
             'email' => ['required', 'string', 'email'],
-            'pin' => ['required', 'digits:6'],
+            'pin' => ['required', 'digits:8'],
         ];
     }
 
     public function messages(): array
     {
         return [
-            'pin.digits' => 'PIN harus 6 digit angka.',
+            'pin.digits' => 'PIN harus 8 digit angka.',
         ];
     }
 
     /**
      * Coba autentikasi, dibungkus rate limit sederhana per email+IP.
-     * PIN 6 digit angka = cuma 1 juta kombinasi, jauh lebih lemah dari password
-     * bebas — throttle di sini penting, bukan sekadar nice-to-have.
+     * PIN 8 digit angka = 100 juta kombinasi, masih jauh lebih lemah dari
+     * password bebas — throttle di sini penting, bukan sekadar nice-to-have.
      */
     public function authenticate(): void
     {
@@ -58,7 +59,10 @@ class LoginRequest extends FormRequest
             'password' => $this->string('pin'), // 'pin' dari form, dicek ke getAuthPassword()
         ];
 
-        if (! Auth::attempt($credentials, $this->boolean('remember'))) {
+        // Tidak ada "remember me" (L-11): komputer di kantor dipakai bersama,
+        // dan sesi yang tidak pernah kedaluwarsa berarti siapa pun yang duduk
+        // di kursi itu bisa membaca arsip.
+        if (! Auth::attempt($credentials)) {
             RateLimiter::hit($this->throttleKey());
 
             throw ValidationException::withMessages([

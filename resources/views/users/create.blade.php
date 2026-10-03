@@ -23,7 +23,7 @@
                 <div class="alert alert-info border-0 rounded-3 small mb-4">
                     <i class="fas fa-info-circle me-1"></i>
                     Akun baru dibuat langsung oleh admin. User dapat login menggunakan <strong>email</strong>
-                    dan <strong>PIN 6 digit</strong> yang Anda tentukan di sini.
+                    dan <strong>PIN 8 digit</strong> yang Anda tentukan di sini.
                 </div>
 
                 <form method="POST" action="{{ route('users.store') }}">
@@ -71,8 +71,8 @@
                         <div class="input-group">
                             <input type="password" name="pin" id="pin"
                                    class="form-control font-monospace @error('pin') is-invalid @enderror"
-                                   placeholder="6 digit angka" maxlength="6"
-                                   pattern="\d{6}" inputmode="numeric"
+                                   placeholder="8 digit angka" maxlength="8"
+                                   pattern="\d{8}" inputmode="numeric"
                                    autocomplete="new-password" required>
                             <button class="btn btn-outline-secondary" type="button" id="btnTogglePin"
                                     onclick="pradanaTogglePin('pin', 'btnTogglePin')">
@@ -87,8 +87,8 @@
                         <div class="input-group">
                             <input type="password" name="pin_confirmation" id="pin_confirmation"
                                    class="form-control font-monospace"
-                                   placeholder="Ulangi PIN yang sama" maxlength="6"
-                                   pattern="\d{6}" inputmode="numeric"
+                                   placeholder="Ulangi PIN yang sama" maxlength="8"
+                                   pattern="\d{8}" inputmode="numeric"
                                    autocomplete="new-password" required>
                             <button class="btn btn-outline-secondary" type="button"
                                     onclick="pradanaTogglePin('pin_confirmation', this)">

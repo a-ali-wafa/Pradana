@@ -163,6 +163,9 @@
                 <a class="nav-link {{ request()->routeIs('pemusnahan-arsip.*') ? 'active' : '' }}" href="{{ route('pemusnahan-arsip.index') }}">
                     <i class="fas fa-fire fa-fw"></i> Pemusnahan Arsip
                 </a>
+                <a class="nav-link {{ request()->routeIs('profil.*') ? 'active' : '' }}" href="{{ route('profil.pin.edit') }}">
+                    <i class="fas fa-key fa-fw"></i> Ganti PIN
+                </a>
 
                 <div class="nav-section-label">Administrator</div>
                 <a class="nav-link {{ request()->routeIs('klasifikasi-primer.*') ? 'active' : '' }}" href="{{ route('klasifikasi-primer.index') }}">

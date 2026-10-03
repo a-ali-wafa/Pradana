@@ -33,7 +33,7 @@ Aplikasi arsip surat masuk/keluar untuk kantor kelurahan/desa. Migrasi dari Goog
 
 Sudah ada & jalan: migration + model (kini **13 tabel**: 11 lama + `pemusnahan_arsip` + `pemusnahan_arsip_item`), Auth login/logout (email+PIN, rate limit), CRUD surat masuk/keluar, CRUD klasifikasi 3 level, Pengaturan Instansi (edit-only), Lampiran (upload/unduh), Pengajuan hapus lampiran, **Pemusnahan arsip + Berita Acara**, Dashboard + view, Pencarian, Cetak PDF + halaman draf, logging via 10 Observer, middleware `admin`.
 
-Langkah 1–6 Bagian 7 **selesai & terverifikasi** (4 Okt 2026):
+Langkah 1–7 Bagian 7 **selesai & terverifikasi** (4 Okt 2026):
 
 1. Laravel **12.69.3** (PHP 8.2), Sanctum/`routes/api.php`/welcome dihapus, `optimize-autoloader`.
 2. Lampiran ke **disk lokal `arsip`** (L-01) + upload sync AJAX multi-file (L-02/L-13/L-24) dengan duplikat-sha256 dilewati; queue + 2 Job dihapus; log sync; `arsip:sinkron-ke-drive` (backup harian, `--dry-run`) & `arsip:daftar-usang`.
@@ -43,15 +43,19 @@ Langkah 1–6 Bagian 7 **selesai & terverifikasi** (4 Okt 2026):
 
 6. **Role 2 tingkat + hak nyata admin** (L-07): migration pemetaan enum (`kepala`→`admin`, `perangkat`→`pegawai`, dijalankan & diverifikasi di MariaDB dev — urutannya harus "perluas enum → ubah data → persempit enum"; percobaan pertama gagal karena `pegawai` belum ada di enum lama), satu sumber label role (`User::peranTersedia()`/`labelRole()`) dipakai form user, daftar user, dan topbar; `StoreUserRequest` cuma menerima 2 nilai. Kebijakan otorisasi **sengaja tidak** dipindah ke Policy per-model: dengan 2 tingkat semuanya cuma mengulang `isAdmin()`. `app/Policies/LampiranPolicy.php` dihapus (scaffold kosong + aturan kepemilikan yang justru melarang staf membuka arsip kantor, menabrak L-09/L-10) beserta `authorize('view')` di `LampiranController::download()`. L-20 ikut ditutup: nomor surat keluar tidak bisa diubah non-admin (divalidasi di server, input `readonly` di form). H3: kartu "klasifikasi terbanyak" dashboard kini menghitung surat masuk **dan** keluar (dulu hanya masuk), cache 60 detik dashboard dihapus supaya angka tidak tertinggal sesudah input surat.
 
-Test suite: **55 passed** (`php artisan test`, 10 class) — 11 alur pemusnahan, 9 tempat sampah, 11 otorisasi dua tingkat. 3 tes penomoran (`NomorSuratKeluarTest`) jalan di **MariaDB sungguhan** pakai dua koneksi `mysql_test_a`/`mysql_test_b` dan mengunci baris betulan; sisanya SQLite in-memory.
-Diverifikasi lewat browser nyata di `http://127.0.0.1:8000`: alur pemusnahan penuh (ajukan → setujui → `surat_masuk` hilang dari DB, Berita Acara `BA-001/X/2026` ter-render 200 `application/pdf`, log urut), plus DOM halaman user/dashboard/form edit surat keluar (opsi role tinggal dua, nomor tetap bisa diedit admin).
+7. **PIN & sesi dirampungkan** (L-11/L-12): PIN **8 digit** di 4 jalur (login, buat user, reset admin, ganti sendiri) — `LoginRequest` tidak lagi menerima `remember`, kolom `remember_token` tidak pernah ditulis lagi; halaman `profil/pin` (ganti PIN sendiri, wajib PIN lama + `different`), form inline "Reset PIN" di daftar user (admin), dua perintah terminal untuk serah terima: `arsip:akun-pertama` (satu-satunya jalan membuat admin setelah seeder dilucuti) dan `arsip:reset-pin` (kalau semua admin lupa PIN — tidak ada SMTP kantor). I3: `DatabaseSeeder` produksi kini **hanya** baris `pengaturan_instansi`; akun contoh + klasifikasi contoh pindah ke `DevSeeder` yang menolak jalan di luar `APP_ENV=local` dan membaca PIN dari `DEV_PIN` di `.env`. `.env.example` ditulis ulang jadi versi PRADANA (buang boilerplate Pusher/Mail/Redis/Vite yang tidak dipakai, tambah `DB_TEST_DATABASE`, `DEV_PIN`, `GOOGLE_DRIVE_*`).
+
+Test suite: **69 passed** (`php artisan test`, 12 class) — +12 `PinAkunTest`. 3 tes penomoran (`NomorSuratKeluarTest`) jalan di **MariaDB sungguhan** pakai dua koneksi `mysql_test_a`/`mysql_test_b` dan mengunci baris betulan; sisanya SQLite in-memory.
+Diverifikasi lewat browser nyata di `http://127.0.0.1:8000`: alur pemusnahan penuh (ajukan → setujui → `surat_masuk` hilang dari DB, Berita Acara `BA-001/X/2026` ter-render 200 `application/pdf`, log urut), DOM halaman user/dashboard/form edit surat keluar (opsi role tinggal dua, nomor tetap bisa diedit admin), `/profil/pin` (3 field PIN), `/users` (3 form reset PIN inline), halaman login (checkbox "Ingat saya" hilang, `pattern=\d{8}`), dan `arsip:reset-pin`/`arsip:akun-pertama` dijalankan sungguhan di terminal.
+
+Catatan untuk user: karena PIN sekarang 8 digit, **PIN akun dev `aliwafa3575@gmail.com` sudah diganti menjadi `12345678`** — PIN lama yang 6 digit tidak bisa dipakai login lagi.
 
 Bug nyata yang ditemukan tes (bukan dokumen) dan sudah diperbaiki:
 - `$model->forceDeleting` di Observer melempar `BadMethodCallException` (propertinya protected; magic getter malah mencocokkan namanya dengan method statis `forceDeleting($callback)` yang butuh 1 argumen) → **hapus surat masuk/keluar selalu 500**, bahkan sebelum modul pemusnahan ada. Ganti `isForceDeleting()`.
 - `PemusnahanArsipItem::pemusnahan()` menebak FK `pemusnahan_id`, kolom sebenarnya `pemusnahan_arsip_id`.
 - `LampiranPolicy::view()` memberi 403 ke staf yang membuka lampiran bukan miliknya — tidak pernah kelihatan karena semua uji manual sebelumnya dijalankan sebagai admin.
 
-Yang belum ada / masih mati: halaman error 403/404/500, UI log aktivitas, export laporan, buku agenda, notifikasi approval, reset/ganti PIN, PIN masih 6 digit (target 8, L-12), remember-me masih ada di form login, pencarian belum menjangkau isi, `terkunci_pada` (auto-lock B10), squash migration + tabel `sessions`/`cache` + FULLTEXT, `DatabaseSeeder` masih berisi email pribadi + PIN keras (pindah ke `DevSeeder`, I3).
+Yang belum ada / masih mati: halaman error 403/404/500, UI log aktivitas + retensi log, export laporan, buku agenda, notifikasi approval, multi-template PDF (F3), pencarian belum menjangkau isi, `terkunci_pada` (auto-lock B10), squash migration + tabel `sessions`/`cache` + FULLTEXT + buang kolom mati (`remember_token`, `email_verified_at`, `pengaturan_instansi.gdrive_root_folder_id`, `surat_*.file_path`, `draf_konten_surat_keluar.lampiran`), README kantor + manual pemakaian, Larastan/Pint (L-24).
 
 ## 4. Keputusan user [LOCKED]
 
@@ -67,8 +71,8 @@ Yang belum ada / masih mati: halaman error 403/404/500, UI log aktivitas, export
 | L-08 | Surat boleh **diubah siapa pun yang login** (B5=c "semua boleh, tapi tercatat di log aktivitas") — `update()` memang cuma `middleware('auth')`, dan observer sudah mencatatnya, jadi tidak ada perubahan kode diperlukan. **Koreksi 4 Okt 2026**: baris ini dulu tertulis salah ("klasifikasi boleh diedit semua yang login") — yang ditanyakan di B5 itu surat, bukan klasifikasi. B3 (klasifikasi hanya admin) di register user jawabannya **"Lanjut"**, jadi mutasi klasifikasi tetap admin-only seperti sekarang |
 | L-09 | Surat `rahasia`: akses **sama untuk semua yang login** (B6=a) — tidak ada pembatasan khusus |
 | L-10 | User boleh dihapus walau punya surat (B8=a, "tidak ada sistem kepemilikan, semua milik kantor") — log aktivitas jadi penjaga |
-| L-11 | Tidak ada 2FA (A6=a), **remember-me dihapus** dari form login (H4=a), login tetap email+PIN (A1=a) |
-| L-12 | Alur lupa PIN dibuat lengkap: admin reset PIN **dan** user bisa ganti PIN sendiri (A4/A5=a) |
+| L-11 | Tidak ada 2FA (A6=a), **remember-me dihapus** dari form login (H4=a), login tetap email+PIN (A1=a). **Selesai 4 Okt 2026** — kolom `remember_token` masih ada di skema tapi tidak pernah ditulis; dibersihkan sekalian saat squash S11 |
+| L-12 | Alur lupa PIN dibuat lengkap: admin reset PIN **dan** user bisa ganti PIN sendiri (A4/A5=a). **Selesai 4 Okt 2026**: PIN **8 digit** di semua jalur (login, buat user, reset, ganti sendiri); admin → `PATCH users/{user}/pin` + form inline di daftar user; staf → `profil/pin` (wajib PIN lama); kalau semua admin terkunci: `php artisan arsip:reset-pin email`. Tidak ada reset lewat email (kantor tanpa SMTP) |
 | L-13 | Tipe file lampiran diperluas: `pdf, jpg, jpeg, png` **+ `doc, docx, xls, xlsx`** (C1=a) |
 | L-14 | Filter daftar surat **disamakan** untuk masuk & keluar: cari, tahun, sifat, status arsip, klasifikasi (H1=a). Pagination seragam 20/halaman (H2) |
 | L-15 | Pencarian ikut menjangkau **isi** (`ringkasan`, `isi_surat`) (P4=b) |
@@ -105,11 +109,16 @@ Yang belum ada / masih mati: halaman error 403/404/500, UI log aktivitas, export
 ```bash
 # prasyarat: XAMPP MariaDB sebagai service, DB `pradana` sudah dibuat
 composer install
-cp .env.example .env && php artisan key:generate   # lalu isi DB_*, GOOGLE_*
-php artisan migrate --seed
+cp .env.example .env && php artisan key:generate   # lalu isi DB_*, GOOGLE_*, DEV_PIN
+php artisan migrate --seed                         # seeder produksi: cuma baris pengaturan instansi
+php artisan arsip:akun-pertama email@kantor.desa --nama="Kepala Desa"   # akun admin pertama
 php artisan serve            # http://127.0.0.1:8000
-php artisan test             # suite lama 6 tes
+php artisan test             # 69 tes (SQLite in-memory + 3 tes MariaDB, butuh DB_TEST_DATABASE)
+
+# data contoh untuk pengembangan (TOLAK jalan kalau APP_ENV bukan local):
+php artisan db:seed --class=DevSeeder
 ```
+Perintah lain yang perlu diketahui saat serah terima: `arsip:reset-pin {email}` (kalau semua admin lupa PIN — tidak ada reset lewat email), `arsip:sinkron-ke-drive [--dry-run]` (backup), `arsip:daftar-usang [--tahun=5]` (daftar arsip lewat retensi).
 Service Account JSON: `storage/app/google/service-account.json` (jangan pernah di-commit; sudah tercakup `.gitignore`).
 Dokumen uji manual: `Obsidian Vault/Pradana/Manual_Testing_PRADANA.md`. Register keputusan: `.../Daftar Keputusan PRADANA.md`.
 
@@ -121,7 +130,7 @@ Dokumen uji manual: `Obsidian Vault/Pradana/Manual_Testing_PRADANA.md`. Register
 4. ✅ **Fix `generateNomorSurat()`** (race: docblock menyebut `lockForUpdate()`+retry padahal keduanya tidak ada) + tes MariaDB-nya.
 5. ✅ **Soft delete + tombol "Nyahkan" + modul pemusnahan + Berita Acara** (L-05/L-06/L-19).
 6. ✅ **Role 2 tingkat + hak nyata admin + migration pemetaan enum** (L-07). Otorisasi sengaja tetap `isAdmin()` + middleware `admin` di route (BUKAN Policy per-model — lihat alasan di Bagian 3 langkah 6); `@can` tidak dipakai karena hanya ada satu cek.
-7. **PIN 8 digit, reset PIN admin, ganti PIN sendiri, hapus remember-me** (L-07, L-11, L-12).
+7. ✅ **PIN 8 digit, reset PIN admin, ganti PIN sendiri, hapus remember-me** (L-11, L-12) + **I3 DevSeeder**.
 8. **UI log aktivitas + retensi log**, perluasan pencarian (isi + FULLTEXT, pagination) (L-15, L-22).
 9. **Ekspor laporan + Buku Agenda + notifikasi approval** (L-17).
 10. **Halaman error, README kantor, manual pemakaian** (K16, L-26, L-25).

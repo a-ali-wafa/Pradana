@@ -74,7 +74,7 @@ class OtorisasiDuaTingkatTest extends TestCase
         User::forceCreate([
             'nama_lengkap' => 'Kembali ke Masa Lalu',
             'email' => 'lama@example.test',
-            'pin' => bcrypt('123456'),
+            'pin' => bcrypt('12345678'),
             'role' => 'perangkat',
         ]);
     }
@@ -94,8 +94,8 @@ class OtorisasiDuaTingkatTest extends TestCase
                 ->post(route('users.store'), [
                     'nama_lengkap' => 'Korban Role Lama',
                     'email' => $roleLama.'@example.test',
-                    'pin' => '123456',
-                    'pin_confirmation' => '123456',
+                    'pin' => '12345678',
+                    'pin_confirmation' => '12345678',
                     'role' => $roleLama,
                 ])
                 ->assertSessionHasErrors('role');
@@ -110,8 +110,8 @@ class OtorisasiDuaTingkatTest extends TestCase
             ->post(route('users.store'), [
                 'nama_lengkap' => 'Staf Dua',
                 'email' => 'staf2@example.test',
-                'pin' => '123456',
-                'pin_confirmation' => '123456',
+                'pin' => '12345678',
+                'pin_confirmation' => '12345678',
                 'role' => 'pegawai',
             ])
             ->assertSessionHasNoErrors();

@@ -32,7 +32,7 @@ class StoreUserRequest extends FormRequest
         return [
             'nama_lengkap' => ['required', 'string', 'max:150'],
             'email' => ['required', 'string', 'email', 'max:150', 'unique:users,email'],
-            'pin' => ['required', 'digits:6', 'confirmed'],
+            'pin' => ['required', 'digits:8', 'confirmed'],
             // L-07: hanya role yang dikenal model — jangan tulis daftar kedua
             // di sini supaya pemangkasan enum tidak bisa terlewat di validasi.
             'role' => ['required', 'in:'.implode(',', array_keys(User::peranTersedia()))],
@@ -42,7 +42,7 @@ class StoreUserRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'pin.digits' => 'PIN harus 6 digit angka.',
+            'pin.digits' => 'PIN harus 8 digit angka.',
             'pin.confirmed' => 'Konfirmasi PIN tidak cocok.',
         ];
     }

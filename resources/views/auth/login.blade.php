@@ -7,7 +7,8 @@
 
     {{--
         auth/login.blade.php — dibuat sesuai AuthController::create() & LoginRequest
-        (field: email, pin [digits:6], remember [boolean]).
+        (field: email, pin [digits:8]). `remember` sudah DIHAPUS (L-11) karena
+        komputer kantor dipakai bersama.
 
         $instansi (baris tunggal `pengaturan_instansi`, dikirim AuthController::create()
         via PengaturanInstansi::first()) dipakai untuk nama & logo di panel kiri — BISA
@@ -24,12 +25,12 @@
 
         Error login salah (email ATAU pin salah) & rate-limit sama-sama dilempar LoginRequest ke
         key 'email' (lihat authenticate()/ensureIsNotRateLimited()) — makanya ditampilkan sebagai
-        1 alert umum di atas form, terpisah dari error field 'pin' (required/format 6 digit) yang
+        1 alert umum di atas form, terpisah dari error field 'pin' (required/format 8 digit) yang
         ditampilkan inline di bawah field-nya sendiri.
 
-        Tidak ada link "lupa PIN": A4 [DEFAULT] di AGENTS.md bilang reset PIN itu manual oleh
-        admin, bukan alur self-service — jadi cuma teks instruksi, bukan link ke route yang belum
-        ada di web.php.
+        Tidak ada link "lupa PIN" di halaman ini: reset PIN dilakukan admin lewat daftar user
+        (L-12), jadi staf yang lupa PIN memang harus menemui admin — bukan self-service, karena
+        tidak ada SMTP kantor untuk kirim tautan reset.
     --}}
 
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -215,7 +216,7 @@
                     </div>
 
                     <div class="mb-3">
-                        <label for="pin" class="form-label">PIN (6 digit)</label>
+                        <label for="pin" class="form-label">PIN (8 digit)</label>
                         <div class="input-group">
                             <span class="input-group-text"><i class="fas fa-lock"></i></span>
                             <input
@@ -223,10 +224,10 @@
                                 class="form-control @error('pin') is-invalid @enderror"
                                 id="pin"
                                 name="pin"
-                                placeholder="••••••"
-                                maxlength="6"
+                                placeholder="••••••••"
+                                maxlength="8"
                                 inputmode="numeric"
-                                pattern="\d{6}"
+                                pattern="\d{8}"
                                 autocomplete="current-password"
                                 required
                             >
@@ -236,10 +237,8 @@
                         @enderror
                     </div>
 
-                    <div class="form-check mb-4">
-                        <input class="form-check-input" type="checkbox" id="remember" name="remember">
-                        <label class="form-check-label small" for="remember">Ingat saya di perangkat ini</label>
-                    </div>
+                    {{-- L-11: tidak ada "remember me". Komputer kantor dipakai
+                         bersama, jadi sesi tidak boleh bertahan lewat browser. --}}
 
                     <button type="submit" class="btn btn-login">
                         <i class="fas fa-right-to-bracket me-1"></i> Masuk

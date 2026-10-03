@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\ResetPinRequest;
 use App\Http\Requests\StoreUserRequest;
 use App\Models\User;
 use Illuminate\Contracts\View\View;
@@ -53,6 +54,23 @@ class UserController extends Controller
         ]);
 
         return redirect()->route('users.index')->with('status', 'User baru berhasil ditambahkan.');
+    }
+
+    /**
+     * L-12 (A4): admin menetapkan PIN baru untuk user yang lupa PIN.
+     * Tidak ada alur reset lewat email di aplikasi ini (kantor tanpa SMTP),
+     * jadi reset oleh admin satu-satunya jalan keluar — dan PIN tidak bisa
+     * dibaca ulang, hanya bisa diganti.
+     *
+     * Untuk dirinya sendiri, user memakai halaman "Ganti PIN"
+     * (`ProfilController@editPin`) yang meminta PIN lama. Jalur admin di sini
+     * sengaja TIDAK bertanya PIN lama: situasinya justru "lupa".
+     */
+    public function updatePin(ResetPinRequest $request, User $user): RedirectResponse
+    {
+        $user->update(['pin' => Hash::make($request->validated('pin'))]);
+
+        return back()->with('status', "PIN {$user->nama_lengkap} sudah diganti. Sampaikan PIN barunya secara langsung.");
     }
 
     /**

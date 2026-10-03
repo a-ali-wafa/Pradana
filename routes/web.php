@@ -12,6 +12,7 @@ use App\Http\Controllers\PencarianController;
 use App\Http\Controllers\PengajuanHapusLampiranController;
 use App\Http\Controllers\PengaturanInstansiController;
 use App\Http\Controllers\PemusnahanArsipController;
+use App\Http\Controllers\ProfilController;
 use App\Http\Controllers\SuratKeluarController;
 use App\Http\Controllers\SuratMasukController;
 use App\Http\Controllers\UserController;
@@ -98,6 +99,16 @@ Route::middleware('auth')->group(function () {
     Route::resource('users', UserController::class)
         ->only(['index', 'create', 'store', 'destroy'])
         ->middleware('admin');
+
+    // Reset PIN oleh admin (L-12 / A4). Di luar resource di atas karena route
+    // users.* admin-only, dan jalur "ganti PIN sendiri" tidak boleh admin-only.
+    Route::patch('users/{user}/pin', [UserController::class, 'updatePin'])
+        ->name('users.pin.update')
+        ->middleware('admin');
+
+    // Ganti PIN milik sendiri (L-12 / A5) — semua role yang login.
+    Route::get('profil/pin', [ProfilController::class, 'editPin'])->name('profil.pin.edit');
+    Route::patch('profil/pin', [ProfilController::class, 'updatePin'])->name('profil.pin.update');
 
     // Klasifikasi: index() terbuka untuk semua role yang login;
     // create/store/edit/update/destroy hanya admin (B1 [LOCKED #16], B3 [DEFAULT])

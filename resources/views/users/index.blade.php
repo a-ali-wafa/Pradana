@@ -66,21 +66,43 @@
                                 @endif
                             </td>
                             <td class="text-center pe-4">
-                                {{--
-                                    Edit / reset PIN belum diimplementasikan (A4/A5 masih WAJIB TANYA USER).
-                                    Hapus: admin tidak boleh hapus dirinya sendiri.
-                                --}}
+                                {{-- L-12: reset PIN oleh admin (staf lupa PIN).
+                                    L-10: hapus = soft delete, admin tidak boleh hapus dirinya sendiri. --}}
+                                <button type="button" class="btn btn-sm btn-outline-warning" title="Reset PIN"
+                                    onclick="pradanaToggleForm('form-reset-pin-{{ $user->id }}', this)">
+                                    <i class="fas fa-key"></i>
+                                </button>
+
                                 @if($user->id !== Auth::id())
-                                <button type="button" class="btn btn-sm btn-outline-danger" title="Non-aktifkan / Hapus"
+                                <button type="button" class="btn btn-sm btn-outline-danger" title="Hapus akun"
                                     onclick="pradanaConfirmHapus(
                                         '{{ route('users.destroy', $user) }}',
-                                        'Hapus akun &ldquo;{{ addslashes($user->nama_lengkap) }}&rdquo;? Aksi ini tidak dapat dibatalkan.'
+                                        'Hapus akun &ldquo;{{ addslashes($user->nama_lengkap) }}&rdquo;? Surat yang pernah ia input tetap tersimpan (tidak ada sistem kepemilikan), dan akun bisa dipulihkan admin.'
                                     )">
                                     <i class="fas fa-trash"></i>
                                 </button>
-                                @else
-                                <span class="text-secondary small">—</span>
                                 @endif
+
+                                <div id="form-reset-pin-{{ $user->id }}" style="display:none;" class="mt-2 text-start">
+                                    <form method="POST" action="{{ route('users.pin.update', $user) }}" class="row g-1 align-items-end">
+                                        @csrf @method('PATCH')
+                                        <div class="col">
+                                            <label class="form-label small fw-bold mb-0">PIN baru (8 digit)</label>
+                                            <input type="text" name="pin" class="form-control form-control-sm font-monospace"
+                                                   maxlength="8" pattern="\d{8}" inputmode="numeric" required
+                                                   aria-label="PIN baru untuk {{ $user->nama_lengkap }}">
+                                            <input type="text" name="pin_confirmation" class="form-control form-control-sm mt-1 font-monospace"
+                                                   maxlength="8" pattern="\d{8}" inputmode="numeric" required
+                                                   aria-label="Ulangi PIN baru" placeholder="ulangi PIN">
+                                        </div>
+                                        <div class="col-auto">
+                                            <button type="submit" class="btn btn-sm btn-warning">Ganti</button>
+                                        </div>
+                                    </form>
+                                    @error('pin')
+                                        <div class="small text-danger mt-1">{{ $message }}</div>
+                                    @enderror
+                                </div>
                             </td>
                         </tr>
                         @endforeach
@@ -94,13 +116,6 @@
     </div>
 </div>
 
-{{--
-    Catatan untuk session berikutnya:
-    - Edit user (ganti nama/email/role) dan Reset PIN admin → A4/A5 masih WAJIB TANYA USER.
-    - Soft-delete (kolom deleted_at ada di skema) — belum ada route destroy di controller,
-      perlu ditambah dulu sebelum tombol hapus di atas bisa berfungsi.
---}}
-
 @endsection
 
 @push('scripts')
@@ -108,6 +123,13 @@
     @csrf @method('DELETE')
 </form>
 <script>
+function pradanaToggleForm(id, tombol) {
+    const el = document.getElementById(id);
+    const akanTerbuka = el.style.display === 'none';
+    el.style.display = akanTerbuka ? 'block' : 'none';
+    if (akanTerbuka) el.querySelector('input[name=pin]').focus();
+}
+
 function pradanaConfirmHapus(url, pesan) {
     Swal.fire({
         title: 'Konfirmasi Hapus',
