@@ -3,9 +3,15 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class SuratMasuk extends Model
 {
+    // L-05: surat tidak pernah hilang benar-benar dari sistem; yang ada hanya
+    // disembunyikan dari daftar (pulihkan lewat admin) atau dimusnahkan lewat
+    // alur pemusnahan + Berita Acara.
+    use SoftDeletes;
+
     protected $table = 'surat_masuk';
 
     protected $fillable = [

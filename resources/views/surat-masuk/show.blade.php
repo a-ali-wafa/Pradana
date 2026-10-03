@@ -57,14 +57,7 @@
         <a href="{{ route('surat-masuk.edit', $surat_masuk) }}" class="btn btn-outline-primary rounded-pill px-3">
             <i class="fas fa-pen me-1"></i> Edit
         </a>
-        @auth
-            @if(Auth::user()->isAdmin())
-            <button type="button" class="btn btn-outline-danger rounded-pill px-3"
-                onclick="pradanaConfirmHapus('{{ route('surat-masuk.destroy', $surat_masuk) }}', 'Hapus surat ini secara permanen?')">
-                <i class="fas fa-trash me-1"></i> Hapus
-            </button>
-            @endif
-        @endauth
+        @include('partials.arsip-aksi', ['surat' => $surat_masuk, 'jenis' => 'masuk'])
     </div>
 </div>
 
@@ -264,29 +257,3 @@
 </div>
 
 @endsection
-
-@push('scripts')
-<form id="formHapusSuratMasuk" method="POST" style="display:none;">
-    @csrf @method('DELETE')
-</form>
-<script>
-function pradanaConfirmHapus(url, pesan) {
-    Swal.fire({
-        title: 'Konfirmasi Hapus',
-        text: pesan,
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonColor: '#dc2626',
-        cancelButtonColor: '#64748b',
-        confirmButtonText: 'Ya, Hapus',
-        cancelButtonText: 'Batal',
-    }).then((result) => {
-        if (result.isConfirmed) {
-            const form = document.getElementById('formHapusSuratMasuk');
-            form.action = url;
-            form.submit();
-        }
-    });
-}
-</script>
-@endpush

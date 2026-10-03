@@ -24,11 +24,13 @@ class SuratMasukObserver
 
     public function deleting(SuratMasuk $suratMasuk): void
     {
-        // `forceDeleting` hanya ada pada model bertingkah SoftDeletes. Untuk
-        // model tanpa soft delete hasilnya null -> dianggap hapus permanen.
+        // `isForceDeleting()` (bukan `$surat->forceDeleting`): properti aslinya
+        // protected, dan lewat magic getter Laravel nama itu malah cocok dengan
+        // method statis `forceDeleting($callback)` yang butuh 1 argumen — akses
+        // langsung melempar Error, bukan mengembalikan null.
         // Saat surat cuma di-nyahkan (soft delete, L-05), berkas & baris
         // lampiran sengaja dibiarkan utuh supaya masih bisa dipulihkan.
-        $hapusPermanen = $suratMasuk->forceDeleting ?? true;
+        $hapusPermanen = $suratMasuk->isForceDeleting();
 
         if (! $hapusPermanen) {
             return;
@@ -42,6 +44,17 @@ class SuratMasukObserver
 
     public function deleted(SuratMasuk $suratMasuk): void
     {
-        $this->catatAktivitas("Menghapus surat masuk: {$suratMasuk->perihal}", $suratMasuk);
+        // Bedakan "baru di-nyahkan" dari "benar-benar dimusnahkan": dua-duanya
+        // memicu event `deleted`, tapi only yang kedua tidak bisa dibatalkan.
+        $aksi = $suratMasuk->isForceDeleting()
+            ? "Memusnahkan surat masuk: {$suratMasuk->perihal}"
+            : "Memindahkan surat masuk ke tempat sampah: {$suratMasuk->perihal}";
+
+        $this->catatAktivitas($aksi, $suratMasuk);
+    }
+
+    public function restored(SuratMasuk $suratMasuk): void
+    {
+        $this->catatAktivitas("Memulihkan surat masuk dari tempat sampah: {$suratMasuk->perihal}", $suratMasuk);
     }
 }

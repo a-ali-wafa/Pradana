@@ -9,6 +9,7 @@ use App\Models\KlasifikasiTersier;
 use App\Models\Lampiran;
 use App\Models\PengajuanHapusLampiran;
 use App\Models\PengaturanInstansi;
+use App\Models\PemusnahanArsip;
 use App\Models\SuratKeluar;
 use App\Models\SuratMasuk;
 use App\Models\User;
@@ -19,6 +20,7 @@ use App\Observers\KlasifikasiTersierObserver;
 use App\Observers\LampiranObserver;
 use App\Observers\PengajuanHapusLampiranObserver;
 use App\Observers\PengaturanInstansiObserver;
+use App\Observers\PemusnahanArsipObserver;
 use App\Observers\SuratKeluarObserver;
 use App\Observers\SuratMasukObserver;
 use App\Observers\UserObserver;
@@ -53,6 +55,11 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // Nama bulan & hari berbahasa Indonesia untuk semua `translatedFormat()`/
+        // `diffForHumans()` di view dan PDF. Tanpa ini output-nya tetap bahasa
+        // Inggris meskipun `config/app.locale` = 'id' (Carbon punya locale sendiri).
+        \Carbon\Carbon::setLocale('id');
+
         // Logging aktivitas otomatis (baru, 1 Sep 2026) — lihat AGENTS.md 12.22.
         // Kalau nanti ada isi boot() lain yang ditambahkan, taruh SETELAH baris
         // registrasi Observer ini atau sebelum, urutan di antara ini tidak penting.
@@ -66,5 +73,6 @@ class AppServiceProvider extends ServiceProvider
         PengaturanInstansi::observe(PengaturanInstansiObserver::class);
         User::observe(UserObserver::class);
         DrafKontenSuratKeluar::observe(DrafKontenSuratKeluarObserver::class);
+        PemusnahanArsip::observe(PemusnahanArsipObserver::class);
     }
 }

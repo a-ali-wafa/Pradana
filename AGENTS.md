@@ -31,10 +31,22 @@ Aplikasi arsip surat masuk/keluar untuk kantor kelurahan/desa. Migrasi dari Goog
 
 ## 3. Status pengerjaan
 
-Sudah ada & jalan: migration + model 11 tabel, Auth login/logout (email+PIN, rate limit), CRUD surat masuk/keluar, CRUD klasifikasi 3 level, Pengaturan Instansi (edit-only), Lampiran (upload/unduh), Pengajuan hapus lampiran, Dashboard + view, Pencarian, Cetak PDF, logging via 9 Observer, middleware `admin`, 40 view Blade.
-**Selesai 4 Okt 2026 (branch `upgrade/laravel-12`):** framework upgrade ke Laravel 12.69.3; lampiran pindah ke **disk lokal** (L-01) dengan upload **sync** + AJAX floating progress bar (L-02, diverifikasi lewat browser: tulis file, lewati duplikat, unduh inline & attachment); queue + 2 Job dihapus; log aktivitas kini **sync** dan terbukti menulis (`Mengunggah lampiran: ...`); daftar pengajuan hapus diberi filter status + pagination (L-23); tipe file diperluas ke Word/Excel + batas 25MB (L-13); `arsip:sinkron-ke-drive` (backup harian, `--dry-run`) dan `arsip:daftar-usang` menggantikan `CleanupRecordsCommand`. Tes: **12 passed**.
-Test suite: 12 tes lolos (`php artisan test`, SQLite in-memory) — cakupan masih sempit, **tes yang jalan di MariaDB belum dibuat** (L-24/Q1).
-Yang belum ada / masih mati: **CRUD `draf_konten_surat_keluar`** (→ fitur cetak PDF selalu menolak, TC-85), halaman error 403/404/500, UI log aktivitas, export laporan, buku agenda, modul pemusnahan arsip, reset/ganti PIN, tombol nyahkan untuk surat masuk, soft delete arsip, fix race `generateNomorSurat()`, role 2 tingkat.
+Sudah ada & jalan: migration + model (kini **13 tabel**: 11 lama + `pemusnahan_arsip` + `pemusnahan_arsip_item`), Auth login/logout (email+PIN, rate limit), CRUD surat masuk/keluar, CRUD klasifikasi 3 level, Pengaturan Instansi (edit-only), Lampiran (upload/unduh), Pengajuan hapus lampiran, **Pemusnahan arsip + Berita Acara**, Dashboard + view, Pencarian, Cetak PDF + halaman draf, logging via 10 Observer, middleware `admin`.
+
+Langkah 1–5 Bagian 7 **selesai & terverifikasi** (4 Okt 2026):
+
+1. Laravel **12.69.3** (PHP 8.2), Sanctum/`routes/api.php`/welcome dihapus, `optimize-autoloader`.
+2. Lampiran ke **disk lokal `arsip`** (L-01) + upload sync AJAX multi-file (L-02/L-13/L-24) dengan duplikat-sha256 dilewati; queue + 2 Job dihapus; log sync; `arsip:sinkron-ke-drive` (backup harian, `--dry-run`) & `arsip:daftar-usang`.
+3. Halaman **draf konten surat keluar** (`surat-keluar/{id}/draf`) — cetak PDF jadi bisa dipakai (L-16).
+4. Penomoran surat keluar jadi **`NomorSuratKeluarGenerator`** + tabel `surat_counters` + `lockForUpdate()` di dalam transaksi; dibuktikan dengan **dua koneksi MariaDB nyata** (bukan cuma docblock) + retry 3× di `store()` (L-20).
+5. **Soft delete surat** (`deleted_at` di kedua tabel) + tombol **"Nyahkan"** (ubah `status_arsip`) + **tempat sampah admin** (`?sampah=1`, `?usang=1`, `Pulihkan`) + **modul Pemusnahan Arsip** (pengajuan → approval admin → `forceDelete` baris & file + **Berita Acara** PDF bernomor `BA-###/romawi/tahun`). Parsial `partials/arsip-aksi.blade.php` dipakai kedua halaman show (menghilangkan duplikasi H6). Sidebar kini menyaring link admin (`isAdmin()`).
+
+Test suite: **45 passed** (`php artisan test`, 9 class) — termasuk 11 tes alur pemusnahan dan 9 tes tempat sampah. 3 tes penomoran (`NomorSuratKeluarTest`) jalan di **MariaDB sungguhan** pakai dua koneksi `mysql_test_a`/`mysql_test_b` dan mengunci baris betulan; sisanya SQLite in-memory (L-24/Q1 baru tertutup sebagian — alur otorisasi belum diuji di MariaDB).
+Diverifikasi lewat browser nyata di `http://127.0.0.1:8000`: ajukan → setujui → `surat_masuk` hilang dari DB, Berita Acara `BA-001/X/2026` ter-render (200, `application/pdf`), log aktivitas tersusun urut.
+
+Bug nyata yang ditemukan tes langkah 5 (sudah diperbaiki): `$model->forceDeleting` di Observer melempar `BadMethodCallException` (properti protected; magic getter malah memanggil method statis `forceDeleting($callback)` yang butuh argumen) → **hapus surat masuk/keluar sebelumnya selalu 500**. Ganti ke `isForceDeleting()`.
+
+Yang belum ada / masih mati: halaman error 403/404/500, UI log aktivitas, export laporan, buku agenda, notifikasi approval, reset/ganti PIN, remember-me masih ada, role masih enum 3 nilai (pemangkasan L-07 belum dikerjakan), pencarian belum menjangkau isi, `terkunci_pada` (auto-lock B10), squash migration + `sessions`/`cache` table + FULLTEXT.
 
 ## 4. Keputusan user [LOCKED]
 
@@ -98,11 +110,11 @@ Dokumen uji manual: `Obsidian Vault/Pradana/Manual_Testing_PRADANA.md`. Register
 
 ## 7. Urutan kerja (disetujui user lewat Q3 + P1)
 
-1. **Upgrade Laravel 10 → 12** + hapus Sanctum/boilerplate, pin dependency, `composer optimize-autoloader`.
-2. **Storage lokal + upload sync** (L-01/L-02) + AJAX loading bar; hapus 2 Job & matikan queue.
-3. **CRUD draf konten / halaman generate PDF** (L-16) — membuka fitur PDF yang sekarang mati.
-4. **Fix `generateNomorSurat()`** (race: docblock menyebut `lockForUpdate()`+retry padahal keduanya tidak ada) + tes MariaDB-nya.
-5. **Soft delete + tombol "Nyahkan" + modul pemusnahan + Berita Acara** (L-05/L-06/L-19).
+1. ✅ **Upgrade Laravel 10 → 12** + hapus Sanctum/boilerplate, pin dependency, `composer optimize-autoloader`.
+2. ✅ **Storage lokal + upload sync** (L-01/L-02) + AJAX loading bar; hapus 2 Job & matikan queue.
+3. ✅ **CRUD draf konten / halaman generate PDF** (L-16) — membuka fitur PDF yang sekarang mati.
+4. ✅ **Fix `generateNomorSurat()`** (race: docblock menyebut `lockForUpdate()`+retry padahal keduanya tidak ada) + tes MariaDB-nya.
+5. ✅ **Soft delete + tombol "Nyahkan" + modul pemusnahan + Berita Acara** (L-05/L-06/L-19).
 6. **Role 2 tingkat + hak nyata admin + migration pemetaan enum** (L-07), konsolidasi otorisasi ke policy/`@can`.
 7. **PIN 8 digit, reset PIN admin, ganti PIN sendiri, hapus remember-me** (L-07, L-11, L-12).
 8. **UI log aktivitas + retensi log**, perluasan pencarian (isi + FULLTEXT, pagination) (L-15, L-22).

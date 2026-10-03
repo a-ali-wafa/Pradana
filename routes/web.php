@@ -11,6 +11,7 @@ use App\Http\Controllers\LampiranController;
 use App\Http\Controllers\PencarianController;
 use App\Http\Controllers\PengajuanHapusLampiranController;
 use App\Http\Controllers\PengaturanInstansiController;
+use App\Http\Controllers\PemusnahanArsipController;
 use App\Http\Controllers\SuratKeluarController;
 use App\Http\Controllers\SuratMasukController;
 use App\Http\Controllers\UserController;
@@ -118,6 +119,21 @@ Route::middleware('auth')->group(function () {
     Route::resource('surat-masuk', SuratMasukController::class);
     Route::resource('surat-keluar', SuratKeluarController::class);
 
+    // Aktif/inaktif status arsip (L-04: sistem hanya menampilkan daftar surat
+    // lewat retensi, keputusan menonaktifkan tetap di tangan user).
+    Route::patch('surat-masuk/{surat_masuk}/status-arsip', [SuratMasukController::class, 'updateStatusArsip'])
+        ->name('surat-masuk.status-arsip');
+    Route::patch('surat-keluar/{surat_keluar}/status-arsip', [SuratKeluarController::class, 'updateStatusArsip'])
+        ->name('surat-keluar.status-arsip');
+
+    // Pulihkan dari tempat sampah — admin only (L-05; tombol "Nyahkan" = soft delete)
+    Route::patch('surat-masuk/{surat_masuk}/pulihkan', [SuratMasukController::class, 'restore'])
+        ->name('surat-masuk.restore')
+        ->middleware('admin');
+    Route::patch('surat-keluar/{surat_keluar}/pulihkan', [SuratKeluarController::class, 'restore'])
+        ->name('surat-keluar.restore')
+        ->middleware('admin');
+
     // Cetak PDF surat keluar (baru, 1 Sep 2026, lihat catatan #8 di atas & AGENTS.md 12.20)
     Route::get('surat-keluar/{surat_keluar}/cetak', [CetakSuratKeluarController::class, 'cetak'])
         ->name('surat-keluar.cetak');
@@ -155,4 +171,22 @@ Route::middleware('auth')->group(function () {
     Route::post('pengajuan-hapus-lampiran/{pengajuan_hapus_lampiran}/tolak', [PengajuanHapusLampiranController::class, 'tolak'])
         ->name('pengajuan-hapus-lampiran.tolak')
         ->middleware('admin');
+
+    // Pemusnahan arsip SURAT + Berita Acara (L-06 / E3, baru 4 Okt 2026) —
+    // pola sama seperti pengajuan hapus lampiran: semua role boleh mengajukan,
+    // hanya admin yang menyetujui/menolak. setujui() = satu-satunya jalur yang
+    // menghapus data sungguhan, jadi dipagari middleware admin di route DAN
+    // abort_unless di dalam controller (jangan cuma salah satu).
+    Route::resource('pemusnahan-arsip', PemusnahanArsipController::class)
+        ->only(['index', 'create', 'store', 'show']);
+    Route::post('pemusnahan-arsip/{pemusnahan_arsip}/setujui', [PemusnahanArsipController::class, 'setujui'])
+        ->name('pemusnahan-arsip.setujui')
+        ->middleware('admin');
+    Route::post('pemusnahan-arsip/{pemusnahan_arsip}/tolak', [PemusnahanArsipController::class, 'tolak'])
+        ->name('pemusnahan-arsip.tolak')
+        ->middleware('admin');
+    // Berita Acara boleh dicetak semua role yang login (dokumen bukti arsip,
+    // bukan aksi destruktif — sama seperti surat-keluar.cetak).
+    Route::get('pemusnahan-arsip/{pemusnahan_arsip}/berita-acara', [PemusnahanArsipController::class, 'beritaAcara'])
+        ->name('pemusnahan-arsip.berita-acara');
 });

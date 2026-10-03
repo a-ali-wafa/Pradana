@@ -3,9 +3,12 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class SuratKeluar extends Model
 {
+    // Lihat SuratMasuk: soft delete sesuai keputusan L-05.
+    use SoftDeletes;
     protected $table = 'surat_keluar';
 
     protected $fillable = [

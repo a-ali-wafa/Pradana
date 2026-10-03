@@ -152,8 +152,16 @@
                 <a class="nav-link {{ request()->routeIs('pencarian.*') ? 'active' : '' }}" href="{{ route('pencarian.index') }}">
                     <i class="fas fa-search fa-fw"></i> Pencarian Arsip
                 </a>
-                <a class="nav-link {{ request()->routeIs('pengajuan-hapus-lampiran.*') ? 'active' : '' }}" href="{{ route('pengajuan-hapus-lampiran.index') }}">
-                    <i class="fas fa-trash-alt fa-fw"></i> Pengajuan Hapus Lampiran
+                {{-- Link di bawah ini disaring per role (L-07, 4 Okt 2026).
+                    Route-nya memang sudah dipagari middleware `admin`, tapi tanpa
+                    filter ini staf non-admin melihat menu yang isinya 403 semua. --}}
+                @if (auth()->user()->isAdmin())
+                    <a class="nav-link {{ request()->routeIs('pengajuan-hapus-lampiran.*') ? 'active' : '' }}" href="{{ route('pengajuan-hapus-lampiran.index') }}">
+                        <i class="fas fa-trash-alt fa-fw"></i> Pengajuan Hapus Lampiran
+                    </a>
+                @endif
+                <a class="nav-link {{ request()->routeIs('pemusnahan-arsip.*') ? 'active' : '' }}" href="{{ route('pemusnahan-arsip.index') }}">
+                    <i class="fas fa-fire fa-fw"></i> Pemusnahan Arsip
                 </a>
 
                 <div class="nav-section-label">Administrator</div>
@@ -166,12 +174,14 @@
                 <a class="nav-link {{ request()->routeIs('klasifikasi-tersier.*') ? 'active' : '' }}" href="{{ route('klasifikasi-tersier.index') }}">
                     <i class="fas fa-tags fa-fw"></i> Klasifikasi Tersier
                 </a>
-                <a class="nav-link {{ request()->routeIs('users.*') ? 'active' : '' }}" href="{{ route('users.index') }}">
-                    <i class="fas fa-users-cog fa-fw"></i> Manajemen User
-                </a>
-                <a class="nav-link {{ request()->routeIs('pengaturan-instansi.*') ? 'active' : '' }}" href="{{ route('pengaturan-instansi.edit') }}">
-                    <i class="fas fa-building fa-fw"></i> Pengaturan Instansi
-                </a>
+                @if (auth()->user()->isAdmin())
+                    <a class="nav-link {{ request()->routeIs('users.*') ? 'active' : '' }}" href="{{ route('users.index') }}">
+                        <i class="fas fa-users-cog fa-fw"></i> Manajemen User
+                    </a>
+                    <a class="nav-link {{ request()->routeIs('pengaturan-instansi.*') ? 'active' : '' }}" href="{{ route('pengaturan-instansi.edit') }}">
+                        <i class="fas fa-building fa-fw"></i> Pengaturan Instansi
+                    </a>
+                @endif
             </div>
         </nav>
 

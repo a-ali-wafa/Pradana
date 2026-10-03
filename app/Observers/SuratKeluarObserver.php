@@ -24,7 +24,9 @@ class SuratKeluarObserver
     {
         // Sama seperti SuratMasukObserver: berkas fisik hanya ikut hilang kalau
         // penghapusan benar-benar permanen, bukan saat surat di-nyahkan (L-05).
-        $hapusPermanen = $suratKeluar->forceDeleting ?? true;
+        // Pakai isForceDeleting() — `$model->forceDeleting` tidak bisa diakses
+        // dari luar (protected) dan magic getter-nya salah resolve ke method statis.
+        $hapusPermanen = $suratKeluar->isForceDeleting();
 
         if (! $hapusPermanen) {
             return;
@@ -38,6 +40,15 @@ class SuratKeluarObserver
 
     public function deleted(SuratKeluar $suratKeluar): void
     {
-        $this->catatAktivitas("Menghapus surat keluar: {$suratKeluar->perihal}", $suratKeluar);
+        $aksi = $suratKeluar->isForceDeleting()
+            ? "Memusnahkan surat keluar: {$suratKeluar->perihal}"
+            : "Memindahkan surat keluar ke tempat sampah: {$suratKeluar->perihal}";
+
+        $this->catatAktivitas($aksi, $suratKeluar);
+    }
+
+    public function restored(SuratKeluar $suratKeluar): void
+    {
+        $this->catatAktivitas("Memulihkan surat keluar dari tempat sampah: {$suratKeluar->perihal}", $suratKeluar);
     }
 }

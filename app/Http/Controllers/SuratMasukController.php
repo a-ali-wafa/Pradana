@@ -9,29 +9,15 @@ use App\Models\SuratMasuk;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 /**
- * CRUD Surat Masuk.
+ * CRUD arsip surat masuk.
  *
- * Relasi sudah DIVERIFIKASI terhadap model SuratMasuk asli (diupload user
- * 26 Agu 2026, lihat AGENTS.md 12.12): primer()/sekunder()/tersier()/
- * lampiran() sesuai tebakan awal, TAPI relasi ke users ternyata bernama
- * petugas() — BUKAN user() seperti tebakan awal, sudah diperbaiki di
- * with()/load() pada index()/show().
- *
- * Auth: middleware('auth') biasa untuk semua action (siapa saja yang login
- * boleh input/edit surat masuk) KECUALI destroy() yang admin-only sesuai
- * ASUMSI SEMENTARA B2 ("siapa yang boleh hapus arsip surat permanen") —
- * B2 masih [WAJIB TANYA USER], BELUM final, cuma asumsi sementaranya
- * kebetulan "admin only". Koreksi 26 Agu 2026: sebelumnya salah ditulis
- * seolah B2 sudah [DEFAULT] di sini, ternyata belum — cross-check dengan
- * SuratKeluarController asli (yang benar menandainya TODO(B2)/WAJIB TANYA
- * USER). Kalau B2 dijawab beda dari "admin only", pengecekan di destroy()
- * di bawah perlu direvisi (atau dihapus kalau ternyata semua role boleh hapus).
- *
- * Pengecekan admin di destroy() pakai abort_unless+isAdmin() inline — konsisten
- * dengan pola SuratKeluarController::destroy() (retrofit B1, 1 Sep 2026).
+ * Penghapusan = soft delete (L-05): arsip tidak bisa dimusnahkan dari layar
+ * ini; pemusnahan resmi lewat modul Pemusnahan Arsip + Berita Acara (L-06).
+ * Penonaktifan arsip lewat tombol "Nyahkan" / updateStatusArsip (L-19).
  */
 class SuratMasukController extends Controller
 {
@@ -42,7 +28,16 @@ class SuratMasukController extends Controller
 
     public function index(Request $request): View
     {
-        $query = SuratMasuk::with(['primer', 'sekunder', 'tersier', 'petugas']);
+        $melihatSampah = $request->query('sampah') === '1';
+
+        // Hanya admin yang boleh membuka daftar arsip yang sudah dihapus lunak (L-05).
+        abort_unless(! $melihatSampah || $request->user()->isAdmin(), 403);
+
+        $query = SuratMasuk::query()->with(['primer', 'sekunder', 'tersier', 'petugas']);
+
+        if ($melihatSampah) {
+            $query->onlyTrashed();
+        }
 
         if ($request->filled('cari')) {
             $kw = $request->input('cari');
@@ -61,10 +56,27 @@ class SuratMasukController extends Controller
             $query->where('klasifikasi_primer_id', $request->integer('klasifikasi_primer_id'));
         }
 
-        $suratMasuk       = $query->orderByDesc('tanggal_diterima')->paginate(20)->withQueryString();
+        if ($request->filled('status_arsip')) {
+            $query->where('status_arsip', $request->input('status_arsip'));
+        }
+
+        if ($request->filled('tahun')) {
+            $query->whereYear('tanggal_surat', $request->integer('tahun'));
+        }
+
+        $usang = $request->query('usang') === '1';
+
+        // L-04: sistem hanya MENYEDIAKAN DAFTAR arsip yang lewat retensi 5 tahun
+        // (dihitung dari tanggal_surat — L-21); keputusan menonaktifkan tetap
+        // milik user, makanya ini filter manual, bukan layar terpisah yang memaksa.
+        if ($usang) {
+            $query->where('tanggal_surat', '<', now()->subYears(5));
+        }
+
+        $suratMasuk       = $query->orderByDesc('tanggal_diterima')->orderByDesc('id')->paginate(20)->withQueryString();
         $klasifikasiPrimer = KlasifikasiPrimer::orderBy('kode')->get();
 
-        return view('surat-masuk.index', compact('suratMasuk', 'klasifikasiPrimer'));
+        return view('surat-masuk.index', compact('suratMasuk', 'klasifikasiPrimer', 'melihatSampah', 'usang'));
     }
 
     public function create(): View
@@ -132,10 +144,11 @@ class SuratMasukController extends Controller
         );
 
         try {
+            // L-05: ini soft delete — baris, lampiran, dan file fisiknya tetap
+            // ada dan bisa dipulihkan admin. Pemusnahan sungguhan hanya lewat
+            // modul Pemusnahan Arsip (dengan Berita Acara).
             $surat_masuk->delete();
         } catch (QueryException $e) {
-            // Restrict delete kemungkinan dari relasi lain yang mereferensikan
-            // baris ini (mis. aktivitas.subjek, kalau logging sudah aktif).
             return back()->with(
                 'error',
                 'Surat masuk tidak bisa dihapus karena masih direferensikan data lain.'
@@ -144,6 +157,44 @@ class SuratMasukController extends Controller
 
         return redirect()
             ->route('surat-masuk.index')
-            ->with('status', 'Surat masuk berhasil dihapus.');
+            ->with('status', 'Surat masuk dipindahkan ke tempat sampah (masih bisa dipulihkan).');
+    }
+
+    /**
+     * L-19 / E8+E9: men-nyahkan arsip = status_arsip jadi "inaktif".
+     * Tersedia untuk semua user login (arsip kantor, tanpa kepemilikan),
+     * dan tiap perubahan tercatat otomatis lewat observer.
+     */
+    public function updateStatusArsip(Request $request, SuratMasuk $surat_masuk): RedirectResponse
+    {
+        $data = $request->validate([
+            'status_arsip' => ['required', Rule::in(['aktif', 'inaktif'])],
+        ]);
+
+        $surat_masuk->update($data);
+
+        return back()->with(
+            'status',
+            $data['status_arsip'] === 'inaktif'
+                ? 'Surat masuk dinonaktifkan sebagai arsip aktif.'
+                : 'Surat masuk diaktifkan kembali.'
+        );
+    }
+
+    /**
+     * Pulihkan surat dari tempat sampah (admin saja). Paramenya bukan model
+     * binding karena surat yang sudah dihapus lunak tidak ikut ditemukan oleh
+     * route binding default.
+     */
+    public function restore(Request $request, int $suratMasuk): RedirectResponse
+    {
+        abort_unless($request->user()->isAdmin(), 403, 'Hanya admin yang bisa memulihkan arsip.');
+
+        $surat = SuratMasuk::withTrashed()->findOrFail($suratMasuk);
+        $surat->restore();
+
+        return redirect()
+            ->route('surat-masuk.show', $surat)
+            ->with('status', 'Surat masuk dipulihkan dari tempat sampah.');
     }
 }
