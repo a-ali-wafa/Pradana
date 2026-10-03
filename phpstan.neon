@@ -1,0 +1,20 @@
+includes:
+    - vendor/nunomaduro/larastan/extension.neon
+    # 29 temuan hasil `--generate-baseline` (4 Okt 2026): semuanya ketidaktahuan
+    # statis terhadap relasi polymorphic (`morphTo` mengembalikan Model, sehingga
+    # `$lampiran->lampiranable?->primer` dan `hapusBerkasFisik()` tidak bisa
+    # dibuktikan) + `catch (QueryException)` yang memang dilempar PDO saat runtime.
+    # Regenerasi kalau file-file itu berubah: vendor/bin/phpstan --generate-baseline
+    - phpstan-baseline.neon
+
+# L-24 (Q2=a): analisis statis. Level 5 dipilih sebagai titik mulai yang masih
+# masuk akal untuk kode yang ditulis cepat sepanjang Sep-Okt 2026; Naikkan ke
+# 6/7 setelah temuan di level ini habis, jangan langsung 8 (baseline-nya akan
+# jadi kuburan).
+parameters:
+    paths:
+        - app
+        - database
+        - routes
+    level: 5
+    treatPhpDocTypesAsCertain: false
