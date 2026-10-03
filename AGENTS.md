@@ -33,7 +33,7 @@ Aplikasi arsip surat masuk/keluar untuk kantor kelurahan/desa. Migrasi dari Goog
 
 Sudah ada & jalan: migration + model (kini **13 tabel**: 11 lama + `pemusnahan_arsip` + `pemusnahan_arsip_item`), Auth login/logout (email+PIN, rate limit), CRUD surat masuk/keluar, CRUD klasifikasi 3 level, Pengaturan Instansi (edit-only), Lampiran (upload/unduh), Pengajuan hapus lampiran, **Pemusnahan arsip + Berita Acara**, Dashboard + view, Pencarian, Cetak PDF + halaman draf, **Ekspor laporan CSV + Buku Agenda PDF**, logging via 10 Observer, middleware `admin`.
 
-Langkah 1–9 Bagian 7 **selesai & terverifikasi** (4 Okt 2026):
+Langkah 1–10 Bagian 7 **selesai & terverifikasi** (4 Okt 2026):
 
 1. Laravel **12.69.3** (PHP 8.2), Sanctum/`routes/api.php`/welcome dihapus, `optimize-autoloader`.
 2. Lampiran ke **disk lokal `arsip`** (L-01) + upload sync AJAX multi-file (L-02/L-13/L-24) dengan duplikat-sha256 dilewati; queue + 2 Job dihapus; log sync; `arsip:sinkron-ke-drive` (backup harian, `--dry-run`) & `arsip:daftar-usang`.
@@ -49,8 +49,10 @@ Langkah 1–9 Bagian 7 **selesai & terverifikasi** (4 Okt 2026):
 
 9. **Ekspor laporan, Buku Agenda, dan antrian approval** (L-17): `LaporanController` + halaman `/laporan` — satu filter (periode, jenis, klasifikasi primer, status arsip) dipakai tiga keluaran: halaman itu sendiri (dengan caption "N surat cocok" + peringatan eksplisit kalau 0, supaya rekap kosong tidak dibaca sebagai aplikasi rusak), **`/laporan/rekap` = CSV** (`;` + BOM UTF-8, dibuka di Excel/LibreOffice kantor; bukan `.xlsx` karena `maatwebsite/excel` butuh extension yang belum tentu ada di shared hosting K1=a), dan **`/laporan/agenda` = PDF Buku Agenda A4 landscape** (dompdf, kop instansi, kolom sesuai format agenda manual kantor, blok tanda tangan Kepala Instansi + Petugas Arsip). Kedua keluaran dibaca dari **satu method yang sama** (`baris()`) supaya tidak bisa berbeda kesimpulan. Surat di tempat sampah otomatis terluar (scope soft delete); periode terbalik dibalik, bukan menghasilkan dokumen kosong. H1=b "notifikasi" diwujudkan **badge jumlah pengajuan `menunggu` di sidebar admin** (2 sumber: hapus lampiran + pemusnahan) lewat `View::composer('layouts.app')` — kantor tanpa SMTP/WA, jadi tidak ada jalur kirim; angka 0 meniadakan query untuk non-admin.
 
-Test suite: **90 passed** (`php artisan test`, 14 class) — +11 `PencarianDanLogTest`, +10 `LaporanAgendaTest`. 3 tes penomoran (`NomorSuratKeluarTest`) jalan di **MariaDB sungguhan** pakai dua koneksi `mysql_test_a`/`mysql_test_b` dan mengunci baris betulan; sisanya SQLite in-memory.
-Diverifikasi lewat browser nyata di `http://127.0.0.1:8000`: alur pemusnahan penuh (ajukan → setujui → `surat_masuk` hilang dari DB, Berita Acara `BA-001/X/2026` ter-render 200 `application/pdf`, log urut), DOM halaman user/dashboard/form edit surat keluar (opsi role tinggal dua, nomor tetap bisa diedit admin), `/profil/pin` (3 field PIN), `/users` (3 form reset PIN inline), halaman login (checkbox "Ingat saya" hilang, `pattern=\d{8}`), `arsip:reset-pin`/`arsip:akun-pertama` dijalankan sungguhan di terminal, lalu `/laporan` (caption jumlah + peringatan periode kosong berbahasa Indonesia "01 Mei 2026"), unduhan CSV nyata (BOM `EF BB BF`, header 12 kolom `;`, baris surat masuk & keluar), dan `/laporan/agenda` 200 `application/pdf` `%PDF-1.7`.
+10. **Halaman error, README kantor, dan manual pemakaian** (K16, X2=a, L-25): `resources/views/errors/{403,404,419,500,503}.blade.php` + `errors/layout.blade.php`. Layout error **berdiri sendiri** (sengaja TIDAK `@extends('layouts.app')`) karena layout utama memanggil `auth()->user()->isAdmin()` + query pengajuan — exception kedua di atas halaman error (mis. DB mati = penyebab 500-nya) bikin user malah lihat layar kosong; karena itu juga tidak ada tombol "Keluar" (form POST butuh token CSRF yang justru sering kedaluwarsa di layar ini). Bahasanya untuk orang kantor, bukan pesan default Laravel: 403 menjelaskan siapa admin, 404 mengarahkan ke Pencarian Arsip, **419** ("halaman kedaluwarsa", kasus nyata: formulir dibiarkan >2 jam / laptop tidur — dijabarkan cara menghindari kehilangan isian panjang), 500 (jangan ulang-ulang, catat jam & nomor surat, jangan utak-atik folder arsip), 503 (mode `artisan down`). Tidak ada variabel `$exception` yang dicetak (nama tabel/path server tidak boleh terbaca). `README.md` ditulis ulang dari boilerplate Laravel jadi halaman untuk orang kantor; manual pemakaian lengkap ada di **`docs/manual-pemakaian.md`** (16 bagian + Lampiran A petugas: `upload_max_filesize`/`post_max_size` ≥ 26M, cron `schedule:run`, uji pulih backup sebelum serah terima, daftar batasan yang diketahui). Sekalian diperbaiki: bullet halaman login masih menjanjikan "Lampiran tersimpan aman di Google Drive" padahal L-01 sudah pindah ke disk lokal.
+
+Test suite: **95 passed** (`php artisan test`, 15 class) — +11 `PencarianDanLogTest`, +10 `LaporanAgendaTest`, +5 `HalamanErrorTest`. 3 tes penomoran (`NomorSuratKeluarTest`) jalan di **MariaDB sungguhan** pakai dua koneksi `mysql_test_a`/`mysql_test_b` dan mengunci baris betulan; sisanya SQLite in-memory.
+Diverifikasi lewat browser nyata di `http://127.0.0.1:8000`: alur pemusnahan penuh (ajukan → setujui → `surat_masuk` hilang dari DB, Berita Acara `BA-001/X/2026` ter-render 200 `application/pdf`, log urut), DOM halaman user/dashboard/form edit surat keluar (opsi role tinggal dua, nomor tetap bisa diedit admin), `/profil/pin` (3 field PIN), `/users` (3 form reset PIN inline), halaman login (checkbox "Ingat saya" hilang, `pattern=\d{8}`), `arsip:reset-pin`/`arsip:akun-pertama` dijalankan sungguhan di terminal, lalu `/laporan` (caption jumlah + peringatan periode kosong berbahasa Indonesia "01 Mei 2026"), unduhan CSV nyata (BOM `EF BB BF`, header 12 kolom `;`, baris surat masuk & keluar), dan `/laporan/agenda` 200 `application/pdf` `%PDF-1.7`. Halaman error juga diambil betulan lewat browser: `/AlamatTidakAda123` → 404 dengan kode "404" di layar, tanpa sidebar, dan tanpa halaman debugger; tes mengesahkan 403 dari middleware admin + 503 dari `artisan down` benar-benar lewat view baru (file `storage/framework/down` dipastikan bersih lagi sesudah tes).
 
 Catatan untuk user: karena PIN sekarang 8 digit, **PIN akun dev `aliwafa3575@gmail.com` sudah diganti menjadi `12345678`** — PIN lama yang 6 digit tidak bisa dipakai login lagi.
 
@@ -59,7 +61,7 @@ Bug nyata yang ditemukan tes (bukan dokumen) dan sudah diperbaiki:
 - `PemusnahanArsipItem::pemusnahan()` menebak FK `pemusnahan_id`, kolom sebenarnya `pemusnahan_arsip_id`.
 - `LampiranPolicy::view()` memberi 403 ke staf yang membuka lampiran bukan miliknya — tidak pernah kelihatan karena semua uji manual sebelumnya dijalankan sebagai admin.
 
-Yang belum ada / masih mati: halaman error 403/404/500, squash migration + tabel `sessions`/`cache` + FULLTEXT + buang kolom mati (`remember_token`, `email_verified_at`, `pengaturan_instansi.gdrive_root_folder_id`, `surat_*.file_path`, `draf_konten_surat_keluar.lampiran`), README kantor + manual pemakaian, Larastan/Pint (L-24).
+Yang belum ada / masih mati: squash migration + tabel `sessions`/`cache` + FULLTEXT + buang kolom mati (`remember_token`, `email_verified_at`, `pengaturan_instansi.gdrive_root_folder_id`, `surat_*.file_path`, `draf_konten_surat_keluar.lampiran`), Larastan/Pint (L-24), dan uji pulih backup + deploy sungguhan ke hosting kantor (butuh K1/S14: belum ada server).
 
 Dua item **tidak bisa diselesaikan agent** dan butuh bahan/angka dari user — jangan ditebak:
 - **F3 multi-template PDF** (jawaban user: "nanti multi template, menyesuaikan dengan punya desa"): butuh kop/template resmi desa aslinya. Sekarang satu template umum di `resources/views/surat-keluar/cetak.blade.php`.
@@ -81,7 +83,7 @@ Dua item **tidak bisa diselesaikan agent** dan butuh bahan/angka dari user — j
 | L-10 | User boleh dihapus walau punya surat (B8=a, "tidak ada sistem kepemilikan, semua milik kantor") — log aktivitas jadi penjaga |
 | L-11 | Tidak ada 2FA (A6=a), **remember-me dihapus** dari form login (H4=a), login tetap email+PIN (A1=a). **Selesai 4 Okt 2026** — kolom `remember_token` masih ada di skema tapi tidak pernah ditulis; dibersihkan sekalian saat squash S11 |
 | L-12 | Alur lupa PIN dibuat lengkap: admin reset PIN **dan** user bisa ganti PIN sendiri (A4/A5=a). **Selesai 4 Okt 2026**: PIN **8 digit** di semua jalur (login, buat user, reset, ganti sendiri); admin → `PATCH users/{user}/pin` + form inline di daftar user; staf → `profil/pin` (wajib PIN lama); kalau semua admin terkunci: `php artisan arsip:reset-pin email`. Tidak ada reset lewat email (kantor tanpa SMTP) |
-| L-13 | Tipe file lampiran diperluas: `pdf, jpg, jpeg, png` **+ `doc, docx, xls, xlsx`** (C1=a) |
+| L-13 | Tipe file lampiran diperluas: `pdf, jpg, jpeg, png` **+ `doc, docx, xls, xlsx`** (C1=a). Batas yang berlaku di kode (`StoreLampiranRequest`): **maks 25MB per berkas, 10 berkas sekali unggah** — perlu `upload_max_filesize`/`post_max_size` ≥ 26M di `php.ini` server, kalau tidak PHP menolak sebelum Laravel sempat memberi pesan ramah (dicatat di manual Lampiran A.1) |
 | L-14 | Filter daftar surat **disamakan** untuk masuk & keluar: cari, tahun, sifat, status arsip, klasifikasi (H1=a). Pagination seragam 20/halaman (H2) |
 | L-15 | Pencarian ikut menjangkau **isi** (`ringkasan`, `isi_surat`) (P4=b) |
 | L-16 | Ada **halaman khusus untuk mengisi draf/generate PDF** surat keluar (form header + isi) (P1, jawaban user) |
@@ -121,14 +123,14 @@ cp .env.example .env && php artisan key:generate   # lalu isi DB_*, GOOGLE_*, DE
 php artisan migrate --seed                         # seeder produksi: cuma baris pengaturan instansi
 php artisan arsip:akun-pertama email@kantor.desa --nama="Kepala Desa"   # akun admin pertama
 php artisan serve            # http://127.0.0.1:8000
-php artisan test             # 90 tes (SQLite in-memory + 3 tes MariaDB, butuh DB_TEST_DATABASE)
+php artisan test             # 95 tes (SQLite in-memory + 3 tes MariaDB, butuh DB_TEST_DATABASE)
 
 # data contoh untuk pengembangan (TOLAK jalan kalau APP_ENV bukan local):
 php artisan db:seed --class=DevSeeder
 ```
 Perintah lain yang perlu diketahui saat serah terima: `arsip:reset-pin {email}` (kalau semua admin lupa PIN — tidak ada reset lewat email), `arsip:sinkron-ke-drive [--dry-run]` (backup), `arsip:daftar-usang [--tahun=5]` (daftar arsip lewat retensi).
 Service Account JSON: `storage/app/google/service-account.json` (jangan pernah di-commit; sudah tercakup `.gitignore`).
-Dokumen uji manual: `Obsidian Vault/Pradana/Manual_Testing_PRADANA.md`. Register keputusan: `.../Daftar Keputusan PRADANA.md`.
+Dokumen untuk kantor: **`docs/manual-pemakaian.md`** (manual pemakaian + Lampiran A petugas — ikut ter-commit, dicetak saat serah terima), `README.md` (halaman depan untuk orang kantor). Dokumen uji manual: `Obsidian Vault/Pradana/Manual_Testing_PRADANA.md`. Register keputusan: `.../Daftar Keputusan PRADANA.md`.
 
 ## 7. Urutan kerja (disetujui user lewat Q3 + P1)
 
@@ -141,5 +143,5 @@ Dokumen uji manual: `Obsidian Vault/Pradana/Manual_Testing_PRADANA.md`. Register
 7. ✅ **PIN 8 digit, reset PIN admin, ganti PIN sendiri, hapus remember-me** (L-11, L-12) + **I3 DevSeeder**.
 8. **UI log aktivitas + retensi log**, perluasan pencarian (isi + FULLTEXT, pagination) (L-15, L-22). ✅ *(FULLTEXT sengaja ditunda ke S11 — lihat alasan LIKE di Bagian 3 langkah 8)*
 9. **Ekspor laporan + Buku Agenda + notifikasi approval** (L-17). ✅ *(notifikasi = badge antrian di sidebar, bukan email/WA — kantor tanpa SMTP; lihat Bagian 3 langkah 9)*
-10. **Halaman error, README kantor, manual pemakaian** (K16, L-26, L-25).
+10. **Halaman error, README kantor, manual pemakaian** (K16, L-26, L-25). ✅
 11. **Squash migration + kolom baru + index** (S11) — dikerjakan sekali, setelah skema fitur-final stabil.

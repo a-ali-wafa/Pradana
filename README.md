@@ -1,66 +1,63 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# PRADANA — Arsip Surat Digital Kantor
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Aplikasi arsip **surat masuk dan surat keluar** untuk kantor desa/kelurahan. Dibuat untuk
+menggantikan pencatatan di Google Sheets + Google Drive: satu tempat untuk mencatat surat,
+menyimpan scan-nya, menomori surat keluar, mencetak PDF berkop, dan menyiapkan Berita
+Acara pemusnahan arsip yang diminta saat audit.
 
-## About Laravel
+- **Manual pemakaian (untuk staf & kepala desa):** [`docs/manual-pemakaian.md`](docs/manual-pemakaian.md)
+- **Pasang & pelihara (untuk petugas IT):** Lampiran A di manual yang sama
+- **Konteks teknis untuk AI agent / programmer yang melanjutkan:** [`AGENTS.md`](AGENTS.md)
+  (riwayat keputusan panjang: `AGENTS_HISTORY.md`)
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+## Yang bisa dilakukan aplikasi
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+| Untuk | Fitur |
+|---|---|
+| Staf arsip | Catat surat masuk/keluar, unggah lampiran (banyak berkas sekaligus), cari arsip termasuk dari isi surat, men-*nyahkan* arsip lewat retensi, isi draf & cetak PDF surat keluar, ajukan hapus lampiran / pemusnahan |
+| Admin (kepala desa/lurah) | Semua di atas + setujui pengajuan hapus & pemusnahan (lengkap dengan **Berita Acara** PDF), tempat sampah & pulihkan arsip, kelola user & PIN, klasifikasi 3 tingkat, kop/logo instansi, **Laporan CSV & Buku Agenda PDF**, baca **Log Aktivitas** |
+| Otomatis | Nomor surat keluar (`001/01.02.03/IX/2026`, urut lagi tiap Januari), log setiap perubahan, backup arsip ke Google Drive harian, pembersihan log lama |
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+## Cara membuka
 
-## Learning Laravel
+Aplikasi berjalan di browser (Chrome / Firefox / Edge versi baru) di jaringan kantor.
+Alamatnya diberikan petugas yang memasang; biasanya `http://<alamat-server>` di jaringan
+kantor atau `http://127.0.0.1:8000` kalau dijalankan di satu computer.
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+Masuk pakai **email + PIN 8 digit** dari admin. Tidak ada pendaftaran sendiri dan tidak ada
+link "lupa PIN" — reset PIN dilakukan admin lewat menu Manajemen User.
 
-You may also try the [Laravel Bootcamp](https://bootcamp.laravel.com), where you will be guided through building a modern Laravel application from scratch.
+## Alur kerja sehari-hari yang paling sering
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+1. Catat surat masuk baru beserta scan-nya (bagian 3 & 6 manual).
+2. Catat surat keluar, isi drafnya, cetak PDF (bagian 4 & 5).
+3. Sesudah selesai dipakai, tekan **Nyahkan** di halaman surat (bagian 8).
+4. Awal tahun berikutnya: unduh rekap CSV + Buku Agenda tahun lalu (bagian 12), lalu
+   ajukan pemusnahan arsip yang sudah lewat 5 tahun (bagian 10).
 
-## Laravel Sponsors
+## Catatan yang perlu diketahui sejak awal
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+- File arsip disimpan di computer server kantor, di luar folder yang bisa diakses publik.
+  Tidak ada satu pun tautan file yang dibagikan tanpa login.
+- Penghapusan surat **tidak pernah** langsung permanen dari layar — masuk tempat sampah
+  dulu, dan hanya bisa dipulihkan admin. Hapus total hanya lewat alur **Pemusnahan Arsip**
+  yang meninggalkan Berita Acara.
+- PDF surat saat ini memakai satu template kop umum. Template resmi desa bisa
+  menyusul (butuh contoh kop resminya).
+- Aplikasi ini dibuat untuk dipakai satu kantor (bukan untuk banyak desa sekaligus).
 
-### Premium Partners
+## Untuk pengembang
 
-- **[Vehikl](https://vehikl.com/)**
-- **[Tighten Co.](https://tighten.co)**
-- **[WebReinvent](https://webreinvent.com/)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel/)**
-- **[Cyber-Duck](https://cyber-duck.co.uk)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Jump24](https://jump24.co.uk)**
-- **[Redberry](https://redberry.international/laravel/)**
-- **[Active Logic](https://activelogic.com)**
-- **[byte5](https://byte5.de)**
-- **[OP.GG](https://op.gg)**
+```bash
+composer install
+cp .env.example .env && php artisan key:generate   # lalu isi DB_* dan DEV_PIN
+php artisan migrate --seed
+php artisan db:seed --class=DevSeeder              # data contoh, hanya di APP_ENV=local
+php artisan arsip:akun-pertama admin@kantor.desa --nama="Kepala Desa"
+php artisan serve
+php artisan test
+```
 
-## Contributing
-
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
-
-## Code of Conduct
-
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
-
-## Security Vulnerabilities
-
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
-
-## License
-
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+Framework: Laravel 12 (PHP 8.2), MariaDB/MySQL, Bootstrap 5 via CDN, PDF lewat dompdf.
+Aturan penamaan domain sengaja bahasa Indonesia (`surat_masuk`, `pemusnahan_arsip`) —
+lihat `AGENTS.md` sebelum mengubah apa pun.

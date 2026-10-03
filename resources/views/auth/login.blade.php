@@ -177,7 +177,7 @@
             <ul>
                 <li><i class="fas fa-check-circle"></i> Klasifikasi arsip berjenjang</li>
                 <li><i class="fas fa-check-circle"></i> Penomoran surat otomatis</li>
-                <li><i class="fas fa-check-circle"></i> Lampiran tersimpan aman di Google Drive</li>
+                <li><i class="fas fa-check-circle"></i> Lampiran tersimpan di computer arsip kantor</li>
             </ul>
         </div>
 
