@@ -6,6 +6,8 @@ use App\Http\Requests\StoreSuratKeluarRequest;
 use App\Http\Requests\UpdateSuratKeluarRequest;
 use App\Models\KlasifikasiPrimer;
 use App\Models\SuratKeluar;
+use App\Services\NomorSuratKeluarGenerator;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -14,25 +16,14 @@ use Illuminate\View\View;
 /**
  * CRUD arsip surat keluar.
  *
- * SENGAJA BELUM DITANGANI di controller ini (di luar scope "CRUD Surat Keluar"
- * menurut roadmap Bagian 11 AGENTS.md, jadi ditunda supaya tidak menebak-nebak
- * kode yang belum ada):
- * - Upload lampiran ke Google Drive — Lampiran model & GoogleDriveService belum
- *   dibuat (dikonfirmasi user). Setelah keduanya ada, tambahkan relasi
- *   `lampiran()` (morphMany) di model SuratKeluar lalu sambungkan di sini.
- * - Logging ke tabel `aktivitas` — ini item roadmap terpisah ("Logging aktivitas
- *   otomatis di setiap aksi") dan kemungkinan lebih rapi diimplementasikan lewat
- *   Model Observer/Event daripada dipanggil manual di tiap controller. Belum
- *   saya tambahkan di sini supaya tidak dobel/konflik nanti.
- * - Create/edit isi draf_konten_surat_keluar & generate PDF — juga item roadmap
- *   terpisah ("Generate PDF surat keluar, DomPDF").
- *
- * CATATAN: Atribut `file_path` sudah resmi dihapus sesuai dengan keputusan di Bagian 8.
-
+ * Penomoran delegasi ke NomorSuratKeluarGenerator (WAJIB di dalam transaksi —
+ * lihat komentar kelas itu). Cetak PDF ada di CetakSuratKeluarController,
+ * isi kontennya di DrafKontenSuratKeluarController, lampiran di
+ * LampiranController; logging otomatis lewat SuratKeluarObserver.
  */
 class SuratKeluarController extends Controller
 {
-    public function __construct()
+    public function __construct(private readonly NomorSuratKeluarGenerator $nomorSurat)
     {
         $this->middleware('auth');
     }
@@ -87,29 +78,50 @@ class SuratKeluarController extends Controller
 
     public function store(StoreSuratKeluarRequest $request): RedirectResponse
     {
-        $data = $request->validated();
-
-        $suratKeluar = DB::transaction(function () use ($data, $request) {
-            $tanggal = \Carbon\Carbon::parse($data['tanggal_surat']);
-            $tahun   = (int) $tanggal->year;
-            $bulan   = (int) $tanggal->month;
-
-            $data['nomor_surat'] = $this->generateNomorSurat(
-                $tahun,
-                $bulan,
-                (int) $data['klasifikasi_primer_id'],
-                isset($data['klasifikasi_sekunder_id']) ? (int) $data['klasifikasi_sekunder_id'] : null,
-                isset($data['klasifikasi_tersier_id'])  ? (int) $data['klasifikasi_tersier_id']  : null,
-            );
-            $data['status_arsip'] = $data['status_arsip'] ?? 'aktif';
-            $data['user_id'] = $request->user()->id;
-
-            return SuratKeluar::create($data);
-        });
+        $suratKeluar = $this->simpanDenganNomor($request->validated(), $request->user()->id);
 
         return redirect()
             ->route('surat-keluar.show', $suratKeluar)
             ->with('status', "Surat keluar {$suratKeluar->nomor_surat} berhasil disimpan.");
+    }
+
+    /**
+     * Simpan surat keluar dengan nomor yang baru di-generate, dicoba ulang
+     * maksimal 3 kali kalau ternyata menabrak unique constraint `nomor_surat`
+     * (jaring pengaman di atas lock counter, bukan pengganti lock).
+     */
+    private function simpanDenganNomor(array $data, int $userId, int $sisaPercobaan = 3): SuratKeluar
+    {
+        try {
+            return DB::transaction(function () use ($data, $userId) {
+                $data['nomor_surat'] = $this->nomorSurat->generate(
+                    $data['tanggal_surat'],
+                    (int) $data['klasifikasi_primer_id'],
+                    isset($data['klasifikasi_sekunder_id']) ? (int) $data['klasifikasi_sekunder_id'] : null,
+                    isset($data['klasifikasi_tersier_id']) ? (int) $data['klasifikasi_tersier_id'] : null,
+                );
+                $data['status_arsip'] = $data['status_arsip'] ?? 'aktif';
+                $data['user_id'] = $userId;
+
+                return SuratKeluar::create($data);
+            });
+        } catch (QueryException $e) {
+            if ($sisaPercobaan <= 1 || ! $this->nomorSuratTabrakan($e)) {
+                throw $e;
+            }
+
+            return $this->simpanDenganNomor($data, $userId, $sisaPercobaan - 1);
+        }
+    }
+
+    /**
+     * 1062 = duplicate key (MySQL/MariaDB); SQLite memakai teks error sendiri.
+     */
+    private function nomorSuratTabrakan(QueryException $e): bool
+    {
+        return ($e->errorInfo[1] ?? null) === 1062
+            || str_contains($e->getMessage(), 'Duplicate entry')
+            || str_contains($e->getMessage(), 'surat_keluar_nomor_surat_unique');
     }
 
     public function show(SuratKeluar $surat_keluar): View
@@ -157,58 +169,6 @@ class SuratKeluarController extends Controller
         return redirect()
             ->route('surat-keluar.index')
             ->with('status', "Surat keluar {$nomorSurat} berhasil dihapus.");
-    }
-
-    /**
-     * Generate nomor surat keluar dengan format yang dikonfirmasi user 3 Sep 2026 (D1 [LOCKED]):
-     *   {urutan 3 digit}/{kodeP.kodeS.kodeT}/{bulan romawi}/{tahun}
-     * Contoh: 001/01.01.01/IX/2026
-     *
-     * - Urutan: global per tahun (D2), reset tiap tahun (D3). Dihitung dari `tanggal_surat`.
-     * - kodeP/kodeS/kodeT: diambil langsung dari model KlasifikasiPrimer/Sekunder/Tersier.
-     *   Jika sekunder/tersier tidak dipilih, bagian yang bersangkutan dilewati
-     *   (misal cuma primer: "001/01/IX/2026").
-     * - lockForUpdate() di dalam transaction supaya tidak ada nomor kembar pada request bersamaan.
-     * - Retry 3x sebagai jaga-jaga jika terjadi race condition antar transaksi.
-     */
-    protected function generateNomorSurat(
-        int $tahun,
-        int $bulan,
-        int $klasifikasiPrimerId,
-        ?int $klasifikasiSekonderId = null,
-        ?int $klasifikasiTersierId  = null,
-    ): string {
-        static $bulanRomawi = [
-            1 => 'I', 2 => 'II', 3 => 'III', 4 => 'IV', 5 => 'V', 6 => 'VI',
-            7 => 'VII', 8 => 'VIII', 9 => 'IX', 10 => 'X', 11 => 'XI', 12 => 'XII',
-        ];
-
-        // Ambil kode klasifikasi
-        $primer   = \App\Models\KlasifikasiPrimer::find($klasifikasiPrimerId);
-        $sekunder = $klasifikasiSekonderId  ? \App\Models\KlasifikasiSekunder::find($klasifikasiSekonderId)  : null;
-        $tersier  = $klasifikasiTersierId   ? \App\Models\KlasifikasiTersier::find($klasifikasiTersierId)   : null;
-
-        $bagianKode = collect([
-            $primer?->kode,
-            $sekunder?->kode,
-            $tersier?->kode,
-        ])->filter()->implode('.');
-
-        $romawi = $bulanRomawi[$bulan] ?? (string) $bulan;
-
-        DB::table('surat_counters')->upsert(
-            ['jenis_surat' => 'surat_keluar', 'tahun' => $tahun, 'current_value' => 1],
-            ['jenis_surat', 'tahun'],
-            ['current_value' => DB::raw('current_value + 1')]
-        );
-
-        $counter = DB::table('surat_counters')
-            ->where('jenis_surat', 'surat_keluar')
-            ->where('tahun', $tahun)
-            ->first();
-
-        $urutan = $counter->current_value;
-        return sprintf('%03d/%s/%s/%d', $urutan, $bagianKode, $romawi, $tahun);
     }
 }
 

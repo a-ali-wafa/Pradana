@@ -63,6 +63,42 @@ return [
             ]) : [],
         ],
 
+        /*
+        | Connection khusus tes konkurensi penomoran surat (L-24/Q1). Dua nama
+        | karena satu tes butuh DUA koneksi terpisah ke database yang sama untuk
+        | membuktikan lockForUpdate() benar-benar mengunci baris counter.
+        | Pakai DB_TEST_DATABASE (default pradana_test) — jangan DB utama.
+        */
+        'mysql_test_a' => [
+            'driver' => 'mysql',
+            'host' => env('DB_HOST', '127.0.0.1'),
+            'port' => env('DB_PORT', '3306'),
+            'database' => env('DB_TEST_DATABASE', 'pradana_test'),
+            'username' => env('DB_USERNAME', 'forge'),
+            'password' => env('DB_PASSWORD', ''),
+            'charset' => 'utf8mb4',
+            'collation' => 'utf8mb4_unicode_ci',
+            'prefix' => '',
+            'prefix_indexes' => true,
+            'strict' => true,
+            'options' => [],
+        ],
+
+        'mysql_test_b' => [
+            'driver' => 'mysql',
+            'host' => env('DB_HOST', '127.0.0.1'),
+            'port' => env('DB_PORT', '3306'),
+            'database' => env('DB_TEST_DATABASE', 'pradana_test'),
+            'username' => env('DB_USERNAME', 'forge'),
+            'password' => env('DB_PASSWORD', ''),
+            'charset' => 'utf8mb4',
+            'collation' => 'utf8mb4_unicode_ci',
+            'prefix' => '',
+            'prefix_indexes' => true,
+            'strict' => true,
+            'options' => [],
+        ],
+
         'pgsql' => [
             'driver' => 'pgsql',
             'url' => env('DATABASE_URL'),
