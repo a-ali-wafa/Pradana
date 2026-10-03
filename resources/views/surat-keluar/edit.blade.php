@@ -232,7 +232,7 @@
 @endsection
 
 @push('scripts')
-@include('surat-keluar._klasifikasi_cascade_js', [
+@include('partials.klasifikasi-cascade', [
     'oldPrimerId' => old('klasifikasi_primer_id', $suratKeluar->klasifikasi_primer_id),
     'oldSekId'    => old('klasifikasi_sekunder_id', $suratKeluar->klasifikasi_sekunder_id),
     'oldTerId'    => old('klasifikasi_tersier_id', $suratKeluar->klasifikasi_tersier_id),

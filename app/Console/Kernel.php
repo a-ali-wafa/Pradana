@@ -20,6 +20,9 @@ class Kernel extends ConsoleKernel
 
         // Sekali seminggu ke staf, daftar arsip yang sudah lewat retensi (L-04).
         $schedule->command('arsip:daftar-usang')->weekly();
+
+        // Retensi log aktivitas (E6): bulanan, jejak pemusnahan tidak pernah dibuang.
+        $schedule->command('arsip:bersihkan-log')->monthly()->withoutOverlapping();
     }
 
     /**

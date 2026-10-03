@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\AktivitasController;
 use App\Http\Controllers\CetakSuratKeluarController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DrafKontenSuratKeluarController;
@@ -159,6 +160,9 @@ Route::middleware('auth')->group(function () {
     // Pencarian arsip global (baru, 1 Sep 2026, lihat catatan #9 di atas & AGENTS.md 12.21)
     Route::get('pencarian', [PencarianController::class, 'index'])
         ->name('pencarian.index');
+
+    // Log aktivitas — read-only, admin only (L-22 / P3)
+    Route::get('aktivitas', [AktivitasController::class, 'index'])->name('aktivitas.index');
 
     // Lampiran (baru, 31 Agu 2026) — lihat catatan #2 di atas & AGENTS.md 12.16/12.17.
     Route::post('surat-masuk/{surat_masuk}/lampiran', [LampiranController::class, 'storeForSuratMasuk'])

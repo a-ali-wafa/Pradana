@@ -178,6 +178,9 @@
                     <i class="fas fa-tags fa-fw"></i> Klasifikasi Tersier
                 </a>
                 @if (auth()->user()->isAdmin())
+                    <a class="nav-link {{ request()->routeIs('aktivitas.*') ? 'active' : '' }}" href="{{ route('aktivitas.index') }}">
+                        <i class="fas fa-history fa-fw"></i> Log Aktivitas
+                    </a>
                     <a class="nav-link {{ request()->routeIs('users.*') ? 'active' : '' }}" href="{{ route('users.index') }}">
                         <i class="fas fa-users-cog fa-fw"></i> Manajemen User
                     </a>
