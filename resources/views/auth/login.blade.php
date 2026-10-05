@@ -13,9 +13,10 @@
         $instansi (baris tunggal `pengaturan_instansi`, dikirim AuthController::create()
         via PengaturanInstansi::first()) dipakai untuk nama & logo di panel kiri — BISA
         null (belum di-seed / tabel kosong), jadi semua akses pakai null-safe (?->) dengan
-        fallback ke branding generik "PRADANA". Logo diambil dari disk `public` (C7,
-        BUKAN Google Drive) lewat Storage::url() — sama seperti pola di
-        pengaturan-instansi/edit.blade.php, butuh `php artisan storage:link` sudah jalan.
+        fallback ke branding generik "PRADANA". Logo diambil lewat `$instansi->logoUrl()`
+        (route `instansi.logo`, 5 Okt 2026) — BUKAN `Storage::url()` lagi, karena URL
+        storage itu bergantung pada symlink `public/storage` yang belum/tidak selalu
+        ada; route-nya memang sengaja boleh diakses guest.
 
         SENGAJA standalone (bukan @extends('layouts.app')): layout itu dibangun untuk halaman
         yang SUDAH login (ada sidebar nav ke route yang butuh auth, blok @auth untuk info user +
@@ -161,15 +162,21 @@
 <body>
     <div class="login-wrapper">
         <div class="login-brand">
-            @if ($instansi?->logo_path)
+            @if ($instansi?->logoUrl())
                 <div class="brand-logo">
-                    <img src="{{ Storage::url($instansi->logo_path) }}" alt="Logo {{ $instansi->nama_instansi }}">
+                    <img src="{{ $instansi->logoUrl() }}" alt="Logo {{ $instansi->nama_instansi }}">
                 </div>
             @else
                 <div class="brand-icon"><i class="fas fa-archive"></i></div>
             @endif
 
             <h1>{{ $instansi?->nama_instansi ?? 'PRADANA' }}</h1>
+            @if ($instansi?->nama_kecamatan || $instansi?->nama_kabupaten)
+                <p class="brand-tagline">{{ collect([
+                    $instansi->nama_kecamatan ? 'Kecamatan '.$instansi->nama_kecamatan : null,
+                    $instansi->nama_kabupaten ? 'Kabupaten '.$instansi->nama_kabupaten : null,
+                ])->filter()->implode(' · ') }}</p>
+            @endif
             @if ($instansi?->nama_instansi)
                 <p class="brand-tagline">Sistem Arsip Digital PRADANA</p>
             @endif

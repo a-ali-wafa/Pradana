@@ -3,12 +3,14 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreSuratMasukRequest;
+use App\Http\Requests\UpdateIsiSuratMasukRequest;
 use App\Http\Requests\UpdateSuratMasukRequest;
 use App\Models\KlasifikasiPrimer;
 use App\Models\SuratMasuk;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
@@ -41,10 +43,16 @@ class SuratMasukController extends Controller
 
         if ($request->filled('cari')) {
             $kw = $request->input('cari');
+
+            // L-15: `ringkasan` ikut digali, bukan cuma nomor/perihal/pengirim.
+            // Ini kemampuan halaman /pencarian yang dihapus 5 Okt 2026 — dipindah
+            // ke sini supaya satu kotak pencarian di daftar tetap cukup.
             $query->where(function ($q) use ($kw) {
                 $q->where('perihal', 'like', "%{$kw}%")
                     ->orWhere('nomor_surat', 'like', "%{$kw}%")
-                    ->orWhere('pengirim', 'like', "%{$kw}%");
+                    ->orWhere('pengirim', 'like', "%{$kw}%")
+                    ->orWhere('instansi_pengirim', 'like', "%{$kw}%")
+                    ->orWhere('ringkasan', 'like', "%{$kw}%");
             });
         }
 
@@ -126,6 +134,48 @@ class SuratMasukController extends Controller
         return redirect()
             ->route('surat-masuk.index')
             ->with('status', 'Surat masuk berhasil diperbarui.');
+    }
+
+    /**
+     * Menyimpan hasil baca otomatis yang SUDAH diperiksa user (5 Okt 2026).
+     *
+     * Kolom `isi_terverifikasi_pada` diisi di sini, bukan saat upload: teks dari
+     * mesin belum boleh dianggap diverifikasi hanya karena berhasil dibaca.
+     * `ringkasan` hanya berubah kalau user mencentang "jadikan ringkasan" —
+     * permintaan user jelas bahwa hasilnya ditampilkan untuk divalidasi, bukan
+     * langsung menimpa isian orang. Batas 5.000 karakter: kolom `ringkasan`
+     * bertipe TEXT (65.535 byte) dan isi hasil baca bisa jauh lebih panjang.
+     */
+    public function updateIsi(UpdateIsiSuratMasukRequest $request, SuratMasuk $surat_masuk): RedirectResponse
+    {
+        $teks = $request->validated('isi_hasil_baca');
+        $dipotong = false;
+
+        $surat_masuk->isi_hasil_baca = filled($teks) ? $teks : null;
+        $surat_masuk->isi_terverifikasi_pada = filled($teks) ? now() : null;
+
+        if (filled($teks) && $request->boolean('jadikan_ringkasan')) {
+            $ringkas = trim($teks);
+
+            if (mb_strlen($ringkas) > 5000) {
+                $ringkas = Str::limit($ringkas, 5000, ' …');
+                $dipotong = true;
+            }
+
+            $surat_masuk->ringkasan = $ringkas;
+        }
+
+        $surat_masuk->save();
+
+        return back()->with(
+            'success',
+            filled($teks)
+                ? 'Hasil baca isi surat disimpan'
+                    .($request->boolean('jadikan_ringkasan')
+                        ? ' dan disalin ke ringkasan'.($dipotong ? ' (5.000 karakter pertama)' : '').'.'
+                        : '.')
+                : 'Hasil baca isi surat dikosongkan.'
+        );
     }
 
     /**

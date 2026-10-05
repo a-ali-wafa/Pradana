@@ -5,23 +5,25 @@ namespace App\Http\Requests;
 use Illuminate\Foundation\Http\FormRequest;
 
 /**
- * ⚠️ ASUMSI panjang kolom. `nama_instansi`/`jenis_instansi`/`alamat_instansi`/
- * `no_telp`/`email` di skema Bagian 5 AGENTS.md TIDAK dicantumkan panjangnya secara
- * eksplisit (beda dari tabel lain yang selalu pakai notasi string(N), mis.
- * `users.nama_lengkap` string(150)) — migration `pengaturan_instansi` juga tidak ada
- * di sesi ini untuk dicek langsung. Panjang di bawah ini tebakan wajar (varchar 255
- * default Laravel, alamat dilonggarkan ke 500). WAJIB disesuaikan begitu migration/
- * model asli tersedia.
+ * Validasi form Pengaturan Instansi (kop surat).
  *
- * `logo`: field upload BARU, tidak ada preseden ukuran/tipe maks di AGENTS.md untuk
- * logo instansi (beda dari lampiran surat yang sudah punya C1/C2 [DEFAULT]:
- * pdf/jpg/jpeg/png, maks 10MB — itu untuk dokumen arsip, bukan logo). Dipakai batas
- * lebih kecil & khusus gambar (2MB, jpg/jpeg/png saja) karena ini cuma gambar kop
- * surat. Ini ASUMSI SAYA, bukan keputusan user — tandai untuk dikonfirmasi.
+ * Panjang kolom SUDAH cocok dengan migration hasil squash S11
+ * (`2026_10_04_100002_create_pengaturan_instansi_table.php` +
+ * `2026_10_05_000001_tambah_bagian_kop_pengaturan_instansi.php`) — komentar lama di
+ * file ini pernah menyebut angkanya tebakan, itu sudah tidak benar sejak squash.
  *
- * Otorisasi admin-only TIDAK dicek di authorize() di sini — route
- * `pengaturan-instansi` sudah memakai `->middleware('admin')` (L-07), jadi
- * authorize() cuma `true` supaya ada satu sumber kebenaran.
+ * 5 Okt 2026:
+ * - `nama_kabupaten`, `nama_kecamatan`, `kode_pos` ikut divalidasi (kolom barunya
+ *   kop bertingkat ala tata naskah dinas desa). Semuanya BOLEH KOSONG: tidak semua
+ *   kantor mau kop tiga baris, dan kantor yang sama sekali tidak punya email/telepon
+ *   harus tetap bisa menyimpan kop — makanya `no_telp` dan `email` yang tadinya
+ *   `required` diturunkan jadi opsional. Yang tetap wajib cuma nama, jenis, dan
+ *   alamat, karena tanpa itu surat tidak punya kepala.
+ * - `logo`: 2MB, jpg/jpeg/png (asumsi [DEFAULT-agent], bukan keputusan user — ini
+ *   aset kop, bukan dokumen arsip, jadi batas lampiran C1/L-13 tidak berlaku).
+ *
+ * Otorisasi admin-only TIDAK dicek di authorize(): route `pengaturan-instansi`
+ * sudah memakai `->middleware('admin')` (L-07), jadi satu sumber kebenaran saja.
  */
 class UpdatePengaturanInstansiRequest extends FormRequest
 {
@@ -33,12 +35,28 @@ class UpdatePengaturanInstansiRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'nama_instansi' => ['required', 'string', 'max:255'],
-            'jenis_instansi' => ['required', 'string', 'max:255'],
-            'alamat_instansi' => ['required', 'string', 'max:500'],
-            'no_telp' => ['required', 'string', 'max:20'],
-            'email' => ['required', 'email', 'max:255'],
+            'nama_instansi' => ['required', 'string', 'max:150'],
+            'nama_kabupaten' => ['nullable', 'string', 'max:100'],
+            'nama_kecamatan' => ['nullable', 'string', 'max:100'],
+            'jenis_instansi' => ['required', 'string', 'max:150'],
+            'alamat_instansi' => ['required', 'string', 'max:255'],
+            'kode_pos' => ['nullable', 'string', 'max:10'],
+            'no_telp' => ['nullable', 'string', 'max:30'],
+            'email' => ['nullable', 'email', 'max:150'],
             'logo' => ['nullable', 'image', 'mimes:jpg,jpeg,png', 'max:2048'],
+        ];
+    }
+
+    public function attributes(): array
+    {
+        return [
+            'nama_instansi' => 'nama instansi',
+            'nama_kabupaten' => 'nama kabupaten',
+            'nama_kecamatan' => 'nama kecamatan',
+            'jenis_instansi' => 'jenis instansi',
+            'alamat_instansi' => 'alamat instansi',
+            'kode_pos' => 'kode pos',
+            'no_telp' => 'nomor telepon',
         ];
     }
 }

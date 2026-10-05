@@ -145,6 +145,8 @@
             panel.style.display = 'block';
             berjalan = berkas.length;
             const duplikatTerlewat = [];
+            const teksBaca = [];
+            const catatanBaca = [];
             setel(0, 'Mengunggah ' + berkas.length + ' berkas…', 'Jangan tutup halaman ini.');
 
             let indeks = 0;
@@ -161,11 +163,30 @@
                         }
 
                         (hasil.duplikat || []).forEach(function (nama) { duplikatTerlewat.push(nama); });
+
+                        // Server mencoba membaca isi berkas surat masuk dalam request
+                        // yang sama (L-02: tanpa queue). Hasilnya dikumpulkan dulu,
+                        // lalu diserahkan sekali ke halaman show di akhir.
+                        if (hasil.baca) {
+                            (hasil.baca.catatan || []).forEach(function (c) { catatanBaca.push(c); });
+                            if (hasil.baca.teks) teksBaca.push(hasil.baca.teks);
+
+                            setel(Math.round(((indeks + 1) / berkas.length) * 100),
+                                'Mengunggah ' + (indeks + 1) + ' dari ' + berkas.length + '…',
+                                hasil.baca.teks ? 'Isi berkas terbaca, menunggu diperiksa' : 'Berkas tersimpan');
+                        }
                     })
                     .then(function () { indeks++; berjalan--; return lanjutan(); });
             };
 
             lanjutan().then(function () {
+                if (typeof window.pradanaHasilBacaIsi === 'function' && (teksBaca.length || catatanBaca.length)) {
+                    window.pradanaHasilBacaIsi({
+                        teks: teksBaca.length ? teksBaca.join('\n\n') : null,
+                        catatan: catatanBaca,
+                    });
+                }
+
                 const pesan = duplikatTerlewat.length
                     ? duplikatTerlewat.length + ' berkas dilewati karena isinya sudah ada di surat ini: '
                         + duplikatTerlewat.join(', ')

@@ -4,45 +4,34 @@ namespace App\Http\Controllers;
 
 use App\Models\PengaturanInstansi;
 use App\Models\SuratKeluar;
+use App\Support\Terbilang;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Response;
 
 /**
- * BARU — 1 Sep 2026. Roadmap "Generate PDF surat keluar (DomPDF, sesuai F2)".
- * F1–F4 (Bagian 9 AGENTS.md, semua [DEFAULT]) TIDAK diblokir WAJIB TANYA USER
- * apa pun, jadi fitur ini langsung dikerjakan tanpa perlu konfirmasi tambahan.
+ * Cetak PDF surat keluar (DomPDF, F2=a). Controller ini berdiri sendiri karena
+ * mencetak bukan aksi destruktif — middleware `auth` polos, semua role boleh.
  *
- * ⚠️ Controller ini BERDIRI SENDIRI (bukan nambah method ke SuratKeluarController
- * yang sudah ada) karena SuratKeluarController.php TIDAK diupload ke sesi ini —
- * mengikuti prinsip 12.9: jangan mengedit/menebak isi file yang tidak tersedia.
- * Kalau lebih suka method ini dipindah jadi bagian dari SuratKeluarController,
- * upload file itu di sesi berikutnya, tinggal dipindah manual (logic-nya sama).
- *
- * ASUMSI yang masih perlu diperhatikan (model SuratKeluar & DrafKontenSuratKeluar
- * ASLI tidak diupload ke sesi ini):
- * - Relasi `drafKonten()`, `primer()`, `sekunder()`, `tersier()`, `petugas()` di
- *   SuratKeluar SUDAH terverifikasi 28 Agu 2026 (lihat 12.13 di AGENTS_HISTORY.md)
- *   — dipakai langsung, bukan tebakan baru.
- * - Kolom-kolom `draf_konten_surat_keluar` diambil dari skema Bagian 5 [LOCKED].
- *   Model aslinya sendiri belum pernah di-cross-check langsung, tapi karena
- *   migration/skema sudah final risikonya jauh lebih kecil dibanding risiko nama
- *   RELASI (yang pernah salah tebak di 12.11) — bukan berarti nol risiko.
- * - Middleware: 'auth' polos (BUKAN admin-only) — dianalogikan ke show()/index()
- *   yang juga auth polos (12.12), karena mencetak surat bukan aksi destruktif.
- *   Kalau ternyata harus dibatasi role tertentu, itu balik ke pertanyaan B1.
- * - Logo (`pengaturan_instansi.logo_path`, disimpan LOKAL sesuai C7) diakses lewat
- *   `public_path('storage/'.$logoPath)` (path filesystem langsung), BUKAN URL —
- *   dompdf lebih andal baca file lokal daripada fetch HTTP. Butuh
- *   `php artisan storage:link` sudah dijalankan (sama seperti catatan di 12.19).
+ * Catatan yang berubah 5 Okt 2026, saat kop surat dirapikan ke standar tata
+ * naskah dinas desa (Permendagri 1/2023):
+ * - Logo dibaca dari DISK, bukan `public_path('storage/...')`. Path lama butuh
+ *   symlink `storage:link`; tanpa itu PDF tercetak tanpa kop dan tidak ada error
+ *   apa pun. `logoPathUntukPdf()` sudah mengembalikan null kalau berkasnya tidak
+ *   ada, jadi template tinggal menyesuaikan diri.
+ * - Baris "Lampiran" tetap dihitung dari file yang benar-benar ada (P6=a), tapi
+ *   formatnya ikut kebiasaan kantor: `0 (nol)` / `2 (dua) berkas`.
  * - Format nomor surat DITAMPILKAN apa adanya dari `nomor_surat` (tidak dihasilkan
- *   ulang di sini) — jadi TIDAK terpengaruh status D1 [WAJIB TANYA USER] yang masih
- *   soal *pembuatan* nomor, bukan soal menampilkannya.
+ *   ulang di sini) — D1 [LOCKED] hanya soal *pembuatan* nomor.
+ * - Multi-template (F3=b) masih menunggu kop resmi dari desa; sekarang satu
+ *   template umum yang sudah mengikuti struktur baku.
  */
 class CetakSuratKeluarController extends Controller
 {
-    public function cetak(SuratKeluar $surat_keluar)
+    public function cetak(SuratKeluar $surat_keluar): RedirectResponse|Response
     {
-        $surat_keluar->load(['primer', 'sekunder', 'tersier', 'petugas', 'drafKonten']);
+        $surat_keluar->load(['primer', 'sekunder', 'tersier', 'petugas', 'drafKonten', 'lampiran']);
 
         if (! $surat_keluar->drafKonten) {
             return back()->with(
@@ -52,27 +41,37 @@ class CetakSuratKeluarController extends Controller
         }
 
         $instansi = PengaturanInstansi::first();
-
-        $logoPath = $instansi?->logo_path ? public_path('storage/'.$instansi->logo_path) : null;
-
-        // Keputusan P6: baris "Lampiran" pada kop dihitung dari file yang benar-benar
-        // ada, bukan dari teks yang diketik tangan (kolom draf.lampiran jadi tidak dipakai).
+        $draf = $surat_keluar->drafKonten;
         $jumlahLampiran = $surat_keluar->lampiran()->count();
 
         $pdf = Pdf::loadView('surat-keluar.cetak', [
             'surat' => $surat_keluar,
-            'draf' => $surat_keluar->drafKonten,
+            'draf' => $draf,
             'instansi' => $instansi,
-            'logoPath' => ($logoPath && file_exists($logoPath)) ? $logoPath : null,
+            'logoPath' => $instansi?->logoPathUntukPdf(),
             'jumlahLampiran' => $jumlahLampiran,
-            'notasiLampiran' => $jumlahLampiran.' Berkas',
+            'notasiLampiran' => $this->notasiLampiran($jumlahLampiran),
             'tanggalSurat' => $this->formatTanggalIndonesia($surat_keluar->tanggal_surat),
+            'kodeKlasifikasi' => trim(collect([
+                $surat_keluar->primer?->kode,
+                $surat_keluar->sekunder?->kode,
+                $surat_keluar->tersier?->kode,
+            ])->filter()->implode('/')),
         ])->setPaper('a4', 'portrait');
 
         $namaFile = 'Surat-'.str_replace(['/', ' '], '-', $surat_keluar->nomor_surat).'.pdf';
 
         return $pdf->stream($namaFile);
-        // Ganti ke ->download($namaFile) kalau maunya langsung unduh (bukan preview tab baru).
+    }
+
+    /**
+     * P6=a: notasi dihitung dari berkas yang ada, bukan diketik tangan. Kalau
+     * kosong tetap ditulis `0 (nol)` — baris Lampiran tidak boleh dihilangkan,
+     * karena surat dinas tanpa baris itu justru dianggap tidak lengkap.
+     */
+    private function notasiLampiran(int $jumlah): string
+    {
+        return Terbilang::denganAngka($jumlah).' berkas';
     }
 
     private function formatTanggalIndonesia($tanggal): ?string

@@ -149,9 +149,8 @@
                 <a class="nav-link {{ request()->routeIs('surat-keluar.*') ? 'active' : '' }}" href="{{ route('surat-keluar.index') }}">
                     <i class="fas fa-paper-plane fa-fw"></i> Surat Keluar
                 </a>
-                <a class="nav-link {{ request()->routeIs('pencarian.*') ? 'active' : '' }}" href="{{ route('pencarian.index') }}">
-                    <i class="fas fa-search fa-fw"></i> Pencarian Arsip
-                </a>
+                {{-- Link "Pencarian Arsip" dihapus 5 Okt 2026: tiap daftar surat sudah
+                     punya kotak pencarian sendiri (dan sekarang menggali isi surat juga). --}}
                 {{-- Link di bawah ini disaring per role (L-07, 4 Okt 2026).
                     Route-nya memang sudah dipagari middleware `admin`, tapi tanpa
                     filter ini staf non-admin melihat menu yang isinya 403 semua. --}}

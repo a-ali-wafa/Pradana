@@ -4,12 +4,10 @@
 <meta charset="utf-8">
 <title>Buku Agenda Surat {{ $dari }} s.d. {{ $sampai }}</title>
 <style>
+    @page { margin: 2cm 1.5cm 2cm 1.5cm; }
     body { font-family: 'Times New Roman', Times, serif; font-size: 11pt; color: #000; }
-    .kop { width: 100%; border-bottom: 3px solid #000; padding-bottom: 6px; margin-bottom: 2px; }
-    .kop table { width: 100%; }
-    .kop .nama-instansi { font-size: 15pt; font-weight: bold; text-transform: uppercase; margin: 0; }
-    .kop .alamat-instansi { font-size: 9pt; margin: 2px 0 0; }
-    .kop-garis-bawah { border-bottom: 1px solid #000; margin-bottom: 16px; }
+    /* Kop tidak didefinisikan di sini — ikut partial partials/kop-pdf.blade.php
+       supaya identik dengan surat keluar dan Berita Acara (5 Okt 2026). */
     .judul { text-align: center; margin-bottom: 12px; }
     .judul h2 { font-size: 13pt; font-weight: bold; text-transform: uppercase; margin: 0; }
     .judul p { font-size: 10pt; margin: 3px 0 0; }
@@ -25,20 +23,7 @@
 </head>
 <body>
 
-<div class="kop">
-    <table>
-        <tr>
-            <td>
-                <p class="nama-instansi">{{ $instansi->nama_instansi ?? 'PEMERINTAH DESA/KELURAHAN' }}</p>
-                <p class="alamat-instansi">
-                    {{ $instansi->jenis_instansi ?? '' }}
-                    @if($instansi?->alamat_instansi) &middot; {{ $instansi->alamat_instansi }} @endif
-                </p>
-            </td>
-        </tr>
-    </table>
-</div>
-<div class="kop-garis-bawah"></div>
+@include('partials.kop-pdf')
 
 <div class="judul">
     <h2>Buku Agenda Surat</h2>

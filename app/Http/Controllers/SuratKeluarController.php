@@ -30,8 +30,9 @@ class SuratKeluarController extends Controller
     }
 
     /**
-     * Daftar surat keluar dengan filter tahun, status arsip, klasifikasi
-     * primer, dan pencarian teks bebas (perihal/penerima/nomor surat).
+     * Daftar surat keluar dengan filter tahun, status arsip, klasifikasi primer,
+     * sifat, dan pencarian teks bebas. Pencarian menggali nomor, perihal,
+     * penerima/instansi, ringkasan, DAN isi surat di draf konten (L-15).
      * `?sampah=1` (admin saja) menampilkan surat yang dihapus lunak.
      */
     public function index(Request $request): View
@@ -65,10 +66,19 @@ class SuratKeluarController extends Controller
         if ($request->filled('cari')) {
             $kataKunci = $request->input('cari');
 
+            // L-15: `isi_surat` di draf konten ikut digali lewat relasi, karena
+            // isi surat keluar tidak disimpan di tabel surat. Ini pengganti
+            // halaman /pencarian yang dihapus 5 Okt 2026.
             $query->where(function ($q) use ($kataKunci) {
                 $q->where('perihal', 'like', "%{$kataKunci}%")
                     ->orWhere('penerima', 'like', "%{$kataKunci}%")
-                    ->orWhere('nomor_surat', 'like', "%{$kataKunci}%");
+                    ->orWhere('instansi_penerima', 'like', "%{$kataKunci}%")
+                    ->orWhere('nomor_surat', 'like', "%{$kataKunci}%")
+                    ->orWhere('ringkasan', 'like', "%{$kataKunci}%")
+                    ->orWhereHas('drafKonten', function ($d) use ($kataKunci) {
+                        $d->where('isi_surat', 'like', "%{$kataKunci}%")
+                            ->orWhere('tembusan', 'like', "%{$kataKunci}%");
+                    });
             });
         }
 

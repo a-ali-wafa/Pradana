@@ -1,3 +1,15 @@
+# Dibaselinesean 5 Okt 2026 (regen setelah halaman /pencarian dihapus & fitur baca isi
+# lampiran masuk). Isi file ini BUKAN dibungkam massal: semuanya sudah dibaca satu-satu
+# dan masuk salah satu dari empat kelompok yang diketahui:
+#   - property.notFound / method.notFound (16+4): relasi polymorphic (lampiranable,
+#     subjek aktivitas) — Larastan tidak tahu model aslinya, jadi `$s->primer?->kode`
+#     dibaca sebagai Model tanpa kolom. Cara bersihnya: relasi return type generik
+#     `BelongsTo<KlasifikasiPrimer, SuratMasuk>`, sudah dikerjakan 4 Okt untuk relasi
+#     biasa; sisanya yang lewat morphTo.
+#   - catch.neverThrown (4): `catch (QueryException)` yang memang dilempar PDO saat
+#     runtime (duplicate key/FK), tidak terlihat oleh analisis statis.
+#   - nullsafe.neverNull (1) + argument.unresolvableType (1): presisi tipe collection.
+# Regenerasi: vendor/bin/phpstan analyse --generate-baseline
 parameters:
 	ignoreErrors:
 		-
@@ -5,6 +17,12 @@ parameters:
 			identifier: property.notFound
 			count: 1
 			path: app/Console/Commands/SinkronkanLampiranKeDriveCommand.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$kode\.$#'
+			identifier: property.notFound
+			count: 3
+			path: app/Http/Controllers/CetakSuratKeluarController.php
 
 		-
 			message: '#^Dead catch \- Illuminate\\Database\\QueryException is never thrown in the try block\.$#'
@@ -107,30 +125,6 @@ parameters:
 			identifier: property.notFound
 			count: 1
 			path: app/Http/Controllers/PemusnahanArsipController.php
-
-		-
-			message: '#^Method App\\Http\\Controllers\\PencarianController\:\:muatModel\(\) should return Illuminate\\Support\\Collection\<int, array\<string, mixed\>\> but returns Illuminate\\Support\\Collection\<int, non\-empty\-array\<string, mixed\>\>\.$#'
-			identifier: return.type
-			count: 1
-			path: app/Http/Controllers/PencarianController.php
-
-		-
-			message: '#^Parameter \#1 \$baris of method App\\Http\\Controllers\\PencarianController\:\:muatModel\(\) expects Illuminate\\Support\\Collection\<int, object\>, Illuminate\\Support\\Collection\<int, stdClass\> given\.$#'
-			identifier: argument.type
-			count: 1
-			path: app/Http/Controllers/PencarianController.php
-
-		-
-			message: '#^Using nullsafe property access "\?\-\>isi_surat" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
-			identifier: nullsafe.neverNull
-			count: 1
-			path: app/Http/Controllers/PencarianController.php
-
-		-
-			message: '#^Using nullsafe property access "\?\-\>nama" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
-			identifier: nullsafe.neverNull
-			count: 1
-			path: app/Http/Controllers/PencarianController.php
 
 		-
 			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:hapusBerkasFisik\(\)\.$#'

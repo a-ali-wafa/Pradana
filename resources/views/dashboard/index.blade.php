@@ -85,30 +85,12 @@
         </div>
     </div>
 
-    {{-- Menu Pintas / Quick Actions --}}
-    <div class="card border-0 shadow-sm mb-4">
-        <div class="card-body py-3">
-            <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
-                <span class="fw-bold text-secondary small text-uppercase">
-                    <i class="fas fa-bolt me-1 text-warning"></i> Aksi Cepat
-                </span>
-                <div class="d-flex flex-wrap gap-2">
-                    <a href="{{ route('surat-masuk.create') }}" class="btn btn-sm btn-primary rounded-pill px-3">
-                        <i class="fas fa-plus me-1"></i> Catat Surat Masuk
-                    </a>
-                    <a href="{{ route('surat-keluar.create') }}" class="btn btn-sm btn-success rounded-pill px-3">
-                        <i class="fas fa-plus me-1"></i> Buat Surat Keluar
-                    </a>
-                    <a href="{{ route('pencarian.index') }}" class="btn btn-sm btn-outline-secondary rounded-pill px-3">
-                        <i class="fas fa-search me-1"></i> Cari Arsip
-                    </a>
-                    <a href="{{ route('pengaturan-instansi.edit') }}" class="btn btn-sm btn-outline-secondary rounded-pill px-3">
-                        <i class="fas fa-building me-1"></i> Pengaturan Instansi
-                    </a>
-                </div>
-            </div>
-        </div>
-    </div>
+    {{--
+        Blok "Aksi Cepat" (pintasan Catat Surat Masuk / Buat Surat Keluar / Cari Arsip /
+        Pengaturan Instansi) DIHAPUS 5 Okt 2026 atas permintaan user: pintasan itu duplikat
+        dengan sidebar kiri yang sudah selalu tampil, dan tombol "Cari Arsip"-nya menunjuk
+        halaman /pencarian yang memang ikut dihapus.
+    --}}
 
     {{-- Baris Tabel: Surat Masuk & Surat Keluar Terbaru --}}
     <div class="row g-3 mb-4">

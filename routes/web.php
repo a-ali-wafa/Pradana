@@ -10,8 +10,8 @@ use App\Http\Controllers\KlasifikasiSekunderController;
 use App\Http\Controllers\KlasifikasiTersierController;
 use App\Http\Controllers\LampiranController;
 use App\Http\Controllers\LaporanController;
+use App\Http\Controllers\LogoInstansiController;
 use App\Http\Controllers\PemusnahanArsipController;
-use App\Http\Controllers\PencarianController;
 use App\Http\Controllers\PengajuanHapusLampiranController;
 use App\Http\Controllers\PengaturanInstansiController;
 use App\Http\Controllers\ProfilController;
@@ -83,10 +83,21 @@ use Illuminate\Support\Facades\Route;
 |    [DEFAULT]). `auth` polos, bukan admin-only (mencetak bukan aksi
 |    destruktif). Detail: AGENTS.md 12.20.
 |
-| 9. Route `pencarian` (baru, 1 Sep 2026) — pencarian arsip gabungan surat
-|    masuk+keluar via `PencarianController`. `auth` polos, semua role boleh
-|    akses. Detail: AGENTS.md 12.21.
+| 9. Route `pencarian` (1 Sep 2026) — DIHAPUS 5 Okt 2026 atas permintaan user, karena
+|    tiap daftar surat masuk/keluar sudah punya kotak pencariannya sendiri. Isi
+|    `PencarianController` (menggali `ringkasan` + `isi_surat`, L-15) tidak dibuang:
+|    kemampuannya dipindah ke filter `cari` di `SuratMasukController::index()` dan
+|    `SuratKeluarController::index()`. Detail: AGENTS.md Bagian 3 langkah 8.
+|
+| 10. Route `instansi/logo` (baru, 5 Okt 2026) — melayani berkas logo dari disk
+|     `public` lewat `LogoInstansiController`, BEBAS login (harus tampil di halaman
+|     login). Ini pengganti `Storage::url()` yang bergantung symlink `public/storage`
+|     — symlink itu tidak ada di laptop dev dan tidak tentu bisa dibuat di shared
+|     hosting K1=a. Lihat catatan kelas controllernya.
 */
+
+// Logo kop instansi — harus bisa diminta halaman login (guest), lihat catatan #10.
+Route::get('instansi/logo', [LogoInstansiController::class, 'show'])->name('instansi.logo');
 
 Route::middleware('guest')->group(function () {
     Route::get('login', [AuthController::class, 'create'])->name('login');
@@ -139,6 +150,12 @@ Route::middleware('auth')->group(function () {
     Route::patch('surat-keluar/{surat_keluar}/status-arsip', [SuratKeluarController::class, 'updateStatusArsip'])
         ->name('surat-keluar.status-arsip');
 
+    // Simpan/validasi hasil baca otomatis isi lampiran (5 Okt 2026). Semua role
+    // yang login boleh (L-08); endpoint terpisah karena UpdateSuratMasukRequest
+    // memvalidasi seluruh field surat, bukan satu kolom teks.
+    Route::patch('surat-masuk/{surat_masuk}/isi', [SuratMasukController::class, 'updateIsi'])
+        ->name('surat-masuk.isi.update');
+
     // Pulihkan dari tempat sampah — admin only (L-05; tombol "Nyahkan" = soft delete)
     Route::patch('surat-masuk/{surat_masuk}/pulihkan', [SuratMasukController::class, 'restore'])
         ->name('surat-masuk.restore')
@@ -158,9 +175,9 @@ Route::middleware('auth')->group(function () {
     Route::put('surat-keluar/{surat_keluar}/draf', [DrafKontenSuratKeluarController::class, 'update'])
         ->name('surat-keluar.draf.update');
 
-    // Pencarian arsip global (baru, 1 Sep 2026, lihat catatan #9 di atas & AGENTS.md 12.21)
-    Route::get('pencarian', [PencarianController::class, 'index'])
-        ->name('pencarian.index');
+    // Pencarian arsip global — HALAMAN /pencarian DIHAPUS 5 Okt 2026 (catatan #9 di
+    // atas). Kemampuannya menggali isi surat (L-15) sekarang hidup di filter `cari`
+    // pada surat-masuk.index & surat-keluar.index.
 
     // Log aktivitas — read-only, admin only (L-22 / P3)
     Route::get('aktivitas', [AktivitasController::class, 'index'])->name('aktivitas.index');

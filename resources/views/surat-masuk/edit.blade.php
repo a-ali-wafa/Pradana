@@ -103,9 +103,38 @@
                             </div>
                             <div class="col-12">
                                 <label class="form-label small fw-bold">Ringkasan Isi Surat</label>
-                                <textarea name="ringkasan" rows="3"
+                                <textarea name="ringkasan" id="ringkasan" rows="3"
                                           class="form-control @error('ringkasan') is-invalid @enderror">{{ old('ringkasan', $suratMasuk->ringkasan) }}</textarea>
                                 @error('ringkasan') <div class="invalid-feedback">{{ $message }}</div> @enderror
+
+                                {{--
+                                    Isi yang dibaca mesin dari lampiran (fitur 5 Okt 2026).
+                                    Sengaja TIDAK mengisi ringkasan otomatis: teks hasil baca
+                                    bisa salah (PDF scan, urutan sel tabel), dan user minta
+                                    hasilnya "ditampilkan untuk divalidasi". Yang ada cuma
+                                    tombol salin, jadi manusia yang memutuskan.
+                                --}}
+                                @if ($suratMasuk->isi_hasil_baca)
+                                    <div class="border rounded p-3 mt-2 bg-light">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <span class="small fw-bold text-secondary">
+                                                <i class="fas fa-robot me-1"></i>Hasil baca isi lampiran
+                                            </span>
+                                            <span class="badge {{ $suratMasuk->isi_terverifikasi_pada ? 'text-bg-success' : 'text-bg-warning' }}">
+                                                {{ $suratMasuk->isi_terverifikasi_pada ? 'sudah diverifikasi' : 'belum diverifikasi' }}
+                                            </span>
+                                        </div>
+                                        <div class="small text-secondary mt-1">
+                                            Dari {{ $suratMasuk->isi_dibaca_dari ?: 'lampiran' }} ·
+                                            dibaca {{ $suratMasuk->isi_dibaca_pada?->translatedFormat('d F Y, H:i') ?? '-' }}
+                                        </div>
+                                        <pre class="small bg-white border rounded p-2 mt-2 mb-2" style="max-height: 10rem; overflow: auto; white-space: pre-wrap;">{{ $suratMasuk->isi_hasil_baca }}</pre>
+                                        <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-3"
+                                                onclick="pradanaSalinHasilBaca()">
+                                            <i class="fas fa-copy me-1"></i> Masukkan ke Ringkasan
+                                        </button>
+                                    </div>
+                                @endif
                             </div>
                         </div>
                     </div>
@@ -212,4 +241,26 @@
     'oldSekId'    => old('klasifikasi_sekunder_id', $suratMasuk->klasifikasi_sekunder_id),
     'oldTerId'    => old('klasifikasi_tersier_id', $suratMasuk->klasifikasi_tersier_id),
 ])
+@endpush
+
+@push('scripts')
+<script>
+    // Tombol "Masukkan ke Ringkasan" di blok hasil baca (5 Okt 2026). Ringkasan
+    // yang sudah diketik orang tidak boleh hilang diam-diam, makanya ada konfirmasi.
+    function pradanaSalinHasilBaca() {
+        const sumber = @js($suratMasuk->isi_hasil_baca);
+        const kotak = document.getElementById('ringkasan');
+
+        if (!sumber || !kotak) return;
+
+        if (kotak.value.trim() !== '' && !window.confirm(
+            'Ringkasan surat sudah terisi. Ganti isinya dengan hasil baca lampiran?'
+        )) {
+            return;
+        }
+
+        kotak.value = sumber;
+        kotak.focus();
+    }
+</script>
 @endpush

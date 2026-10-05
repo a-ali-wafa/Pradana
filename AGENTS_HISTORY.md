@@ -510,3 +510,54 @@ Sesi lanjutan 4 Sep 2026 — fokus pembuatan view (frontend). Stack tetap sama (
 | `AGENTS_HISTORY.md` | **Diperbarui** | Entri ini. |
 
 > **Milestone**: Semua view halaman MVP telah selesai per 4 Sep 2026. Sisa roadmap: Testing & Deployment.
+
+---
+
+## 13.5 Okt — Kop PDF tata naskah dinas, logo tanpa symlink, /pencarian dihapus, baca isi lampiran (5 Okt 2026)
+
+Permintaan user satu kalimat empat bagian ("tingkatkan PDF-nya ke standar perkantoran desa, logo tidak keluar, rapikan layout Pengaturan Instansi, hilangkan halaman pencarian arsip") lalu dua susulan ("hilangkan tombol aksi cepat di dashboard", "baca isi lampiran surat masuk otomatis, tampilkan di form untuk divalidasi"). Rujukan standar yang dipakai: **Permendagri 1/2023 tentang Tata Naskah Dinas** + contoh kop pemerintah desa (halaman JDIH / website kecamatan). PDF peraturan negara tidak bisa diekstrak teksnya dari sisi agent, jadi struktur dibangun dari sumber HTML + kebiasaan kop desa yang terdokumentasi; **angka margin tidak dinyatakan sebagai kutipan resmi** — dipakai pola lazim `@page { margin: 2.5cm 2.5cm 2.5cm 3cm }` (kiri 3 cm) yang tinggal digeser begitu kop resmi desa masuk (F3).
+
+### File dibuat / diubah
+
+| File | Status | Keterangan |
+|---|---|---|
+| `database/migrations/2026_10_05_000001_tambah_bagian_kop_pengaturan_instansi.php` | **Baru** | `nama_kabupaten`, `nama_kecamatan`, `kode_pos` (nullable). Additive supaya `php artisan migrate` biasa cukup — file squash `2026_10_04_100002` TIDAK diedit, jadi database kantor tidak perlu `migrate:fresh`. |
+| `database/migrations/2026_10_05_000002_tambah_hasil_baca_isi_surat_masuk.php` | **Baru** | `isi_hasil_baca` (longText), `isi_dibaca_dari`, `isi_dibaca_pada`, `isi_terverifikasi_pada`. |
+| `app/Models/PengaturanInstansi.php` | **Dirombak** | Helper kop satu sumber: `kopBarisAtas()`, `kopAlamat()`, `tempatSurat()` (buang prefix Pemerintah/Sekretariat/Kantor), `sebutanPemimpin()` ("Pemerintah Desa" jadi "Kepala Desa"), `logoUrl()` (route + cache-buster dari nama berkas), `logoPathUntukPdf()` (path disk, null kalau berkas hilang). |
+| `app/Http/Controllers/LogoInstansiController.php` | **Baru** | `GET /instansi/logo` di luar grup `auth` (halaman login butuh), baca disk `public` langsung, MIME dari ekstensi, `Cache-Control: immutable`. Pengganti `Storage::url()` yang mati diam-diam kalau `storage:link` belum ada. |
+| `routes/web.php` | **Diubah** | + `instansi.logo`; − route `pencarian` + `use PencarianController`; + `PATCH surat-masuk/{surat_masuk}/isi`; catatan header #9 ditandai dihapus, #10 baru. |
+| `app/Support/Terbilang.php` | **Baru** | Angka ke kata, murni PHP tanpa dependency. Dipakai `0 (nol) berkas` (P6) dan hari/tanggal Berita Acara. |
+| `resources/views/partials/kop-pdf.blade.php` | **Baru** | Kop dipakai 3 dokumen PDF; semua gaya inline supaya tidak tertimpa style pemanggil; `?? null` defensif karena tidak semua controller mengirim `$instansi`/`$logoPath` (variabel tak ada = ErrorException, bukan null). |
+| `resources/views/surat-keluar/cetak.blade.php` | **Ditulis ulang** | Struktur naskah dinas lengkap (rincian di AGENTS.md Bagian 3, "Perubahan 5 Okt" no. 1). |
+| `resources/views/pemusnahan-arsip/berita-acara.blade.php` | **Diubah** | Ikut partial kop; blok "Yang bertanda tangan" + hari/tanggal in huruf; tempat & tanggal di atas tanda tangan; jumlah berkas terbilang. |
+| `resources/views/laporan/agenda.blade.php` | **Diubah** | Kop lokal dibuang, ikut partial; `@page` margin. |
+| `app/Http/Controllers/CetakSuratKeluarController.php` | **Diubah** | `logoPathUntukPdf()`; notasi lampiran terbilang; `kodeKlasifikasi` 3 level; return type eksplisit. ⚠️ `$pdf->stream()` mengembalikan `Illuminate\Http\Response`, BUKAN `StreamedResponse` — return type yang salah memberi 500 `TypeError`, dan ini yang menangkapnya. |
+| `app/Http/Controllers/PemusnahanArsipController.php`, `LaporanController.php` | **Diubah** | Logo dari disk + variabel terbilang/tempat. |
+| `app/Http/Requests/UpdatePengaturanInstansiRequest.php` | **Diubah** | +3 field kop; `no_telp`/`email` jadi `nullable`; panjang kolom dicocokkan ke migration hasil squash (komentar "asumsi panjang" sudah basi). |
+| `resources/views/pengaturan-instansi/edit.blade.php` | **Dirombak** | Dua kolom: isian per seksi + **pratinjau kop hidup** (mengikuti ketikan, bukan data tersimpan) dan preview logo; pola readonly-sampai-Edit dipertahankan. |
+| `resources/views/auth/login.blade.php` | **Diubah** | `logoUrl()`; baris Kabupaten/Kecamatan di panel kiri; komentar soal `storage:link` dibuang. |
+| `app/Services/PembacaIsiLampiran.php` | **Baru** | PDF (`smalot/pdfparser`), DOCX/XLSX (`ZipArchive` + XML). JPG/PNG/DOC/XLS ditolak dengan `catatan` (tidak ada OCR di server kantor). Batas 15 MB / 20.000 karakter. Tidak pernah melempar. |
+| `app/Http/Controllers/LampiranController.php` | **Diubah** | `cobaBacaIsi()` khusus `SuratMasuk`; hasil di respons JSON (`baca.teks`, `baca.catatan`) dan flash non-JS; tulis lewat `forceFill` karena kolomnya di luar `$fillable`. |
+| `app/Http/Controllers/SuratMasukController.php`, `SuratKeluarController.php` | **Diubah** | `updateIsi()` + perluasan filter `cari` (L-15 dipindah ke daftar). |
+| `app/Http/Requests/UpdateIsiSuratMasukRequest.php` | **Baru** | Endpoint terpisah supaya tidak kena validasi "semua field wajib" dari `UpdateSuratMasukRequest`. |
+| `app/Models/SuratMasuk.php` | **Diubah** | 4 kolom hasil baca sengaja di luar `$fillable` (alasannya ditulis di file) + cast 2 timestamp. |
+| `resources/views/surat-masuk/show.blade.php`, `edit.blade.php`, `partials/lampiran-upload.blade.php` | **Diubah** | Kartu "Hasil Baca Isi Lampiran" (badge belum/sudah diverifikasi + checkbox "jadikan ringkasan"), panel + tombol "Masukkan ke Ringkasan" (dengan konfirmasi) di form edit, hook `window.pradanaHasilBacaIsi` dipanggil pengunggah AJAX tanpa reload. |
+| `resources/views/dashboard/index.blade.php` | **Diubah** | Blok "Aksi Cepat" dihapus. |
+| `resources/views/layouts/app.blade.php` | **Diubah** | Link sidebar "Pencarian Arsip" dihapus. |
+| `resources/views/errors/404.blade.php` | **Diubah** | Arahkan ke daftar surat (kotak cari), bukan `/pencarian`. |
+| `app/Http/Controllers/PencarianController.php`, `resources/views/pencarian/` | **DIHAPUS** | Lihat L-15 di AGENTS.md Bagian 4: penggalian isi pindah ke filter daftar. |
+| `tests/Feature/CetakSuratKeluarTest.php`, `tests/Feature/IsiLampiranSuratMasukTest.php` | **Baru** | 7 + 13 tes. Struktur PDF diuji dari HTML hasil render (byte PDF dikompres, tidak bisa dipakai membuktikan urutan baris); ekstraksi PDF diuji dengan PDF sungguhan buatan dompdf. |
+| `tests/Feature/PencarianDanLogTest.php`, `PengaturanInstansiTest.php`, `HalamanErrorTest.php` | **Diubah** | 6 tes `/pencarian` jadi 7 tes filter daftar; +3 tes logo/helper kop; 404 assert arah baru. |
+| `phpstan-baseline.neon` | **Diregenerasi** | 31 temuan (kategori sama seperti sebelumnya); komentar alasan sekarang ada di kepala file. |
+| `docs/manual-pemakaian.md`, `README.md` | **Diubah** | Bagian 2, 3, 5, 6, 7, 13.3, 15 + A.2 (tidak perlu `storage:link`) + A.8 (bukan OCR) + jumlah tes. |
+
+### Keputusan yang diambil agent ([DEFAULT-agent], boleh direvisi tanpa tanya user)
+
+- `no_telp`/`email` jadi opsional: kantor tanpa email tidak boleh terkunci tidak bisa menyimpan kop.
+- Baris tempat tanggal surat memakai `tempatSurat()` (prefix lembaga dibuang dari `nama_instansi`) daripada menambah kolom baru untuk satu kata.
+- Hasil baca mesin **tidak pernah** otomatis mengisi `ringkasan`; hanya lewat centangan eksplisit user, dan `isi_terverifikasi_pada` menjadi penanda manusia sudah memeriksa.
+- Surat keluar tidak ikut dibacakan (permintaan user menyebut surat masuk, dan `draf.isi_surat` memang buatan orang). Layanannya sudah umum, tinggal panggil dari jalur keluar kalau nanti diminta.
+
+### Catatan lingkungan
+
+`composer require smalot/pdfparser` butuh **±6,5 menit** untuk tahap `dump-autoload -o` di laptop user (classmap 44.295 kelas di bawah Windows/Defender). Perintah yang tampak "menggantung tanpa output" sebenarnya sedang dipotong timeout; akibatnya paket ada di disk + `installed.json` tapi TIDAK terdaftar di autoloader (`class_exists` false, `autoload_namespaces.php` kosong). Pemulihannya satu kali: `composer dump-autoload -o --no-scripts` dengan timeout panjang — bukan `composer install` berulang kali. Ini pengulangan jebakan yang sudah dicatat 4 Okt.

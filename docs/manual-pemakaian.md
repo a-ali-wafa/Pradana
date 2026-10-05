@@ -29,7 +29,7 @@ Menu di kiri layar: **Dashboard, Surat Masuk, Surat Keluar, Pencarian Arsip, Pem
 
 Halaman pertama sesudah login. Isinya ringkasan kerja hari itu: jumlah surat masuk/keluar, surat terbaru, klasifikasi paling banyak dipakai, dan (untuk admin) catatan aktivitas terakhir.
 
-Tombol pintas di bagian atas menuju pekerjaan yang paling sering: mencatat surat masuk, mencatat surat keluar, dan mencari arsip.
+Semua pekerjaan dimulai dari **menu di kiri layar** — dashboard sengaja tidak mengulang tombol pintasan, supaya tidak ada dua jalan ke tempat yang sama.
 
 ---
 
@@ -46,7 +46,7 @@ Yang perlu diketahui:
 - **Klasifikasi** memilih berjenjang: setelah Primer dipilih, dropdown Sekunder dan Tersier terisi sendiri. Kalau Sekunder/Tersier belum ada di daftar, itu tugas admin menambahkannya (bagian 13).
 - Klasifikasi yang dipilih menentukan **folder tempat file arsip disimpan**, jadi jangan asal pilih "Umum".
 - Surat masuk boleh disimpan dengan **nomor surat yang sama** dengan surat lain (misal satu surat dikirim ke beberapa instansi). Yang tidak boleh duplikat hanya nomor surat keluar.
-- Lampiran diunggah **setelah** surat tersimpan — lihat bagian 6.
+- Lampiran diunggah **setelah** surat tersimpan — lihat bagian 6. Berkas PDF/DOCX/XLSX yang diunggah akan **dicoba dibaca isinya** otomatis, lalu teksnya muncul untuk Anda periksa sebelum dipakai (bagian 6).
 
 ---
 
@@ -72,6 +72,8 @@ Surat keluar punya "isi surat" untuk diterbitkan sebagai PDF berkop:
 
 PDF dibuka di tab baru. Simpan lewat browser (Ctrl+S) atau tekan Ctrl+P untuk mencetak ke printer.
 
+Bentuk PDF mengikuti tata naskah dinas yang lazim di kantor desa/kelurahan: kop bertingkat (Kabupaten → Kecamatan → Desa) dengan garis ganda, blok **Nomor / Klasifikasi / Sifat / Lampiran / Perihal** sejajar, tempat & tanggal di kanan ("Urek-Urek, 5 Oktober 2026"), alamat tujuan dengan **Kepada Yth. … di …**, isi rata kiri-kanan per paragraf, blok tanda tangan dengan jabatan + nama digarisbawahi + NIP/NIK, dan **Tembusan** bernomor. Isi kop diambil dari menu **Pengaturan Instansi** (bagian 13.3). Kalau desa sudah punya kop/lembar berlogo resmi dan ingin PDF-nya disamakan, itu dicatat sebagai penyesuaian tersendiri — sampai sekarang dipakai satu template umum.
+
 ---
 
 ## 6. Lampiran (scan & file)
@@ -90,15 +92,32 @@ Aturan yang berlaku:
 - File arsip tersimpan di computer arsip kantor, **tidak bisa dibuka dari luar** tanpa login. Tekan **Unduh** untuk melihat (dibuka di layar) atau menyimpan ke computer.
 - Nomor telepon/alamat di dalam file tetap terbaca orang lain kalau file-nya dipublikasikan sendiri oleh staf — tanggung jawab ada di yang mengunggah.
 
+### Isi surat ikut terbaca (khusus surat masuk)
+
+Sesudah unggah, sistem **mencoba membaca isi berkasnya** dan menampilkan teksnya di kartu **Hasil Baca Isi Lampiran** pada halaman surat itu juga — tidak perlu muat ulang.
+
+Yang perlu diketahui pemakai:
+
+- Teks itu **draf hasil mesin, belum pasti benar**. Kartu ditandai **belum diverifikasi** sampai ada orang menekan **Simpan (sudah saya periksa)**. Perbaiki langsung di kolomnya kalau ada yang salah baca, lalu simpan.
+- Centang **Salin teks ini ke Ringkasan surat** hanya kalau memang mau ringkasan surat terisi dari teks tersebut. Tanpa dicentang, ringkasan yang sudah Anda ketik tidak akan tertimpa.
+- Yang bisa dibaca: **PDF berisi teks (hasil export Word/Excel/LibreOffice), DOCX, dan XLSX**. Yang TIDAK bisa dibaca: **foto/scan (JPG, PNG)** — sistem tidak punya pembaca tulisan tangan/OCR — dan **DOC/XLS format lama**. Untuk dua kasus terakhir, simpan ulang berkasnya sebagai PDF/DOCX/XLSX dari program Office, atau ketik ringkasannya sendiri.
+- Berkas yang gagal terbaca **tetap tersimpan** sebagai lampiran. Kegagalan baca tidak pernah membuat unggahan gagal; alasannya muncul di keterangan kartu.
+
 ---
 
 ## 7. Mencari arsip
 
-Menu **Pencarian Arsip**. Kolom kata kunci menggali **nomor surat, perihal, pengirim/penerima, ringkasan, dan isi surat keluar** — jadi cukup mengetik potongan kata, misalnya `irigasi`.
+Menu **Pencarian Arsip** sudah tidak ada sejak 5 Okt 2026 — pencariannya pindah ke tempat orang memang mencarinya: kotak **Cari** di halaman **Surat Masuk** dan di halaman **Surat Keluar**.
 
-Saringannya sama dengan daftar surat: jenis surat, klasifikasi, sifat, status arsip, dan rentang tanggal. Hasil ditampilkan 20 per halaman.
+Kotak itu menggali **nomor surat, perihal, pengirim atau penerima, instansi, ringkasan, dan isi surat keluar** (termasuk isi draf yang diketik di halaman draf). Jadi cukup mengetik potongan kata, misalnya `irigasi`, tanpa perlu hafal nomornya.
 
-Cara cepat lain: di halaman **Surat Masuk** / **Surat Keluar** ada kotak cari + filter tahun/sifat/klasifikasi/status arsip.
+Samping kotak ada saringan yang bekerja bersama kata kunci: **tahun, sifat, status arsip, klasifikasi primer**. Hasil ditampilkan **20 per halaman**; kosongkan kotak untuk melihat semua.
+
+Sedikit trik yang berguna:
+
+- Surat yang sedang di **tempat sampah** tidak muncul di pencarian. Untuk itu, buka daftar surat lalu centang/tekan penyaring tempat sampah (khusus admin).
+- Kalau kata kunci panjang (satu kalimat) tidak ketemu, coba potongan yang lebih pendek — sistem mencari teks persis, bukan sinonim.
+- Isi surat masuk yang berasal dari lampiran terbaca hanya kalau lampirannya PDF/DOCX/XLSX (lihat bagian 6). Foto/hasil scan tidak ikut ketemu karena isinya belum terbaca sistem.
 
 ---
 
@@ -183,9 +202,15 @@ Reset PIN lewat tombol **Reset PIN** di baris user. Menghapus user boleh dilakuk
 Menu **Klasifikasi Primer / Sekunder / Tersier**, tambah lewat tombol **Tambah**. Hierarki: Primer → Sekunder → Tersier. Menghapus induk ikut menghapus yang di bawahnya, jadi sistem menolak menghapus klasifikasi yang sudah dipakai surat.
 
 ### 13.3 Pengaturan instansi
-Menu **Pengaturan Instansi**: nama instansi, jenis, alamat, telepon, email, dan **logo**. Semuanya muncul di kop PDF surat, Berita Acara, dan Buku Agenda, jadi isi dengan benar sekali di awal. Field-nya terkunci sampai tombol **Edit** ditekan, supaya tidak kepencet ubah tidak sengaja.
+Menu **Pengaturan Instansi** — ini yang menentukan bentuk kop surat kantor. Layarnya dua kolom: kiri isian, kanan **pratinjau kop** yang berubah langsung mengikuti tulisan di kiri, jadi kelihatan benar atau tidaknya sebelum disimpan.
 
-Untuk logo: setelah **Edit**, kolom "Ganti Logo" muncul. Begitu berkas dipilih, **pratinjau logo baru** langsung tampil di layar (beserta nama berkas dan ukurannya) tanpa perlu menyimpan dulu — pakai itu untuk memastikan logo tidak terbalik, terpotong, atau pecah sebelum kop PDF dicetak. Logo lama tetap yang dipakai sampai perubahan disimpan. Logo tersimpan di aplikasi (bukan di internet) dan bisa diganti kapan saja.
+Isian yang ada sekarang: **Nama Instansi** (baris besar kop), **Jenis Instansi** (mis. "Pemerintah Desa" — dipakai untuk menulis "Kepala Desa" di blok tanda tangan), **Kabupaten** dan **Kecamatan** (dua baris atas kop bertingkat; kosongkan kalau kantor Anda memakai kop satu baris), **Alamat**, **Kode Pos**, **Telepon**, **Email**, dan **Logo**. Telepon, email, kode pos, kabupaten, dan kecamatan boleh kosong — barisnya cukup tidak ikut tercetak.
+
+Field terkunci sampai tombol **Edit** ditekan, supaya kop tidak kepencet berubah.
+
+Logo: setelah **Edit**, kolom "Ganti Logo" muncul. Begitu berkas dipilih, **pratinjau logo** langsung tampil — baik di blok logo maupun di kop pratinjau sebelah kanan — tanpa perlu menyimpan dulu. Pakai itu untuk memastikan logo tidak terbalik, terpotong, atau pecah. Logo lama tetap yang dipakai sampai perubahan disimpan. Logo tampil lewat aplikasi (bukan folder internet), jadi tidak perlu pengaturan tambahan di server; kalau dulu logo tidak muncul sama sekali, itu masalah yang sudah diperbaiki.
+
+Baris tanggal surat ("Urek-Urek, 5 Oktober 2026") memakai nama instansi tanpa kata "Pemerintah"/"Kantor"/"Sekretariat" — jadi kalau Nama Instansi diisi "PEMERINTAH DESA UREK-UREK", tanggalnya tertulis "DESA UREK-UREK, 5 Oktober 2026".
 
 ### 13.4 Log aktivitas
 Menu **Log Aktivitas** (hanya admin): siapa melakukan apa dan kapan, disaring per orang, per kata, atau per rentang tanggal. Layar ini hanya membaca — tidak ada tombol hapus. Catatan lebih dari 2 tahun dibersihkan otomatis oleh sistem, **kecuali** jejak pemusnahan.
@@ -212,7 +237,7 @@ Setiap layar kesalahan menampilkan kode besar dan apa yang harus dilakukan. Ring
 | Kode | Artinya | Yang perlu Anda lakukan |
 |---|---|---|
 | **403** | Halaman itu khusus admin | Minta admin yang membuka; jangan minta hak akses |
-| **404** | Alamat salah / surat tidak ada | Pakai **Pencarian Arsip** daripada menebak alamat |
+| **404** | Alamat salah / surat tidak ada | Buka daftar **Surat Masuk** / **Surat Keluar** lalu cari di kotaknya, jangan menebak alamat |
 | **419** | Formulir terlalu lama dibiarkan terbuka | Muat ulang, isi ulang, kirim lagi. Untuk teks panjang, ketik di Word lalu tempel |
 | **500** | Kesalahan di sisi server | Tunggu sebentar, coba lagi **satu kali**; kalau gagal lagi catat jam & sedang membuka apa, lalu laporkan |
 | **503** | Sedang diperbarui petugas | Tunggu beberapa menit lalu muat ulang |
@@ -241,6 +266,8 @@ php artisan config:cache && php artisan route:cache && php artisan view:cache
 ```
 `--seed` hanya menanam satu baris pengaturan instansi kosong — **sengaja**. Akun contoh & klasifikasi contoh ada di `DevSeeder` yang menolak jalan di server produksi.
 
+**Tidak perlu `php artisan storage:link`.** Logo instansi dilayani lewat route `/instansi/logo` yang membaca disk `public` langsung, jadi logo tetap tampil di shared hosting tempat symlink tidak bisa (atau belum) dibuat. Kalau suatu saat pindah ke setup yang menyediakan symlink, route ini tetap jalan — tidak ada yang perlu diubah.
+
 ### A.3 Tugas terjadwal (cron)
 Scheduler Laravel harus dipanggil tiap menit:
 ```
@@ -267,11 +294,13 @@ php artisan tinker                                   # pemeriksaan data
 
 ### A.7 Setelah memasang
 ```bash
-php artisan test          # 95 tes; butuh DB_TEST_DATABASE untuk 3 tes penomoran di MariaDB
+php artisan test          # 123 tes; butuh DB_TEST_DATABASE untuk 3 tes penomoran di MariaDB
 ```
 Untuk pengembangan lokal: `php artisan db:seed --class=DevSeeder` (hanya jalan saat `APP_ENV=local`), PIN akun contoh dibaca dari `DEV_PIN` di `.env`.
 
 ### A.8 Batasan yang belum dibuat (diketahui, bukan kelupaan)
 - **Template PDF masih satu bentuk umum.** Multi-template sesuai kop resmi desa menunggu contoh kop dari kantor.
 - **Kunci otomatis arsip setelah N hari** belum diaktifkan — nilai N belum diputuskan.
+- **Pembaca isi lampiran bukan OCR.** PDF hasil scan (gambarnya saja), JPG/PNG, dan DOC/XLS format lama tidak terbaca; sistem selalu menyebutkan alasannya di kartu hasil baca, tidak pernah diam-diam.
+- **Hasil baca mesin = draf.** Teks yang diambil dari PDF/DOCX/XLSX bisa salah susun (tabel, header) dan baru dianggap diverifikasi setelah petugas menekan Simpan.
 - Backup Drive tidak menyalin ulang file yang sudah dihapus di kedua sisi; ia menambah, bukan mencerminkan keadaan.

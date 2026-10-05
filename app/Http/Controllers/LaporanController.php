@@ -98,9 +98,13 @@ class LaporanController extends Controller
     {
         [$dari, $sampai] = $this->periode($request);
 
+        $instansi = PengaturanInstansi::first();
+
         $pdf = Pdf::loadView('laporan.agenda', [
             'items' => $this->baris($request, $dari, $sampai),
-            'instansi' => PengaturanInstansi::first(),
+            'instansi' => $instansi,
+            // partials/kop-pdf.blade.php membaca $logoPath (path fisik, bukan URL).
+            'logoPath' => $instansi?->logoPathUntukPdf(),
             'dari' => $dari->translatedFormat('d F Y'),
             'sampai' => $sampai->translatedFormat('d F Y'),
             'jenis' => $this->jenis($request),

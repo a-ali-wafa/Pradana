@@ -89,6 +89,64 @@
             </div>
         </div>
 
+        {{--
+            HASIL BACA ISI LAMPIRAN (fitur baru 5 Okt 2026). Teks di bawah ini
+            diambil MESIN dari berkas lampiran dan belum tentu benar, makanya
+            badge-nya "belum diverifikasi" sampai user menekan Simpan. Kartu ini
+            ada di DOM sejak awal tapi tersembunyi kalau belum ada hasil baca —
+            begitu unggah lampiran menghasilkan teks, JavaScript dari
+            partials/lampiran-upload mengisi textarea ini dan melepas .d-none,
+            jadi user tidak perlu memuat ulang halaman untuk melihat hasilnya.
+        --}}
+        <div class="card mb-3 {{ $surat_masuk->isi_hasil_baca ? '' : 'd-none' }}" id="kartuHasilBaca">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="fas fa-robot me-2"></i>Hasil Baca Isi Lampiran</span>
+                <span class="badge {{ $surat_masuk->isi_terverifikasi_pada ? 'text-bg-success' : 'text-bg-warning' }}"
+                      id="badgeVerifikasiBaca">
+                    {{ $surat_masuk->isi_terverifikasi_pada ? 'sudah diverifikasi' : 'belum diverifikasi' }}
+                </span>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ route('surat-masuk.isi.update', $surat_masuk) }}">
+                    @csrf
+                    @method('PATCH')
+
+                    <label class="form-label small fw-bold text-secondary" for="isiHasilBaca">
+                        Teks yang diambil sistem dari lampiran — periksa, boleh diperbaiki langsung
+                    </label>
+                    <textarea name="isi_hasil_baca" id="isiHasilBaca" rows="8" class="form-control"
+                              style="white-space: pre-wrap;">{{ $surat_masuk->isi_hasil_baca }}</textarea>
+                    @error('isi_hasil_baca') <div class="text-danger small mt-1">{{ $message }}</div> @enderror
+
+                    <div class="small text-secondary mt-1" id="keteranganBaca">
+                        @if($surat_masuk->isi_dibaca_dari)
+                            Dibaca dari {{ $surat_masuk->isi_dibaca_dari }}
+                            pada {{ $surat_masuk->isi_dibaca_pada?->translatedFormat('d F Y, H:i') }}.
+                        @endif
+                        @if($surat_masuk->isi_terverifikasi_pada)
+                            Disimpan oleh pengguna pada {{ $surat_masuk->isi_terverifikasi_pada->translatedFormat('d F Y, H:i') }}.
+                        @endif
+                    </div>
+
+                    <div class="form-check mt-2">
+                        <input class="form-check-input" type="checkbox" value="1" id="jadikanRingkasan"
+                               name="jadikan_ringkasan" @checked(empty($surat_masuk->ringkasan))>
+                        <label class="form-check-label small" for="jadikanRingkasan">
+                            Salin teks ini ke <strong>Ringkasan surat</strong> di atas
+                        </label>
+                        <div class="form-text">
+                            Ringkasan dipakai daftar surat &amp; pencarian. Kalau isian ringkasannya
+                            sudah ada dan tidak mau tertimpa, jangan dicentang.
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-sm btn-primary rounded-pill px-3 mt-3">
+                        <i class="fas fa-check me-1"></i> Simpan (sudah saya periksa)
+                    </button>
+                </form>
+            </div>
+        </div>
+
         {{-- Data pengirim --}}
         <div class="card mb-3">
             <div class="card-header"><i class="fas fa-user me-2"></i>Pengirim</div>
@@ -257,3 +315,41 @@
 </div>
 
 @endsection
+
+@push('scripts')
+<script>
+    // Dipanggil partials/lampiran-upload setelah unggahan selesai, kalau server
+    // berhasil membaca isi berkasnya. Tidak ada reload halaman: teks langsung
+    // muncul di kartu "Hasil Baca Isi Lampiran" untuk diperiksa user.
+    window.pradanaHasilBacaIsi = function (baca) {
+        const kartu = document.getElementById('kartuHasilBaca');
+        if (!kartu) return;
+
+        if (baca && baca.teks) {
+            document.getElementById('isiHasilBaca').value = baca.teks;
+            kartu.classList.remove('d-none');
+
+            const badge = document.getElementById('badgeVerifikasiBaca');
+            badge.textContent = 'belum diverifikasi';
+            badge.className = 'badge text-bg-warning';
+
+            const ket = document.getElementById('keteranganBaca');
+            ket.textContent = (baca.catatan || []).join(' ');
+
+            kartu.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        } else if (baca && (baca.catatan || []).length) {
+            // Tidak ada teks (foto/DOC lama/PDF scan) — beritahu lewat badge
+            // keterangan kartu kalau kartunya sedang terbuka, dan lewat alert
+            // ringan kalau kartunya tersembunyi, supaya "kok isinya nggak kebaca"
+            // tidak terasa seperti aplikasi error.
+            const kotak = document.getElementById('keteranganBaca');
+
+            if (!kartu.classList.contains('d-none')) {
+                kotak.textContent = (baca.catatan || []).join(' ');
+            } else {
+                window.alert((baca.catatan || []).join('\n'));
+            }
+        }
+    };
+</script>
+@endpush

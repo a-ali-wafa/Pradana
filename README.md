@@ -16,7 +16,7 @@ Acara pemusnahan arsip yang diminta saat audit.
 |---|---|
 | Staf arsip | Catat surat masuk/keluar, unggah lampiran (banyak berkas sekaligus), cari arsip termasuk dari isi surat, men-*nyahkan* arsip lewat retensi, isi draf & cetak PDF surat keluar, ajukan hapus lampiran / pemusnahan |
 | Admin (kepala desa/lurah) | Semua di atas + setujui pengajuan hapus & pemusnahan (lengkap dengan **Berita Acara** PDF), tempat sampah & pulihkan arsip, kelola user & PIN, klasifikasi 3 tingkat, kop/logo instansi, **Laporan CSV & Buku Agenda PDF**, baca **Log Aktivitas** |
-| Otomatis | Nomor surat keluar (`001/01.02.03/IX/2026`, urut lagi tiap Januari), log setiap perubahan, backup arsip ke Google Drive harian, pembersihan log lama |
+| Otomatis | Nomor surat keluar (`001/01.02.03/IX/2026`, urut lagi tiap Januari), **pembacaan isi lampiran** (PDF/DOCX/XLSX) jadi draf yang tinggal diperiksa petugas, notasi lampiran di PDF dihitung dari jumlah berkas, log setiap perubahan, backup arsip ke Google Drive harian, pembersihan log lama |
 
 ## Cara membuka
 
@@ -42,8 +42,13 @@ link "lupa PIN" — reset PIN dilakukan admin lewat menu Manajemen User.
 - Penghapusan surat **tidak pernah** langsung permanen dari layar — masuk tempat sampah
   dulu, dan hanya bisa dipulihkan admin. Hapus total hanya lewat alur **Pemusnahan Arsip**
   yang meninggalkan Berita Acara.
-- PDF surat saat ini memakai satu template kop umum. Template resmi desa bisa
-  menyusul (butuh contoh kop resminya).
+- PDF surat mengikuti tata naskah dinas desa pada umumnya (kop bertingkat Kabupaten →
+  Kecamatan → Desa, blok Nomor/Klasifikasi/Sifat/Lampiran/Perihal, tempat & tanggal,
+  blok tanda tangan, tembusan bernomor). Kop **resmi** desa (logo dan susunan khusus)
+  bisa menyusul begitu contoh dari kantor diberikan.
+- Isi lampiran surat masuk ikut terbaca kalau berkasnya PDF berisi teks, DOCX, atau
+  XLSX. Foto/hasil scan dan DOC/XLS lama tidak terbaca (tidak ada OCR di server kantor),
+  dan sistem selalu mengatakannya, bukan diam-diam.
 - Aplikasi ini dibuat untuk dipakai satu kantor (bukan untuk banyak desa sekaligus).
 
 ## Untuk pengembang

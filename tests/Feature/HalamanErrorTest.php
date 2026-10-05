@@ -21,10 +21,14 @@ class HalamanErrorTest extends TestCase
 
     public function test_halaman_tidak_dikenal_menggunakan_halaman_sendiri(): void
     {
+        // Arahannya ke daftar surat, BUKAN ke /pencarian: halaman pencarian
+        // gabungan dihapus 5 Okt 2026 dan pencarian isi sekarang hidup di filter
+        // `cari` pada tiap daftar.
         $this->get('/Alamat-Yang-Tidak-Pernah-Ada')
             ->assertNotFound()
             ->assertSee('Halaman atau arsip ini tidak ditemukan')
-            ->assertSee('Pencarian Arsip');
+            ->assertSee('Cari di Surat Masuk')
+            ->assertDontSee('/pencarian');
     }
 
     public function test_pegawai_yang_membuka_halaman_admin_diberi_penjelasan(): void

@@ -24,9 +24,19 @@ class SuratMasuk extends Model
         'status_berkas', 'status_arsip', 'lokasi_fisik', 'user_id',
     ];
 
+    /**
+     * SENGAJA tidak ada di $fillable: `isi_hasil_baca`, `isi_dibaca_dari`,
+     * `isi_dibaca_pada`, `isi_terverifikasi_pada` (fitur baca otomatis 5 Okt 2026).
+     * Keempatnya dikelola sistem — ditulis `LampiranController` saat unggah dan
+     * `SuratMasukController::updateIsi()` saat user memeriksa. Kalau suatu hari
+     * form surat ikut mengirimkannya, isinya harus lewat jalur eksplisit itu,
+     * bukan lewat mass assignment. Di tes pakai `forceFill()`.
+     */
     protected $casts = [
         'tanggal_surat' => 'date',
         'tanggal_diterima' => 'date',
+        'isi_dibaca_pada' => 'datetime',
+        'isi_terverifikasi_pada' => 'datetime',
     ];
 
     public function petugas(): BelongsTo

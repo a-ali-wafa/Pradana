@@ -4,32 +4,32 @@
 @section('page-title', 'Pengaturan Instansi')
 
 {{--
-    View Pengaturan Instansi — dibuat 31 Agu 2026, DIROMBAK ULANG (sesi sama) setelah
-    user kasih preview HTML sistem lama. Lihat AGENTS.md 12.19.
+    View Pengaturan Instansi — dibuat 31 Agu 2026, dirombak ulang 5 Okt 2026.
 
-    Pola interaksi "field readonly, klik Edit baru bisa isi" ini SENGAJA meniru
-    `handleEditHeader()`/`cancelEditHeader()` di referensi lama — di sana, field kop
-    surat (nama/jenis/alamat instansi, dst) memang readonly sampai user pencet tombol
-    "Edit Header", supaya tidak kepencet ubah tidak sengaja. Bedanya: referensi lama
-    nyimpannya lewat AJAX ke Apps Script tanpa reload; di sini pakai <form> POST+PUT
-    standar Laravel (submit = reload halaman) — lebih sederhana & tidak butuh JS
-    tambahan untuk validasi/error handling (`@error` Blade sudah otomatis dari
-    `UpdatePengaturanInstansiRequest`, lihat AGENTS.md 12.18).
+    Tiga alasan dirombak:
+    1. Logo tidak pernah tampil. `Storage::url()` menunjuk `public/storage/...` yang
+       bergantung pada symlink `artisan storage:link`; symlink itu belum ada di laptop
+       dev dan tidak tentu bisa dibuat di shared hosting kantor (K1=a). Sekarang lewat
+       route `instansi.logo` — `$pengaturanInstansi->logoUrl()`.
+    2. Halaman sempit dan kosong (satu kolom di tengah). Sekarang dua kolom: kiri data
+       kop, kanan PRA-TINJAU kop yang meniru partials/kop-pdf.blade.php, jadi user
+       melihat hasil sebelum menyimpan.
+    3. Kop desa bertingkat (Kabupaten > Kecamatan > Desa) belum bisa ditulis sama
+       sekali; kolom `nama_kabupaten`/`nama_kecamatan`/`kode_pos` ditambahkan lewat
+       migration 5 Okt 2026.
 
-    Field & controller-nya SUDAH cross-checked (lihat 12.18) — TIDAK ada asumsi baru
-    di sini soal data, cuma soal presentasi/UX.
-
-    ⚠️ `Storage::url()` di bawah butuh symlink `storage:link` sudah dijalankan di
-    server (`public/storage` → `storage/app/public`) supaya logo bisa tampil — ini
-    setup standar Laravel, belum tentu sudah dijalankan di server user, WAJIB dicek.
+    Pola interaksi "field readonly, klik Edit baru bisa isi" SENGAJA dipertahankan
+    (meniru `handleEditHeader()` sistem lama) supaya kop surat tidak kepencet berubah.
+    Penyimpanan tetap <form> POST+PUT standar Laravel, bukan AJAX — lihat
+    `UpdatePengaturanInstansiRequest` dan AGENTS.md 12.18.
 --}}
 
 @section('content')
-<div class="row justify-content-center">
-    <div class="col-lg-8">
-        <div class="card">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <span><i class="fas fa-building me-2"></i>Kop Surat &amp; Data Instansi</span>
+<div class="row g-4">
+    <div class="col-12 col-xl-7">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-white d-flex justify-content-between align-items-center py-3">
+                <span class="fw-bold"><i class="fas fa-building me-2 text-primary"></i>Data Kop Surat</span>
                 <button type="button" id="btnToggleEdit" class="btn btn-sm btn-outline-primary rounded-pill px-3" onclick="pradanaToggleEditPengaturanInstansi()">
                     <i class="fas fa-pen me-1"></i> Edit
                 </button>
@@ -39,75 +39,117 @@
                     @csrf
                     @method('PUT')
 
-                    <div class="row mb-3">
+                    <h6 class="text-uppercase fw-bold small text-secondary mb-3">Identitas instansi</h6>
+                    <div class="row g-3">
                         <div class="col-md-6">
-                            <label class="form-label small fw-bold text-secondary">Nama Instansi</label>
+                            <label class="form-label small fw-bold text-secondary">Nama Instansi <span class="text-danger">*</span></label>
                             <input type="text" name="nama_instansi" class="form-control bg-light border-0 pradana-field"
-                                   value="{{ old('nama_instansi', $pengaturanInstansi->nama_instansi) }}" readonly required>
+                                   value="{{ old('nama_instansi', $pengaturanInstansi->nama_instansi) }}"
+                                   placeholder="Cth: PEMERINTAH DESA UREK-UREK" readonly required>
+                            <div class="form-text">Baris paling besar pada kop; tulis dengan huruf kapital.</div>
                             @error('nama_instansi') <div class="text-danger small mt-1">{{ $message }}</div> @enderror
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label small fw-bold text-secondary">Jenis Instansi</label>
+                            <label class="form-label small fw-bold text-secondary">Jenis Instansi <span class="text-danger">*</span></label>
                             <input type="text" name="jenis_instansi" class="form-control bg-light border-0 pradana-field"
-                                   value="{{ old('jenis_instansi', $pengaturanInstansi->jenis_instansi) }}" placeholder="Cth: Pemerintah Desa" readonly required>
+                                   value="{{ old('jenis_instansi', $pengaturanInstansi->jenis_instansi) }}"
+                                   placeholder="Cth: Pemerintah Desa" readonly required>
+                            <div class="form-text">Dipakai untuk jabatan penandatangan di dokumen ("Kepala Desa").</div>
                             @error('jenis_instansi') <div class="text-danger small mt-1">{{ $message }}</div> @enderror
                         </div>
-                    </div>
-
-                    <div class="mb-3">
-                        <label class="form-label small fw-bold text-secondary">Alamat Instansi</label>
-                        <textarea name="alamat_instansi" class="form-control bg-light border-0 pradana-field" rows="2" readonly required>{{ old('alamat_instansi', $pengaturanInstansi->alamat_instansi) }}</textarea>
-                        @error('alamat_instansi') <div class="text-danger small mt-1">{{ $message }}</div> @enderror
-                    </div>
-
-                    <div class="row mb-3">
                         <div class="col-md-6">
-                            <label class="form-label small fw-bold text-secondary">No. Telepon</label>
-                            <input type="text" name="no_telp" class="form-control bg-light border-0 pradana-field"
-                                   value="{{ old('no_telp', $pengaturanInstansi->no_telp) }}" readonly required>
-                            @error('no_telp') <div class="text-danger small mt-1">{{ $message }}</div> @enderror
+                            <label class="form-label small fw-bold text-secondary">Kabupaten</label>
+                            <input type="text" name="nama_kabupaten" class="form-control bg-light border-0 pradana-field"
+                                   value="{{ old('nama_kabupaten', $pengaturanInstansi->nama_kabupaten) }}"
+                                   placeholder="Cth: Banyumas" readonly>
+                            <div class="form-text">Kosongkan kalau kop kantor hanya satu baris.</div>
+                            @error('nama_kabupaten') <div class="text-danger small mt-1">{{ $message }}</div> @enderror
                         </div>
                         <div class="col-md-6">
+                            <label class="form-label small fw-bold text-secondary">Kecamatan</label>
+                            <input type="text" name="nama_kecamatan" class="form-control bg-light border-0 pradana-field"
+                                   value="{{ old('nama_kecamatan', $pengaturanInstansi->nama_kecamatan) }}"
+                                   placeholder="Cth: Kedung Banteng" readonly>
+                            @error('nama_kecamatan') <div class="text-danger small mt-1">{{ $message }}</div> @enderror
+                        </div>
+                    </div>
+
+                    <h6 class="text-uppercase fw-bold small text-secondary mt-4 mb-3">Alamat &amp; kontak</h6>
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <label class="form-label small fw-bold text-secondary">Alamat Instansi <span class="text-danger">*</span></label>
+                            <textarea name="alamat_instansi" rows="2" class="form-control bg-light border-0 pradana-field" readonly required>{{ old('alamat_instansi', $pengaturanInstansi->alamat_instansi) }}</textarea>
+                            @error('alamat_instansi') <div class="text-danger small mt-1">{{ $message }}</div> @enderror
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-bold text-secondary">Kode Pos</label>
+                            <input type="text" name="kode_pos" class="form-control bg-light border-0 pradana-field"
+                                   value="{{ old('kode_pos', $pengaturanInstansi->kode_pos) }}" placeholder="Cth: 53182" readonly inputmode="numeric">
+                            @error('kode_pos') <div class="text-danger small mt-1">{{ $message }}</div> @enderror
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-bold text-secondary">No. Telepon</label>
+                            <input type="text" name="no_telp" class="form-control bg-light border-0 pradana-field"
+                                   value="{{ old('no_telp', $pengaturanInstansi->no_telp) }}" placeholder="Cth: 0281-xxxxxxx" readonly>
+                            @error('no_telp') <div class="text-danger small mt-1">{{ $message }}</div> @enderror
+                        </div>
+                        <div class="col-md-4">
                             <label class="form-label small fw-bold text-secondary">Email</label>
                             <input type="email" name="email" class="form-control bg-light border-0 pradana-field"
-                                   value="{{ old('email', $pengaturanInstansi->email) }}" readonly required>
+                                   value="{{ old('email', $pengaturanInstansi->email) }}" placeholder="Cth: desa@kabupaten.go.id" readonly>
                             @error('email') <div class="text-danger small mt-1">{{ $message }}</div> @enderror
                         </div>
                     </div>
+                    <div class="form-text mt-2">
+                        Telepon dan email boleh kosong. Kantor yang belum punya tetap bisa mencetak kop;
+                        barisnya cukup tidak ikut tercetak.
+                    </div>
 
-                    @if ($pengaturanInstansi->logo_path)
-                        <div class="mb-3">
-                            <label class="form-label small fw-bold text-secondary d-block">Logo Saat Ini</label>
-                            <img src="{{ Storage::url($pengaturanInstansi->logo_path) }}" alt="Logo instansi"
-                                 style="max-height: 80px;" class="border rounded p-2 bg-light">
+                    <hr class="my-4">
+
+                    <h6 class="text-uppercase fw-bold small text-secondary mb-3">Logo</h6>
+                    <div class="row g-3 align-items-start">
+                        <div class="col-md-6">
+                            @if ($pengaturanInstansi->logoUrl())
+                                <div class="border rounded p-2 bg-light d-inline-block">
+                                    <img src="{{ $pengaturanInstansi->logoUrl() }}" alt="Logo instansi" style="max-height: 84px;">
+                                </div>
+                                <div class="small text-muted mt-1">Logo yang sekarang dipakai di semua dokumen.</div>
+                            @else
+                                <div class="border rounded p-3 text-center text-muted small bg-light" style="max-width: 220px; border-style: dashed;">
+                                    <i class="fas fa-image fa-2x d-block mb-2 opacity-50"></i>
+                                    Belum ada logo tersimpan
+                                </div>
+                            @endif
                         </div>
-                    @endif
+                        <div class="col-md-6">
+                            <div id="logoUploadWrap" class="d-none">
+                                <label class="form-label small fw-bold text-secondary">
+                                    {{ $pengaturanInstansi->logo_path ? 'Ganti Logo (biarkan kosong kalau tidak ingin ganti)' : 'Upload Logo' }}
+                                </label>
+                                <input type="file" name="logo" id="logoBaru" class="form-control" accept=".jpg,.jpeg,.png">
+                                <div class="form-text">Format jpg/jpeg/png, maks 2MB. Latar transparan lebih rapi.</div>
 
-                    <div class="mb-3 d-none" id="logoUploadWrap">
-                        <label class="form-label small fw-bold text-secondary">
-                            {{ $pengaturanInstansi->logo_path ? 'Ganti Logo (opsional, biarkan kosong kalau tidak ingin ganti)' : 'Upload Logo' }}
-                        </label>
-                        <input type="file" name="logo" id="logoBaru" class="form-control bg-light border-0" accept=".jpg,.jpeg,.png">
-                        <div class="form-text">Format jpg/jpeg/png, maks 2MB. Logo dipakai di kop PDF, Buku Agenda, Berita Acara, dan halaman login.</div>
-                        @error('logo') <div class="text-danger small mt-1">{{ $message }}</div> @enderror
-
-                        {{-- Pratinjau langsung dari berkas yang dipilih — baru terlihat
-                             sebelum menyimpan, supaya kantor bisa memastikan logo tidak
-                             terbalik/pecah sebelum kop PDF-nya dicetak. --}}
-                        <div class="mt-3 d-none" id="logoPratinjau">
-                            <div class="small fw-bold text-secondary mb-1">
-                                Pratinjau logo baru
-                                <span class="fw-normal" id="logoUkuran"></span>
+                                {{-- Pratinjau langsung dari berkas yang dipilih (URL objek, belum
+                                     dikirim ke server), jadi gambar muncul seketika. --}}
+                                <div class="mt-3 d-none" id="logoPratinjau">
+                                    <div class="small fw-bold text-secondary mb-1">
+                                        Pratinjau logo baru
+                                        <span class="fw-normal" id="logoUkuran"></span>
+                                    </div>
+                                    <img id="logoPratinjauGambar" alt="Pratinjau logo baru"
+                                         class="border rounded p-2 bg-light" style="max-height: 80px;">
+                                    <div class="small text-secondary mt-1">
+                                        Logo lama masih yang dipakai sampai perubahan disimpan.
+                                    </div>
+                                </div>
+                                @error('logo') <div class="text-danger small mt-1">{{ $message }}</div> @enderror
                             </div>
-                            <img id="logoPratinjauGambar" alt="Pratinjau logo baru"
-                                 class="border rounded p-2 bg-light" style="max-height: 80px;">
-                            <div class="small text-secondary mt-1">
-                                Logo lama masih yang dipakai sampai perubahan disimpan.
-                            </div>
+                            <div class="small text-muted">Klik <strong>Edit</strong> di kanan atas untuk mengubah logo.</div>
                         </div>
                     </div>
 
-                    <div class="d-none gap-2" id="submitWrap">
+                    <div class="d-none gap-2 mt-4" id="submitWrap">
                         <button type="submit" class="btn btn-primary rounded-pill px-4">
                             <i class="fas fa-save me-1"></i> Simpan Perubahan
                         </button>
@@ -119,47 +161,163 @@
             </div>
         </div>
     </div>
+
+    <div class="col-12 col-xl-5">
+        <div class="card border-0 shadow-sm" style="position: sticky; top: 1rem;">
+            <div class="card-header bg-white py-3">
+                <span class="fw-bold"><i class="fas fa-eye me-2 text-secondary"></i>Pratinjau Kop Surat</span>
+            </div>
+            <div class="card-body">
+                {{-- Cermin dari partials/kop-pdf.blade.php: susunan barisnya sama, jadi
+                     apa yang benar di sini ikut benar di PDF. --}}
+                <div class="border rounded p-3 bg-white">
+                    <table style="width: 100%; border-collapse: collapse;">
+                        <tr>
+                            <td id="kopLogoSel" style="width: 74px; vertical-align: middle; padding-right: 8px; display: none;">
+                                <img id="kopLogo" alt="" style="max-width: 64px; max-height: 64px;">
+                            </td>
+                            <td style="text-align: center; vertical-align: middle;">
+                                <div id="kopKabupaten" class="pradana-kop-tingkat"></div>
+                                <div id="kopKecamatan" class="pradana-kop-tingkat"></div>
+                                <div id="kopNama" class="pradana-kop-utama">PEMERINTAH DESA / KELURAHAN</div>
+                                <div id="kopAlamat" class="small text-muted mt-1"></div>
+                                <div id="kopKontak" class="small text-muted"></div>
+                            </td>
+                            <td id="kopLogoPenyeimbang" style="width: 74px; display: none;">&nbsp;</td>
+                        </tr>
+                    </table>
+                    <div style="border-bottom: 3px solid #000; margin-top: 6px;"></div>
+                    <div style="border-bottom: 1px solid #000; margin-top: 2px;"></div>
+                </div>
+
+                <div class="small text-secondary mt-3">
+                    <i class="fas fa-info-circle me-1 text-primary"></i>
+                    Kop ini dipakai untuk <strong>surat keluar</strong>, <strong>Berita Acara
+                    Pemusnahan</strong>, dan <strong>Buku Agenda</strong>. Pratinjau berubah
+                    mengikuti isian di kiri, tapi PDF baru memakai versi yang sudah disimpan.
+                </div>
+
+                <div class="alert alert-light border small mt-3 mb-0">
+                    <span class="fw-bold d-block mb-1">Baris tempat &amp; tanggal surat</span>
+                    <span id="kopTanggal">-</span>
+                    <div class="text-muted mt-1">
+                        Nama tempat diambil dari Nama Instansi; kata "Pemerintah", "Sekretariat",
+                        dan "Kantor" di depan dibuang otomatis.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 @endsection
 
 @push('scripts')
+<style>
+    .pradana-kop-tingkat { font-size: .78rem; font-weight: 700; text-transform: uppercase; letter-spacing: .4px; line-height: 1.25; }
+    .pradana-kop-utama { font-size: 1.2rem; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; line-height: 1.2; }
+</style>
 <script>
-    // Mode readonly-sampai-diklik-Edit, meniru pola handleEditHeader() di referensi lama.
-    function pradanaToggleEditPengaturanInstansi() {
-        document.querySelectorAll('.pradana-field').forEach(function (el) {
-            el.readOnly = false;
+    // Mode readonly-sampai-diklik-Edit (pola handleEditHeader() sistem lama) + pratinjau
+    // kop langsung. Pratinjau dibaca dari VALUE field, bukan dari data tersimpan, jadi
+    // perubahan terlihat sebelum disimpan.
+    (function () {
+        const field = {
+            nama: document.querySelector('[name="nama_instansi"]'),
+            kabupaten: document.querySelector('[name="nama_kabupaten"]'),
+            kecamatan: document.querySelector('[name="nama_kecamatan"]'),
+            alamat: document.querySelector('[name="alamat_instansi"]'),
+            kodePos: document.querySelector('[name="kode_pos"]'),
+            telp: document.querySelector('[name="no_telp"]'),
+            email: document.querySelector('[name="email"]'),
+        };
+
+        function teks(el) {
+            return el && el.value ? el.value.trim() : '';
+        }
+
+        function tampilkan(id, nilai) {
+            const el = document.getElementById(id);
+            el.textContent = nilai;
+            el.style.display = nilai ? '' : 'none';
+        }
+
+        function perbarui() {
+            tampilkan('kopKabupaten', teks(field.kabupaten) ? 'PEMERINTAH KABUPATEN ' + teks(field.kabupaten).toUpperCase() : '');
+            tampilkan('kopKecamatan', teks(field.kecamatan) ? 'KECAMATAN ' + teks(field.kecamatan).toUpperCase() : '');
+
+            const nama = (teks(field.nama) || 'PEMERINTAH DESA / KELURAHAN').toUpperCase();
+            document.getElementById('kopNama').textContent = nama;
+
+            let alamat = teks(field.alamat);
+            if (alamat && teks(field.kodePos)) {
+                alamat += ', Kode Pos ' + teks(field.kodePos);
+            }
+            document.getElementById('kopAlamat').textContent = alamat;
+
+            const kontak = [];
+            if (teks(field.telp)) kontak.push('Telp. ' + teks(field.telp));
+            if (teks(field.email)) kontak.push('E-mail: ' + teks(field.email));
+            document.getElementById('kopKontak').textContent = kontak.join(' · ');
+
+            // Meniru PengaturanInstansi::tempatSurat() di PHP.
+            let tempat = teks(field.nama).replace(/^(pemerintah|sekretariat|kantor)\s+/i, '').trim();
+            if (!tempat) tempat = teks(field.kecamatan);
+            document.getElementById('kopTanggal').textContent = (tempat || '(isi Nama Instansi dulu)') + ', 05 Oktober 2026';
+        }
+
+        Object.values(field).forEach(function (el) {
+            if (el) el.addEventListener('input', perbarui);
         });
-        document.getElementById('logoUploadWrap').classList.remove('d-none');
-        document.getElementById('submitWrap').classList.remove('d-none');
-        document.getElementById('submitWrap').classList.add('d-flex');
-        document.getElementById('btnToggleEdit').classList.add('d-none');
-    }
 
-    // Pratinjau logo: berkas dibaca langsung di browser (URL objek), tidak
-    // dikirim ke server dulu, jadi gambar muncul seketika setelah dipilih.
-    let urlPratinjau = null;
-    const inputLogo = document.getElementById('logoBaru');
+        // Pratinjau logo: berkas dibaca langsung di browser (URL objek), tidak dikirim
+        // ke server dulu, jadi gambar muncul seketika setelah dipilih.
+        let urlPratinjau = null;
+        const inputLogo = document.getElementById('logoBaru');
 
-    inputLogo.addEventListener('change', function () {
-        const kotak = document.getElementById('logoPratinjau');
-        const berkas = inputLogo.files && inputLogo.files[0];
+        if (inputLogo) {
+            inputLogo.addEventListener('change', function () {
+                const kotak = document.getElementById('logoPratinjau');
+                const berkas = inputLogo.files && inputLogo.files[0];
 
-        if (urlPratinjau) {
-            URL.revokeObjectURL(urlPratinjau);
-            urlPratinjau = null;
+                if (urlPratinjau) {
+                    URL.revokeObjectURL(urlPratinjau);
+                    urlPratinjau = null;
+                }
+
+                if (!berkas) {
+                    kotak.classList.add('d-none');
+                    document.getElementById('kopLogoSel').style.display = 'none';
+                    document.getElementById('kopLogoPenyeimbang').style.display = 'none';
+
+                    return;
+                }
+
+                urlPratinjau = URL.createObjectURL(berkas);
+                document.getElementById('logoPratinjauGambar').src = urlPratinjau;
+                document.getElementById('logoUkuran').textContent =
+                    '- ' + berkas.name + ' (' + Math.round(berkas.size / 1024) + ' KB)';
+                kotak.classList.remove('d-none');
+
+                // Logo ikut masuk ke pratinjau kop: keluhan "logo tidak keluar" harus
+                // kelihatan di layar, bukan baru ketahuan di PDF.
+                document.getElementById('kopLogo').src = urlPratinjau;
+                document.getElementById('kopLogoSel').style.display = '';
+                document.getElementById('kopLogoPenyeimbang').style.display = '';
+            });
         }
 
-        if (! berkas) {
-            kotak.classList.add('d-none');
+        window.pradanaToggleEditPengaturanInstansi = function () {
+            document.querySelectorAll('.pradana-field').forEach(function (el) {
+                el.readOnly = false;
+                el.classList.remove('bg-light', 'border-0');
+            });
+            document.getElementById('logoUploadWrap').classList.remove('d-none');
+            document.getElementById('submitWrap').classList.remove('d-none');
+            document.getElementById('submitWrap').classList.add('d-flex');
+            document.getElementById('btnToggleEdit').classList.add('d-none');
+        };
 
-            return;
-        }
-
-        urlPratinjau = URL.createObjectURL(berkas);
-        document.getElementById('logoPratinjauGambar').src = urlPratinjau;
-        document.getElementById('logoUkuran').textContent =
-            '— ' + berkas.name + ' (' + Math.round(berkas.size / 1024) + ' KB)';
-        kotak.classList.remove('d-none');
-    });
+        perbarui();
+    })();
 </script>
 @endpush

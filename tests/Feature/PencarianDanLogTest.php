@@ -14,8 +14,14 @@ use Tests\TestCase;
 
 /**
  * L-15/P4 (pencarian ikut menjangkau ISI), H1/L-14 (filter sama dengan daftar
- * surat), H7 (pagination, bukan limit diam-diam), L-22 (UI log untuk admin),
+ * surat), H7 (pagination), L-22 (UI log untuk admin),
  * E6 (retensi log: >2 tahun dibuang KECUALI jejak pemusnahan).
+ *
+ * CATATAN 5 Okt 2026: halaman `/pencarian` (PencarianController + view-nya) sudah
+ * DIHAPUS atas permintaan user — tiap daftar surat sudah punya kotak "cari" sendiri.
+ * Bagian pencarian di bawah kini menguji `?cari=` di `surat-masuk.index` dan
+ * `surat-keluar.index`, karena L-15 (menggali `ringkasan` dan `isi_surat`) harus
+ * tetap hidup meski halaman gabungannya hilang.
  */
 class PencarianDanLogTest extends TestCase
 {
@@ -78,80 +84,77 @@ class PencarianDanLogTest extends TestCase
         ], $ubah));
     }
 
-    public function test_pencarian_menjangkau_ringkasan_surat_masuk(): void
+    public function test_cari_di_daftar_surat_masuk_menjangkau_ringkasan(): void
     {
-        $surat = $this->masuk();
+        $cocok = $this->masuk(['nomor_surat' => 'ISI-1', 'ringkasan' => 'Pembahasan anggaran pembangunan jalan']);
+        $tidak = $this->masuk(['nomor_surat' => 'ISI-2', 'ringkasan' => 'Undangan rapat tani']);
 
-        // Kata ini HANYA ada di `ringkasan` — tidak di nomor/perihal/pengirim.
         $this->actingAs($this->pegawai)
-            ->get(route('pencarian.index', ['q' => 'pembangunan jalan']))
+            ->get(route('surat-masuk.index', ['cari' => 'pembangunan jalan']))
             ->assertOk()
-            ->assertSee($surat->nomor_surat)
-            ->assertSee('Pembahasan anggaran pembangunan jalan');
+            ->assertSee($cocok->nomor_surat)
+            ->assertDontSee($tidak->nomor_surat);
     }
 
-    public function test_pencarian_menjangkau_isi_surat_keluar(): void
+    public function test_cari_di_daftar_surat_keluar_menjangkau_isi_draf(): void
     {
-        $surat = $this->keluar();
+        $cocok = $this->keluar(['nomor_surat' => 'DRAF-1']);
+        $tidak = $this->keluar(['nomor_surat' => 'DRAF-2', 'perihal' => 'Surat keterangan domisili']);
 
+        // "irigasi barat" hanya ada di isi draf — kolom surat keluar tidak
+        // menyimpannya sama sekali, jadi tes ini benar-benar menguji whereHas().
         DrafKontenSuratKeluar::forceCreate([
-            'surat_keluar_id' => $surat->id,
+            'surat_keluar_id' => $cocok->id,
             'isi_surat' => 'Sehubungan dengan jadwal pengurasan saluran irigasi barat, kami mengundang warga.',
         ]);
 
         $this->actingAs($this->pegawai)
-            ->get(route('pencarian.index', ['q' => 'irigasi barat']))
+            ->get(route('surat-keluar.index', ['cari' => 'irigasi barat']))
             ->assertOk()
-            ->assertSee($surat->nomor_surat);
+            ->assertSee($cocok->nomor_surat)
+            ->assertDontSee($tidak->nomor_surat);
     }
 
-    public function test_arsip_yang_dihapus_lunak_tidak_muncul_di_pencarian(): void
+    public function test_arsip_yang_dihapus_lunak_tidak_muncul_di_hasil_cari(): void
     {
         $terhapus = $this->masuk(['nomor_surat' => 'HILANG-001', 'perihal' => 'Laporan yang akan dibuang']);
         $terhapus->delete();
 
-        // Yang dicek `perihal`-nya, bukan nomor: kata kunci dicari juga dicetak
-        // balik di kotak pencarian, jadi assertDontSee pada nomor akan selalu
-        // "gagal" walau hasilnya benar.
+        // Soft delete scope membuat ini otomatis, tapi dulunya cuma dibuktikan di
+        // halaman pencarian — sekarang di daftar, tempat orang benar-benar mencari.
         $this->actingAs($this->admin)
-            ->get(route('pencarian.index', ['q' => 'HILANG-001']))
+            ->get(route('surat-masuk.index', ['cari' => 'Laporan yang akan dibuang']))
             ->assertOk()
-            ->assertSee('Tidak ada surat yang cocok')
-            ->assertDontSee('Laporan yang akan dibuang');
+            ->assertSee('Belum ada surat masuk yang cocok dengan filter');
     }
 
-    public function test_filter_jenis_dan_klasifikasi_diterapkan(): void
+    public function test_cari_digabung_dengan_filter_lain(): void
     {
-        $masuk = $this->masuk(['nomor_surat' => 'SAMA-1', 'perihal' => 'kata unik']);
-        $keluar = $this->keluar(['nomor_surat' => 'SAMA-2', 'perihal' => 'kata unik']);
+        $masuk = $this->masuk(['nomor_surat' => 'GABUNG-1', 'perihal' => 'kata unik']);
+        $keluar = $this->keluar(['nomor_surat' => 'GABUNG-2', 'perihal' => 'kata unik']);
 
-        $hanyaMasuk = $this->actingAs($this->pegawai)
-            ->get(route('pencarian.index', ['q' => 'kata unik', 'jenis' => 'masuk']))
-            ->assertOk();
-
-        $hanyaMasuk->assertSee('SAMA-1')->assertDontSee('SAMA-2');
-
-        // Klasifikasi lain -> kosong.
+        // Klasifikasi lain di daftar surat masuk -> tidak ada hasil.
         $lain = KlasifikasiPrimer::forceCreate(['kode' => '09', 'nama' => 'Lainnya']);
 
         $this->actingAs($this->pegawai)
-            ->get(route('pencarian.index', ['q' => 'kata unik', 'klasifikasi_primer_id' => $lain->id]))
-            ->assertSee('Tidak ada surat yang cocok');
+            ->get(route('surat-masuk.index', ['cari' => 'kata unik', 'klasifikasi_primer_id' => $lain->id]))
+            ->assertSee('Belum ada surat masuk yang cocok dengan filter');
 
-        // Status arsip.
+        // Status arsip: yang inaktif tersaring, yang aktif tetap ada.
         $keluar->update(['status_arsip' => 'inaktif']);
 
         $this->actingAs($this->pegawai)
-            ->get(route('pencarian.index', ['q' => 'kata unik', 'status_arsip' => 'aktif']))
-            ->assertSee($masuk->nomor_surat)
+            ->get(route('surat-keluar.index', ['cari' => 'kata unik', 'status_arsip' => 'aktif']))
+            ->assertSee('kata unik')
             ->assertDontSee($keluar->nomor_surat);
+
+        $this->actingAs($this->pegawai)
+            ->get(route('surat-masuk.index', ['cari' => 'kata unik']))
+            ->assertSee($masuk->nomor_surat);
     }
 
-    public function test_hasil_dipaginate_dan_halaman_kedua_terakurat(): void
+    public function test_hasil_cari_di_daftar_tetap_dipaginate(): void
     {
-        // 25 surat masuk + 5 keluar, tanggal keluar PALING BARU. Kalau pagination
-        // gabungan salah (mis. hanya satu tabel yang di-paginate), halaman 2 akan
-        // kehabisan baris atau urutannya melompat.
         foreach (range(1, 25) as $i) {
             $this->masuk([
                 'nomor_surat' => 'PAGE-M'.$i,
@@ -160,38 +163,36 @@ class PencarianDanLogTest extends TestCase
             ]);
         }
 
-        foreach (range(1, 5) as $i) {
-            $this->keluar([
-                'nomor_surat' => 'PAGE-K'.$i,
-                'perihal' => 'dokumen berjenjang',
-                'tanggal_surat' => (new \DateTime('2026-03-01'))->modify("+{$i} days")->format('Y-m-d'),
-            ]);
-        }
-
         $halaman1 = $this->actingAs($this->pegawai)
-            ->get(route('pencarian.index', ['q' => 'dokumen berjenjang']))
+            ->get(route('surat-masuk.index', ['cari' => 'dokumen berjenjang']))
             ->assertOk();
 
-        $halaman1->assertSee('PAGE-K5')   // paling baru -> halaman 1
-            ->assertSee('PAGE-M25')
-            ->assertDontSee('PAGE-M6');   // urutan 21..30 -> halaman 2
+        // Urutan daftar surat masuk = tanggal_diterima desc; yang paling baru dibuat
+        // ada di halaman 1, yang tertua (PAGE-M1..M5) terlempar ke halaman 2.
+        $halaman1->assertSee('PAGE-M25')->assertDontSee('PAGE-M5');
 
-        $halaman2 = $this->actingAs($this->pegawai)
-            ->get(route('pencarian.index', ['q' => 'dokumen berjenjang', 'page' => 2]))
-            ->assertOk();
-
-        $halaman2->assertSee('PAGE-M5')->assertDontSee('PAGE-K5');
+        $this->actingAs($this->pegawai)
+            ->get(route('surat-masuk.index', ['cari' => 'dokumen berjenjang', 'page' => 2]))
+            ->assertOk()
+            ->assertSee('PAGE-M5')
+            ->assertDontSee('PAGE-M25');
     }
 
-    public function test_tanpa_filter_pencarian_tidak_menampilkan_apa_apa(): void
+    public function test_halaman_pencarian_lama_sudah_dihapus(): void
+    {
+        // 5 Okt 2026: `/pencarian` dihapus atas permintaan user. Kalau route ini
+        // ternyata masih hidup, berarti ada yang mendaftarkannya lagi tanpa sengaja.
+        $this->actingAs($this->pegawai)->get('/pencarian')->assertNotFound();
+    }
+
+    public function test_tanpa_kata_kunci_daftar_memperlihatkan_semua(): void
     {
         $this->masuk(['nomor_surat' => 'SEMUA-1']);
 
         $this->actingAs($this->pegawai)
-            ->get(route('pencarian.index'))
+            ->get(route('surat-masuk.index'))
             ->assertOk()
-            ->assertSee('Isi kata kunci atau salah satu filter')
-            ->assertDontSee('SEMUA-1');
+            ->assertSee('SEMUA-1');
     }
 
     public function test_log_aktivitas_hanya_untuk_admin(): void

@@ -7,6 +7,7 @@ use App\Models\PemusnahanArsipItem;
 use App\Models\PengaturanInstansi;
 use App\Models\SuratKeluar;
 use App\Models\SuratMasuk;
+use App\Support\Terbilang;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -199,16 +200,21 @@ class PemusnahanArsipController extends Controller
         $pemusnahan_arsip->load(['items', 'pemroses', 'pengaju']);
 
         $instansi = PengaturanInstansi::first();
-        $logo = $instansi?->logo_path ? public_path('storage/'.$instansi->logo_path) : null;
 
         $pelaksanaan = Carbon::parse($pemusnahan_arsip->tanggal_pelaksanaan ?? now());
 
         $pdf = Pdf::loadView('pemusnahan-arsip.berita-acara', [
             'pemusnahan' => $pemusnahan_arsip,
             'instansi' => $instansi,
-            'logoPath' => ($logo && file_exists($logo)) ? $logo : null,
+            // Logo dibaca dari disk, bukan `public_path('storage/...')` — lihat
+            // alasan di PengaturanInstansi::logoPathUntukPdf() (5 Okt 2026).
+            'logoPath' => $instansi?->logoPathUntukPdf(),
             'hari' => $pelaksanaan->translatedFormat('l'),
             'tanggalPelaksanaan' => $pelaksanaan->translatedFormat('d F Y'),
+            'tanggalHuruf' => Terbilang::kata((int) $pelaksanaan->day),
+            'bulanHuruf' => $pelaksanaan->translatedFormat('F'),
+            'tahunHuruf' => Terbilang::kata((int) $pelaksanaan->year),
+            'tempat' => $instansi?->tempatSurat() ?? '',
         ])->setPaper('a4', 'portrait');
 
         $namaFile = 'Berita-Acara-'.str_replace(['/', ' '], '-', $pemusnahan_arsip->nomor_berita_acara).'.pdf';

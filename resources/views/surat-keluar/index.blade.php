@@ -53,9 +53,10 @@
     <div class="card-body">
         <form method="GET" action="{{ route('surat-keluar.index') }}" class="row g-2 align-items-end">
             <div class="col-md-3">
-                <label class="form-label small fw-bold text-secondary mb-1">Cari Perihal / Nomor / Penerima</label>
+                <label class="form-label small fw-bold text-secondary mb-1">Cari Nomor / Perihal / Penerima / Isi</label>
                 <input type="text" name="cari" class="form-control"
                        placeholder="Ketik kata kunci..." value="{{ request('cari') }}">
+                <div class="form-text">Pencarian ikut menggali <strong>isi surat di draf konten</strong> (L-15), bukan cuma nomor &amp; perihal.</div>
             </div>
             <div class="col-md-2">
                 <label class="form-label small fw-bold text-secondary mb-1">Tahun</label>
