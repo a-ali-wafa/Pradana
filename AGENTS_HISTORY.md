@@ -698,6 +698,51 @@ Verifikasi: `php artisan test` **203 passed / 0 skipped**, `Pint` 172 file lolos
 level 5 bersih dengan 5 entri baseline yang masing-masing sudah dibaca. Dev server tidak
 dijalankan (tidak ada izin eksplisit pada sesi ini); bukti perilaku lewat HTTP di feature test.
 
+### Perapian kode & alur data — Fase 4 (9 Okt 2026, sampah & metadata)
+
+Butir 16–18 rencana (`docs/plan-perapian-kode.md`). Tidak ada perubahan perilaku yang
+direncanakan; yang dihapus adalah sisa generator Laravel yang tidak pernah dibaca PRADANA.
+
+**Dihapus** (setelah grep, dan `@vite` memang nol di semua view): `package.json`,
+`vite.config.js`, `resources/js/app.js`, `resources/js/bootstrap.js`, `resources/css/app.css`
+(kedua direktorinya jadi kosong dan ikut dihapus), `routes/channels.php`,
+`app/Providers/BroadcastServiceProvider.php`, `config/broadcasting.php`, satu baris komentar
+`// App\Providers\BroadcastServiceProvider::class` di `config/app.php`, lima baris Node/npm/yarn
+di `.gitignore`.
+**Diperbaiki isinya**: `EventServiceProvider` — pasangan `Registered => SendEmailVerificationNotification`
+dibuang (tidak ada registrasi publik; akun dibuat lewat `arsip:akun-pertama`, dan kantor tanpa
+SMTP), dokumentasinya sekarang menjelaskan kenapa; `config/services.php` jadi `return []` +
+komentar (Mailgun/Postmark/SES tidak dipakai, Drive hidup di `config/gdrive.php`).
+**Diverifikasi tidak tersenggol**: `config/cors.php` sudah `'paths' => []` sejak lama sehingga
+`HandleCors` di grup `web` tidak pernah cocok — dibiarkan (menghapusnya dari Kernel bukan
+perbaikan apa pun); `storage/app/.gitignore` (baris `*`) tetap melindungi
+`storage/app/google/service-account.json` — dicek `git check-ignore -v` sebelum commit.
+
+**Metadata composer**: `name` → `pradana/arsip-surat`, deskripsi + keyword Indonesia,
+`php: ^8.1` → `^8.2` (stack terkunci), `laravel/pint: "*"` → `^1.30` (terkunci v1.30.4), skrip
+`post-update-cmd` (`vendor:publish --tag=laravel-assets`) dihapus karena tidak ada aset yang
+bisa dipublikasikan. `license: MIT` **dibiarkan** — itu keputusan user, bukan agent.
+
+**Resep lingkungan yang layak dicatat**: perubahan `require` membuat `composer.lock` *stale*,
+dan `composer dump-autoload -o` di laptop ini pernah ±6,5 menit (sudah tercatat sebagai jebakan).
+Yang dipakai: `composer update --lock --no-scripts --no-autoloader --no-plugins` — 9 detik, diff
+lock hanya 2 baris (`content-hash`, `platform.php`), nol perubahan versi paket, autoloader tidak
+disentuh. Diverifikasi: `composer validate` → "valid" tanpa peringatan lock,
+`composer install --dry-run` → "Nothing to install, update or remove", `config:cache` +
+`config:clear` jalan (bukti tidak ada yang membaca `config('broadcasting')` saat boot maupun
+saat caching).
+
+**Sengaja ditunda ke pass tersendiri** (menyentuh graf dependency = resolusi + jejaring): buang
+`laravel/sail` (v1.68.0 terkunci, dev-nya XAMPP) dan `nunomaduro/larastan` → `larastan/larastan`;
+composer sendiri sudah memperingatkan paket itu *abandoned*. `.env` lokal (gitignored) masih
+menyimpan `BROADCAST_DRIVER=log` + enam baris `VITE_*` — tidak disentuh, tidak lagi dibaca kode
+mana pun.
+
+Verifikasi: **203 passed / 0 skipped**, `Pint` **169** file (172 − persis tiga file PHP yang
+dihapus), `Larastan` level 5 bersih, baseline tetap 5. Dev server tetap tidak dijalankan (tidak
+ada izin); buktinya suite + `config:cache` sungguhan.
+
 ### Catatan lingkungan
 
-Sesuite **203 passed, 0 skipped** hanya tercapai saat MariaDB hidup: `CariArsipMariaDbTest` (10) + `AgregatMariaDbTest` (2) + `NomorSuratKeluarTest` (3) memakai koneksi `mysql_test_a`/`mysql_test_b` (`DB_TEST_DATABASE`, default `pradana_test`) dan di-skip dengan pesan kalau XAMPP mati — skip itu bukan kegagalan, tapi berarti bukti portabilitasnya belum ada. `Pint` 172 file lolos; `Larastan` level 5 bersih dengan baseline menyusut **26 → 5** (return type generik di 31 method relasi + `@property-read $lampiran_count` + `self::` untuk method private + delegasi umur arsip ke model bertipe konkret + catch yang ternyata tidak pernah bisa terjadi dibuang). Dev server tidak dijalankan untuk fase-fase perapian ini — verifikasinya lewat HTTP di dalam suite (feature test) dan di MariaDB asli, bukan lewat browser.
+Sesuite **203 passed, 0 skipped** hanya tercapai saat MariaDB hidup: `CariArsipMariaDbTest` (10) + `AgregatMariaDbTest` (2) + `NomorSuratKeluarTest` (3) memakai koneksi `mysql_test_a`/`mysql_test_b` (`DB_TEST_DATABASE`, default `pradana_test`) dan di-skip dengan pesan kalau XAMPP mati — skip itu bukan kegagalan, tapi berarti bukti portabilitasnya belum ada. `Pint` 169 file lolos sejak Fase 4 (sebelumnya 172; selisihnya persis tiga file PHP boilerplate
+yang dihapus); `Larastan` level 5 bersih dengan baseline menyusut **26 → 5** (return type generik di 31 method relasi + `@property-read $lampiran_count` + `self::` untuk method private + delegasi umur arsip ke model bertipe konkret + catch yang ternyata tidak pernah bisa terjadi dibuang). Dev server tidak dijalankan untuk fase-fase perapian ini — verifikasinya lewat HTTP di dalam suite (feature test) dan di MariaDB asli, bukan lewat browser.

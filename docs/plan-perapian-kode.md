@@ -242,6 +242,51 @@ Baseline Larastan: 6 → **5** entri, semuanya sudah dibaca satu-satu.
 18. Config yang menyebut fitur mati (broadcasting/pusher/sanctum/mail) → rapikan nilai
     default + komentar supaya orang kantor tidak mengira fiturnya ada.
 
+### Hasil Fase 4 (dikerjakan 9 Okt 2026)
+
+Sampah yang dihapus — semua diverifikasi grep lebih dulu, dan **nol** view memakai
+`@vite` (Bootstrap 5 dimuat dari CDN), jadi tidak ada satu pun layar yang berubah:
+
+| Dihapus | Bukti tidak dipakai |
+|---|---|
+| `package.json`, `vite.config.js` | tidak ada `@vite`; `public/build` memang tidak pernah ada |
+| `resources/js/{app,bootstrap}.js` + `resources/css/app.css` (direktori kosongnya ikut hilang) | tidak ada yang meng-include |
+| `routes/channels.php`, `app/Providers/BroadcastServiceProvider.php`, `config/broadcasting.php` | providernya sudah dikomentari di `config/app.php` — baris komentarnya sekarang dibuang sekalian |
+| `.gitignore`: `/node_modules`, `/public/build`, `/public/hot`, `npm-debug.log`, `yarn-error.log` | tidak ada lagi alat Node |
+| `EventServiceProvider`: pasangan `Registered => SendEmailVerificationNotification` | kantor tanpa registrasi publik dan tanpa SMTP (L-11/L-12); akun dibuat lewat `arsip:akun-pertama` |
+| `config/services.php`: blok Mailgun/Postmark/SES jadi `[]` + komentar | `grep config('services` → nol pemakai; Drive hidup di `config/gdrive.php` |
+
+Butir 18 sebagian dikerjakan: broadcasting hilang total (bukan dirapikan nilainya),
+`config/services.php` dikosongkan, `config/cors.php` ternyata sudah `'paths' => []`
+sehingga `HandleCors` tidak pernah cocok — dibiarkan karena middleware itu tetap
+membayar satu baca config per request dan tidak memengaruhi apa pun.
+
+Metadata: `composer.json` jadi `pradana/arsip-surat` + deskripsi/keyword PRADANA,
+`"php": "^8.1"` → `^8.2` (stack terkunci 8.2.12), `laravel/pint: "*"` → `^1.30`
+(terkunci v1.30.4), skrip `post-update-cmd` (`vendor:publish --tag=laravel-assets`
+— tidak ada paket frontend) dibuang. `license` **sengaja tidak disentuh**: MIT masih
+tertulis, dan mengganti lisensi dokumen kantor itu keputusan user.
+
+Kunci penting — menghindari jebakan yang tercatat (`dump-autoload -o` ±6,5 menit):
+perubahan `require` membuat `composer.lock` *stale*, dan yang dipakai untuk memperbaikinya
+adalah `composer update --lock --no-scripts --no-autoloader --no-plugins` → **9 detik**,
+diff lock hanya 2 baris (content-hash + `platform.php`), **tidak ada versi paket yang
+berubah**. Diverifikasi ulang dengan `composer validate` ("valid", peringatan lock hilang),
+`composer install --dry-run` ("Nothing to install, update or remove"), dan
+`config:cache` + `config:clear` yang tetap jalan — bukti `config/broadcasting.php` memang
+tidak dibaca saat boot maupun saat caching.
+
+Sengaja **tidak** dikerjakan (butuh `composer update` sungguhan: resolusi + jejaring,
+bukan bagian "rapikan"): buang `laravel/sail` (terkunci v1.68.0, tidak pernah dipakai karena
+dev-nya XAMPP) dan `nunomaduro/larastan` → `larastan/larastan` (composer sendiri sekarang
+memperingatkan "Package nunomaduro/larastan is abandoned"). Kalau dikerjakan, itu satu pass
+tersendiri + `dump-autoload` + suite penuh. `.env` lokal (tidak ter-commit) masih menyimpan
+`BROADCAST_DRIVER=log` dan baris `VITE_*`; dibiarkan — tidak lagi dibaca sejak config file-nya
+hilang, dan mengutak-atik env milik user tanpa keperluan bukan bagian rencana ini.
+
+Gerbang: `Tests: 203 passed (805 assertions)` · `pint --test` PASS 169 file (sebelumnya 172 —
+persis tiga file PHP yang dihapus) · `phpstan analyse` [OK] No errors · baseline tetap 5.
+
 ## Fase 5 — skema (hanya kalau terbukti perlu)
 
 19. Index tambahan additive (BUKAN mengubah file squash): kandidat dari audit —
