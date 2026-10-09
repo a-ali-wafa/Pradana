@@ -7,6 +7,7 @@ use App\Models\PengajuanHapusLampiran;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 /**
@@ -89,14 +90,26 @@ class PengajuanHapusLampiranController extends Controller
         abort_if(! $lampiran, 410, 'Lampiran yang diajukan sudah tidak ada (mungkin sudah terhapus lewat pengajuan lain).');
 
         // L-02: penghapusan berkas dilakukan sinkron, tanpa queue worker.
-        $lampiran->hapusBerkasFisik();
-        $lampiran->delete();
+        //
+        // URUTAN sengaja dibalik (9 Okt 2026): database lebih dulu, berkas fisik
+        // belakangan, dan kedua penulisan DB dalam SATU transaksi.
+        // `hapusBerkasFisik()` tidak bisa di-rollback, sedangkan baris `lampiran`
+        // dan status pengajuan bisa. Bentuk lama membuang berkas lebih dulu, jadi
+        // kegagalan di `update()` meninggalkan pengajuan berstatus "menunggu" untuk
+        // lampiran yang filenya sudah tidak ada — download-nya mati selamanya dan
+        // admin bisa menyetujuinya ulang. Sekarang kegagalan DB justru membuat
+        // semuanya tetap utuh dan aksinya bisa diulang.
+        DB::transaction(function () use ($lampiran, $pengajuan_hapus_lampiran) {
+            $lampiran->delete();
 
-        $pengajuan_hapus_lampiran->update([
-            'status' => 'disetujui',
-            'diproses_oleh' => Auth::id(),
-            'diproses_pada' => now(),
-        ]);
+            $pengajuan_hapus_lampiran->update([
+                'status' => 'disetujui',
+                'diproses_oleh' => Auth::id(),
+                'diproses_pada' => now(),
+            ]);
+        });
+
+        $lampiran->hapusBerkasFisik();
 
         return back()->with('success', 'Pengajuan disetujui, lampiran berhasil dihapus.');
     }

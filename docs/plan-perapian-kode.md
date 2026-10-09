@@ -184,6 +184,54 @@ Yang dikerjakan:
     `DB::transaction`, dan file yang sudah `store()` bisa jadi yatim kalau insert gagal →
     bungkus transaksi + rapikan pembentukan folder/penamaan.
 
+### Hasil Fase 3 (dijalankan 9 Okt 2026 — subset bedah, bukan perombakan)
+
+Selesai:
+
+- **`SuratMasukController::destroy()`**: `try/catch (QueryException)` yang menjanjikan
+  "masih direferensikan data lain" dibuang. Soft delete itu UPDATE `deleted_at`, bukan
+  DELETE, jadi FK `restrictOnDelete` tidak pernah tersentuh dan pesan itu tidak bisa
+  muncul — kalau pun muncul, itu kesalahan lain yang justru tersamar. `SuratKeluarController`
+  memang tidak pernah punya catch begitu, jadi keduanya kini sama. Satu entri baseline
+  Larastan ikut hilang.
+- **`PengajuanHapusLampiranController::setujui()`**: urutan dibalik + transaksi.
+  DB (`lampiran.delete()` + status pengajuan) dalam satu `DB::transaction`,
+  `hapusBerkasFisik()` SESUDAH commit — file tidak bisa di-rollback, baris bisa.
+  Dikunci tes baru yang memaksa `update()` gagal lewat observer penyamar: setelah
+  kegagalan, berkas masih ada, baris masih ada, status masih `menunggu`. Pada bentuk
+  lama tes ini GAGAL (file sudah terlanjur hilang, baris sudah terhapus).
+- **`LampiranController::simpanLampiran()`**: kalau `Lampiran::create()` gagal, berkas
+  yang barusan ditulis ke disk ikut dibuang sebelum exception diteruskan — tidak ada
+  lagi file yatim yang tidak terlihat di layar mana pun. Perilaku untuk user tidak berubah.
+- **Kegagalan baca isi lampiran sekarang dicatat** (`Log::warning`) di dua tempat:
+  `PembacaIsiLampiran::dariPdf()` dan `LampiranController::cobaBacaIsi()`. Upload tetap
+  tidak pernah gagal karena baca gagal (L-02), tapi "kok isinya nggak kebaca" sekarang
+  bisa dijawab dari `storage/logs`, bukan dengan tebakan.
+- **Komentar basi dibersihkan**: 7 observer masih menulis "Belum diregistrasikan, lihat
+  `CATATAN.md`" padahal semuanya terdaftar di `AppServiceProvider::boot()` dan file itu
+  tidak ada; `LogsAktivitas` masih menyebut dirinya "rencana, belum ada implementasi";
+  `AppServiceProvider` merujuk "AGENTS.md 12.22" yang sudah pindah ke `AGENTS_HISTORY.md`.
+  Import `Carbon\Carbon` di `Lampiran` dan `QueryException` di `SuratMasukController`
+  yang jadi mati ikut dibuang.
+- **Urutan dropdown klasifikasi disamakan**: `SuratKeluarController::create()`/`edit()`
+  satu-satunya yang memakai `orderBy('nama')`; semua tempat lain (8 pemanggil) sudah
+  `orderBy('kode')`. Kode memang urutan domain yang dipakai form cascade.
+
+Terverifikasi dan ternyata TIDAK perlu diubah (dibaca, bukan diasumsikan):
+`SinkronkanLampiranKeDriveCommand` tidak punya `DB::transaction` — panggilan HTTP ke
+Drive tidak pernah berada di dalam transaksi, jadi butir "bawa keluar transaksi" gugur.
+Empat `catch (QueryException)` di controller klasifikasi BIAR dipertahankan (FK restrict
+benar-benar melemparnya di runtime; PHPStan hanya tidak bisa melihatnya) — itulah 4 dari
+5 entri baseline yang tersisa.
+
+Belum dikerjakan (sengaja ditunda, bukan kelupaan): deduplikasi `SuratMasuk` ↔
+`SuratKeluar` dan tiga controller klasifikasi jadi trait/parsial; `UpdateStatusArsipRequest`
+eksplisit; `{!! sorot() !!}` → `{{ }}`; angka tanggal hard-coded di JS pratinjau kop.
+Semuanya perubahan bentuk tanpa perubahan perilaku, dan lebih aman dikerjakan sendiri
+dengan tes per layar daripada diburu dalam satu commit.
+
+Baseline Larastan: 6 → **5** entri, semuanya sudah dibaca satu-satu.
+
 ## Fase 4 — sampah & metadata
 
 16. Boilerplate yang tidak dipakai (frontend via CDN, tanpa Vite): `package.json`,

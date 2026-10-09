@@ -84,7 +84,7 @@ class SuratKeluarController extends Controller
     public function create(): View
     {
         return view('surat-keluar.create', [
-            'klasifikasiPrimer' => KlasifikasiPrimer::with('sekunder.tersier')->orderBy('nama')->get(),
+            'klasifikasiPrimer' => KlasifikasiPrimer::with('sekunder.tersier')->orderBy('kode')->get(),
         ]);
     }
 
@@ -153,7 +153,7 @@ class SuratKeluarController extends Controller
     {
         return view('surat-keluar.edit', [
             'suratKeluar' => $surat_keluar,
-            'klasifikasiPrimer' => KlasifikasiPrimer::with('sekunder.tersier')->orderBy('nama')->get(),
+            'klasifikasiPrimer' => KlasifikasiPrimer::with('sekunder.tersier')->orderBy('kode')->get(),
         ]);
     }
 

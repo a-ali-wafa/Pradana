@@ -670,6 +670,34 @@ Kesalahan yang dibuat dan ditangkap suite (dicatat karena berharga): konstanta r
 
 Verifikasi: `php artisan test` 198 passed / 0 skipped (MariaDB hidup, jadi 15 tes engine-asli ikut jalan), `Pint` 171 file lolos, `Larastan` level 5 bersih dengan 6 entri baseline yang masing-masing sudah dibaca satu-satu. Dev server tidak dijalankan untuk fase ini — buktinya lewat HTTP di feature test, bukan lewat browser.
 
+### Perapian kode & alur data — Fase 3 (9 Okt 2026, subset bedah)
+
+Fase 3 di rencana (`docs/plan-perapian-kode.md`) juga berisi deduplikasi controller; yang
+dikerjakan hari ini hanya bagian bedah — bagian perombakan bentuk sengaja ditunda supaya
+tiap layar punya tes sendiri.
+
+| File | Status | Keterangan |
+|---|---|---|
+| `app/Http/Controllers/SuratMasukController.php` | **Diubah** | `destroy()`: `catch (QueryException)` yang promises "masih direferensikan data lain" dibuang — soft delete itu UPDATE `deleted_at`, FK restrict tidak pernah tersentuh, jadi pesan itu tidak bisa muncul; kalau pun muncul, itu kesalahan lain yang jadi tersamar. Import `QueryException` yang jadi mati ikut hilang. `SuratKeluarController::destroy()` memang tidak pernah punya catch begitu. |
+| `app/Http/Controllers/PengajuanHapusLampiranController.php` | **Diubah** | `setujui()`: `lampiran->delete()` + update status pengajuan sekarang dalam SATU `DB::transaction`, dan `hapusBerkasFisik()` dijalankan SETELAH commit. Alasan: file tidak bisa di-rollback sedangkan baris bisa. |
+| `app/Http/Controllers/LampiranController.php` | **Diubah** | `simpanLampiran()`: kalau `Lampiran::create()` melempar, berkas yang barusan ditulis ke disk ikut dihapus sebelum exception diteruskan — tidak ada lagi file yatim. `cobaBacaIsi()`: kegagalan baca sekarang `Log::warning` (upload tetap tidak pernah gagal — L-02). |
+| `app/Services/PembacaIsiLampiran.php` | **Diubah** | `dariPdf()`: `catch (Throwable) { return null; }` yang diam total jadi `Log::warning` dengan path + pesan error. |
+| `app/Observers/*.php` (7), `app/Traits/LogsAktivitas.php`, `app/Providers/AppServiceProvider.php` | **Diubah (komentar)** | Semua masih menyebut "BARU — 1 Sep 2026, belum diregistrasikan, lihat `CATATAN.md`" padahal tujuh observer itu terdaftar di `AppServiceProvider::boot()` dan file `CATATAN.md` tidak pernah ada di repo. Trait juga menyebut dirinya "belum ada implementasi apa pun". Rujukan nomor bagian lama diarahkan ke `AGENTS_HISTORY.md`. |
+| `app/Http/Controllers/SuratKeluarController.php` | **Diubah** | Dropdown klasifikasi di `create()`/`edit()`: `orderBy('nama')` → `orderBy('kode')`, sama seperti 8 pemanggil lain; kode-lah urutan domain yang dipakai form cascade. |
+| `app/Models/Lampiran.php` | **Diubah** | Import `Carbon\Carbon` dibuang (tidak dipakai lagi sejak `layakDihapus()` mendelegasikan ke induk). |
+| `tests/Feature/PengajuanHapusLampiranSetujuiTest.php` | **Baru** | 5 tes jalur approval yang sebelumnya TIDAK punya tes sama sekali: berkas + baris hilang & pengajuan `disetujui` (dengan `lampiran_id` jadi NULL + snapshot tetap terbaca), approval kedua → 422, staf → 403, lampiran sudah hilang → 410 dan status tidak berubah, dan **kasus kegagalan DB: file harus masih ada** (dibuat dengan mendaftarkan observer penyamar yang melempar saat `updating`). Tes terakhir ini gagal pada urutan lama — itu bukti perubahannya nyata. |
+| `phpstan-baseline.neon` | **Diubah** | 6 → **5** entri. |
+
+Dibaca ulang dan ternyata TIDAK perlu diubah: `SinkronkanLampiranKeDriveCommand` tidak
+memiliki `DB::transaction`, jadi "panggilan HTTP Drive di dalam transaksi" yang tercatat di
+rencana tidak pernah ada. Empat `catch (QueryException)` di controller klasifikasi
+dipertahankan (FK `restrictOnDelete` sungguhan melemparnya di MariaDB; yang di-baseline
+hanya karena PHPStan tidak bisa melihat PDO).
+
+Verifikasi: `php artisan test` **203 passed / 0 skipped**, `Pint` 172 file lolos, `Larastan`
+level 5 bersih dengan 5 entri baseline yang masing-masing sudah dibaca. Dev server tidak
+dijalankan (tidak ada izin eksplisit pada sesi ini); bukti perilaku lewat HTTP di feature test.
+
 ### Catatan lingkungan
 
-Sesuite **198 passed, 0 skipped** hanya tercapai saat MariaDB hidup: `CariArsipMariaDbTest` (10) + `AgregatMariaDbTest` (2) + `NomorSuratKeluarTest` (3) memakai koneksi `mysql_test_a`/`mysql_test_b` (`DB_TEST_DATABASE`, default `pradana_test`) dan di-skip dengan pesan kalau XAMPP mati — skip itu bukan kegagalan, tapi berarti bukti portabilitasnya belum ada. `Pint` 171 file lolos; `Larastan` level 5 bersih dengan baseline menyusut **26 → 6** (return type generik di 31 method relasi + `@property-read $lampiran_count` + `self::` untuk method private + delegasi umur arsip ke model bertipe konkret). Dev server TIDAK dijalankan untuk Fase 1 — verifikasinya lewat HTTP di dalam suite (Feature test) dan di MariaDB asli, bukan lewat browser.
+Sesuite **203 passed, 0 skipped** hanya tercapai saat MariaDB hidup: `CariArsipMariaDbTest` (10) + `AgregatMariaDbTest` (2) + `NomorSuratKeluarTest` (3) memakai koneksi `mysql_test_a`/`mysql_test_b` (`DB_TEST_DATABASE`, default `pradana_test`) dan di-skip dengan pesan kalau XAMPP mati — skip itu bukan kegagalan, tapi berarti bukti portabilitasnya belum ada. `Pint` 172 file lolos; `Larastan` level 5 bersih dengan baseline menyusut **26 → 5** (return type generik di 31 method relasi + `@property-read $lampiran_count` + `self::` untuk method private + delegasi umur arsip ke model bertipe konkret + catch yang ternyata tidak pernah bisa terjadi dibuang). Dev server tidak dijalankan untuk fase-fase perapian ini — verifikasinya lewat HTTP di dalam suite (feature test) dan di MariaDB asli, bukan lewat browser.

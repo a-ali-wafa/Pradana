@@ -103,9 +103,10 @@ class AppServiceProvider extends ServiceProvider
             ]);
         });
 
-        // Logging aktivitas otomatis (baru, 1 Sep 2026) — lihat AGENTS.md 12.22.
-        // Kalau nanti ada isi boot() lain yang ditambahkan, taruh SETELAH baris
-        // registrasi Observer ini atau sebelum, urutan di antara ini tidak penting.
+        // Logging aktivitas otomatis (dibuat 1 Sep 2026) — riwayat panjangnya ada di
+        // `AGENTS_HISTORY.md` Bagian 12/13, bukan di `AGENTS.md` yang sekarang ringkas.
+        // Registrasi observer ditaruh di sini supaya satu tempat terlihat jelas;
+        // urutan di antara sesama observe() tidak penting.
         SuratMasuk::observe(SuratMasukObserver::class);
         SuratKeluar::observe(SuratKeluarObserver::class);
         KlasifikasiPrimer::observe(KlasifikasiPrimerObserver::class);

@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Lampiran;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Smalot\PdfParser\Parser;
 use Throwable;
@@ -124,7 +125,16 @@ class PembacaIsiLampiran
             // parseFile() membaca dari disk, bukan menelan seluruh berkas ke memori
             // sekaligus sebagai string — penting untuk lampiran 10 MB di server kecil.
             return (new Parser)->parseFile($path)->getText();
-        } catch (Throwable) {
+        } catch (Throwable $e) {
+            // DIAM-DIAM mengembalikan null bikin fitur ini tidak bisa didiagnosis:
+            // staf cuma lihat "tidak terbaca", sedangkan penyebabnya (PDF rusak,
+            // encrypted, batas memori, path salah) ada di server. Yang TIDAK boleh
+            // berubah adalah konsekuensinya — upload tetap sukses.
+            Log::warning('Isi lampiran (PDF) gagal dibaca otomatis', [
+                'path' => $path,
+                'error' => $e->getMessage(),
+            ]);
+
             return null;
         }
     }

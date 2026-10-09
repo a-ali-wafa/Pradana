@@ -9,7 +9,6 @@ use App\Http\Requests\UpdateSuratMasukRequest;
 use App\Models\KlasifikasiPrimer;
 use App\Models\SuratMasuk;
 use App\Support\FilterArsip;
-use Illuminate\Database\QueryException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -192,17 +191,16 @@ class SuratMasukController extends Controller
             'Hanya admin yang boleh menghapus arsip surat.'
         );
 
-        try {
-            // L-05: ini soft delete — baris, lampiran, dan file fisiknya tetap
-            // ada dan bisa dipulihkan admin. Pemusnahan sungguhan hanya lewat
-            // modul Pemusnahan Arsip (dengan Berita Acara).
-            $surat_masuk->delete();
-        } catch (QueryException $e) {
-            return back()->with(
-                'error',
-                'Surat masuk tidak bisa dihapus karena masih direferensikan data lain.'
-            );
-        }
+        // L-05: ini soft delete — UPDATE kolom `deleted_at`, bukan DELETE baris.
+        // Karena itu TIDAK dibungkus catch(QueryException): bentuk lama menjanjikan
+        // "tidak bisa dihapus karena masih direferensikan data lain", padahal FK
+        // restrict tidak pernah tersentuh oleh soft delete — pesan itu tidak bisa
+        // muncul, dan kalau muncul berarti kesalahan lain yang justru jadi tersamar.
+        // SuratKeluarController::destroy() memang sudah tidak punya catch begitu.
+        //
+        // Baris, lampiran, dan file fisiknya tetap ada dan bisa dipulihkan admin.
+        // Pemusnahan sungguhan hanya lewat modul Pemusnahan Arsip (Berita Acara).
+        $surat_masuk->delete();
 
         return redirect()
             ->route('surat-masuk.index')

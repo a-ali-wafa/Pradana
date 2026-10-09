@@ -5,7 +5,10 @@ namespace App\Observers;
 use App\Models\KlasifikasiSekunder;
 use App\Traits\LogsAktivitas;
 
-/** BARU — 1 Sep 2026. Belum diregistrasikan, lihat CATATAN.md. */
+/**
+ * Dibuat 1 Sep 2026, sekarang SUDAH diregistrasikan di AppServiceProvider::boot()
+ * (lihat `AGENTS.md`). Aksi dicatat lewat trait LogsAktivitas → LogAktivitasEvent.
+ */
 class KlasifikasiSekunderObserver
 {
     use LogsAktivitas;

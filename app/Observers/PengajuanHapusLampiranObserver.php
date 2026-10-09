@@ -6,7 +6,8 @@ use App\Models\PengajuanHapusLampiran;
 use App\Traits\LogsAktivitas;
 
 /**
- * BARU — 1 Sep 2026. Belum diregistrasikan, lihat CATATAN.md.
+ * Dibuat 1 Sep 2026, sekarang SUDAH diregistrasikan di AppServiceProvider::boot()
+ * (lihat `AGENTS.md`). Aksi dicatat lewat trait LogsAktivitas → LogAktivitasEvent.
  * updated() sengaja hanya bereaksi kalau kolom `status` yang berubah — supaya
  * perubahan `catatan_admin` sendirian (kalau ada alur edit catatan terpisah nanti)
  * tidak ikut membuat baris log yang membingungkan.

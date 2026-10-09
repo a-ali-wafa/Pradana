@@ -6,7 +6,8 @@ use App\Models\PengaturanInstansi;
 use App\Traits\LogsAktivitas;
 
 /**
- * BARU — 1 Sep 2026. Belum diregistrasikan, lihat CATATAN.md.
+ * Dibuat 1 Sep 2026, sekarang SUDAH diregistrasikan di AppServiceProvider::boot()
+ * (lihat `AGENTS.md`). Aksi dicatat lewat trait LogsAktivitas → LogAktivitasEvent.
  * Cuma updated() — pengaturan_instansi single row, tidak ada create/delete
  * lewat aplikasi (sesuai desain edit-only PengaturanInstansiController, 12.18).
  */

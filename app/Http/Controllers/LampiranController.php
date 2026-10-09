@@ -11,6 +11,7 @@ use App\Services\PembacaIsiLampiran;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Symfony\Component\HttpFoundation\Response;
@@ -127,17 +128,28 @@ class LampiranController extends Controller
                 continue;
             }
 
-            $tersimpan[] = $lampiran = Lampiran::create([
-                'lampiranable_id' => $surat->id,
-                'lampiranable_type' => $surat::class,
-                'disk' => 'arsip',
-                'path' => $path,
-                'hash_file' => $hash,
-                'nama_file' => $file->getClientOriginalName(),
-                'mime_type' => $file->getMimeType(),
-                'ukuran' => $file->getSize(),
-                'diunggah_oleh' => $request->user()->id,
-            ]);
+            try {
+                $tersimpan[] = $lampiran = Lampiran::create([
+                    'lampiranable_id' => $surat->id,
+                    'lampiranable_type' => $surat::class,
+                    'disk' => 'arsip',
+                    'path' => $path,
+                    'hash_file' => $hash,
+                    'nama_file' => $file->getClientOriginalName(),
+                    'mime_type' => $file->getMimeType(),
+                    'ukuran' => $file->getSize(),
+                    'diunggah_oleh' => $request->user()->id,
+                ]);
+            } catch (Throwable $e) {
+                // Berkasnya sudah di disk TAPI barisnya gagal dibuat. Dibiarkan apa
+                // adanya, file itu jadi yatim yang tidak terlihat di layar mana pun
+                // dan tidak akan pernah terhapus. Dibuang dulu, baru kesalahan
+                // diteruskan — perilaku untuk user tidak berubah (tetap error),
+                // hanya state server yang tidak lagi separuh.
+                Storage::disk('arsip')->delete($path);
+
+                throw $e;
+            }
 
             $this->cobaBacaIsi($surat, $lampiran, $hasilBaca, $catatanBaca);
 
@@ -206,6 +218,15 @@ class LampiranController extends Controller
         } catch (Throwable $e) {
             // Parser pihak ketiga bisa melempar hal tak terduga (PDF rusak parah,
             // memory). Upload sudah sukses di titik ini — jangan dirusak.
+            // Tapi "jangan dirusak" bukan berarti "hilang tanpa jejak": penyebabnya
+            // dicatat di log supaya staf yang melapor "kok isinya nggak kebaca"
+            // bisa dijawab dari `storage/logs`, bukan dengan tebakan.
+            Log::warning('Pembacaan isi lampiran gagal', [
+                'lampiran' => $lampiran->nama_file,
+                'path' => $lampiran->path,
+                'error' => $e->getMessage(),
+            ]);
+
             $catatanBaca[$lampiran->nama_file] = 'Isi '.$lampiran->nama_file.' tidak terbaca otomatis.';
 
             return;

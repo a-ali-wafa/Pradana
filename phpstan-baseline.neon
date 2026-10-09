@@ -29,9 +29,3 @@ parameters:
 			identifier: nullsafe.neverNull
 			count: 1
 			path: app/Http/Controllers/LaporanController.php
-
-		-
-			message: '#^Dead catch \- Illuminate\\Database\\QueryException is never thrown in the try block\.$#'
-			identifier: catch.neverThrown
-			count: 1
-			path: app/Http/Controllers/SuratMasukController.php
