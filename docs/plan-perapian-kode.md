@@ -296,6 +296,72 @@ persis tiga file PHP yang dihapus) · `phpstan analyse` [OK] No errors · baseli
     Aturan: hanya index yang dibuktikan `EXPLAIN` dipakai, atau yang menopang kolom yang
     selalu difilter di layar nyata. Satu migration additive, `migrate` biasa, tanpa `migrate:fresh`.
 
+### Hasil Fase 5 (dikerjakan 9 Okt 2026) — satu index, bukan lima
+
+Langkah pertama bukan menulis migration, tapi membaca `SHOW INDEX` semua tabel di
+MariaDB development dan membandingkannya dengan daftar kandidat butir 19. Hasilnya:
+
+| Kandidat dari audit | Kenyataan di skema | Putusan |
+|---|---|---|
+| `pemusnahan_arsip_item.(arsipable_type, arsipable_id)` | **sudah ada** (dibuat `morphs`/`nullableMorphs` di squash) | tidak dikerjakan |
+| `draf_konten_surat_keluar.surat_keluar_id` | **sudah ada, malah UNIQUE** | tidak dikerjakan |
+| `pemusnahan_arsip.status` + `pengajuan_hapus_lampiran.status` | **sudah ada** | tidak dikerjakan |
+| `klasifikasi_primer_id`/`_sekunder_id`/`_tersier_id`/`user_id` di kedua tabel surat | **sudah ada** (InnoDB wajib index untuk FK) | tidak dikerjakan |
+| `aktivitas.(user_id, created_at)` | `user_id` ada; **`created_at` tidak ada** | satu-satunya yang diukur lalu ditambah |
+
+Jadi empat dari lima kandidat sudah terpasang sejak lama. Kalau daftar itu dipercaya
+apa adanya, perapian ini justru menambah empat index redundan di tabel yang paling
+sering ditulis.
+
+**Pengukuran** (DB tanding `pradana_test`, bukan `pradana`; 40.000 baris log + 8.000
+surat masuk + 8.000 surat keluar, `ANALYZE TABLE` sebelum SETIAP perubahan — percobaan
+pertama sempat memberi hasil menyesatkan karena optimizer mengganti rencananya hanya
+karena statistik baru dihitung, dan itu ketahuan justru setelah ANALYZE dijadikan
+bagian dari protokol):
+
+| Query nyata | Sebelum | +`aktivitas(created_at,id)` |
+|---|---|---|
+| `/aktivitas` tanpa filter (halaman 1) | 22,53 ms · `type=ALL` + filesort 40k baris | **1,02 ms** · `type=index`, 30 baris |
+| `/aktivitas` filter periode | 28,45 ms · ALL + filesort | **1,42 ms** · `range` |
+| `arsip:bersihkan-log` ambil batch | 23,76 ms · scan PRIMARY | **1,00 ms** · `range` + `Using index` |
+| daftar surat masuk polos | 2,16 ms (sudah pakai `tanggal_diterima` terbalik) | tidak berubah → komposit `(deleted_at, tanggal_diterima)` **ditolak** (1,93 vs 2,16 ms = noise) |
+| daftar surat + `status_arsip` | 1,83 ms | tidak berubah |
+| kandidat pemusnahan (`tanggal_surat < ? AND status_arsip='inaktif'`) | 9,04 ms | komposit `(status_arsip, tanggal_surat)` → 6,13 ms; **ditolak**: satu layar admin, menang 3 ms, bayar index keempat di tabel tersibuk |
+| halaman 500 (`OFFSET 14970`) | 75 ms | 72,9 ms — index TIDAK memperbaiki offset dalam; itu sifat pagination limit-offset, dicatat, bukan pura-pura selesai |
+
+**Dua temuan yang tidak bisa ditebak dari kode:**
+
+1. **`created_at` saja tidak cukup.** Percobaan pertama membuat index satu kolom dan
+   halaman log tetap `type=ALL + filesort` (23,9 ms). Urutan layar adalah
+   `created_at DESC, id DESC`, dan MariaDB 10.4 tidak memakai suffix PK implisit pada
+   secondary index untuk memenuhi ORDER BY dua kolom — `id` harus ditulis eksplisit di
+   index. Makanya migration ini `(created_at, id)`, bukan `(created_at)`.
+2. **Titik balik optimizer diukur, bukan diasumsikan.** Pada LIMIT 30: 1.000 baris →
+   filesort 2,34 ms (dan itu **benar**, filesort memang lebih murah); 5.000 → 4,16 ms
+   filesort; 8.000 → index, 0,97 ms; 30.000 → index, 1,31 ms. Manfaat index ini baru
+   ada mulai ±8.000 baris log (±2 tahun kantor aktif). Karena itu
+   `UrutAktivitasMariaDbTest` menanam 12.000 baris dan docblock migration mencatat
+   titik baliknya — supaya nanti tidak ada yang mengira index ini "tidak bekerja" saat
+   tabel masih kecil.
+
+**Isi perubahan:** satu migration additive
+`2026_10_09_000001_tambah_index_urut_aktivitas` (nama index eksplisit
+`aktivitas_created_at_id_index`, `down()` drop dengan nama yang sama) + dua tes baru:
+`SchemaIndexAktivitasTest` (2 tes, mesin-agnostic — `SHOW INDEX` di MariaDB,
+`PRAGMA index_list`/`index_info` di SQLite — membuktikan index ADA dan kolomnya berurutan
+`(created_at, id)`, plus menjaga index lama yang masih dipakai; catatan penting: index
+bantu FK `aktivitas_user_id_foreign` hanya ada di MySQL/MariaDB, SQLite membuat constraint
+tanpa index terpisah, jadi assertion itu digating per engine) dan
+`UrutAktivitasMariaDbTest` (1 tes, MariaDB, skip dengan pesan kalau XAMPP mati — membuktikan
+optimizer sungguh memakai index itu untuk halaman log + filter periode, dan untuk jalur
+`arsip:bersihkan-log` hanya menuntut `possible_keys` karena ORDER BY id boleh memilih PRIMARY).
+Dijalankan sungguhan di `pradana` development: `migrate` 30 ms, index muncul di `SHOW INDEX`,
+3 baris log yang ada tidak tersentuh. DB tanding sudah disapu bersih dari index eksperimen
+dan baris tanaman.
+
+Gerbang: `Tests: 206 passed (819 assertions) / 0 skipped` · `pint --test` PASS 172 file ·
+`phpstan analyse` [OK] No errors · baseline tetap 5.
+
 ## Analisis ulang (gerbang sebelum eksekusi)
 
 Setiap butir di atas harus lolos tiga pertanyaan sebelum disentuh:

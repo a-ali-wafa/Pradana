@@ -742,7 +742,60 @@ Verifikasi: **203 passed / 0 skipped**, `Pint` **169** file (172 − persis tiga
 dihapus), `Larastan` level 5 bersih, baseline tetap 5. Dev server tetap tidak dijalankan (tidak
 ada izin); buktinya suite + `config:cache` sungguhan.
 
+### Perapian kode & alur data — Fase 5 (9 Okt 2026, skema: satu index, bukan lima)
+
+Butir 19 rencana. Langkah pertamanya **membaca `SHOW INDEX` semua tabel**, bukan menulis
+migration — dan ternyata empat dari lima kandidat sudah terpasang sejak squash S11: index morph
+`(arsipable_type, arsipable_id)` / `(lampiranable_type, lampiranable_id)` dibuat oleh `morphs`,
+`draf_konten_surat_keluar.surat_keluar_id` bahkan UNIQUE, `status` di `pemusnahan_arsip` dan
+`pengajuan_hapus_lampiran` sudah di-index, dan InnoDB wajib membuat index untuk tiap FK (jadi
+`klasifikasi_*_id` + `user_id` di kedua tabel surat sudah tertutup). Yang benar-benar hilang cuma
+`aktivitas.created_at`.
+
+Diukur di DB tanding `pradana_test` (40.000 baris log + 8.000 surat masuk + 8.000 surat keluar),
+`ANALYZE TABLE` sebelum setiap perubahan, waktu terbaik dari beberapa pengulangan:
+
+| Query nyata | Sebelum | Sesudah `(created_at, id)` |
+|---|---|---|
+| `/aktivitas` halaman 1 | 22,53 ms `type=ALL` + filesort 40k | **1,02 ms** `type=index`, rows=30 |
+| `/aktivitas` filter periode | 28,45 ms ALL + filesort | **1,42 ms** `range` |
+| `arsip:bersihkan-log` ambil batch | 23,76 ms scan PRIMARY | **1,00 ms** `range` + `Using index` |
+| `/aktivitas` halaman 500 (`OFFSET 14970`) | 75 ms | 72,9 ms — **tidak** membaik (sifat `LIMIT…OFFSET`, dicatat) |
+| daftar surat masuk polos | 2,16 ms (sudah `tanggal_diterima` terbalik) | komposit `(deleted_at, tanggal_diterima)` 1,93 ms → **ditolak, di dalam noise** |
+| kandidat pemusnahan | 9,04 ms | komposit `(status_arsip, tanggal_surat)` 6,13 ms → **ditolak** (satu layar admin vs index ke-4 di tabel tersibuk) |
+
+Tiga hal yang hanya bisa diketahui dengan menjalankan, dan sekarang tercatat di docblock
+migration/tes:
+
+1. **Index satu kolom `created_at` tidak terpakai.** Run pertama memakai `(created_at)` dan
+   halaman log tetap `type=ALL + filesort` (23,9 ms). Urutan layar `created_at DESC, id DESC`
+   butuh `id` ditulis **eksplisit** — MariaDB 10.4 tidak memanfaatkan suffix PK implisit pada
+   secondary index untuk ORDER BY dua kolom.
+2. **Titik balik optimizer diukur, bukan diasumsikan.** 1.000 baris → filesort 2,34 ms (dan itu
+   keputusan yang *benar*); 5.000 → 4,16 ms filesort; 8.000 → index, 0,97 ms; 30.000 → 1,31 ms.
+   Karena itu `UrutAktivitasMariaDbTest` menanam 12.000 baris: di bawah ±8.000 index ini belum
+   seharusnya dipakai, dan tes yang menanam 500 akan gagal tanpa kesalahan kode.
+3. **Protokol ukur: `ANALYZE TABLE` wajib di kedua sisi.** Run pertama (tanpa ANALYZE) memberi
+   angka yang menipu: daftar surat "percepatan 6,7 → 1,5 ms" tampak seperti hasil index komposit,
+   padahal setelah statistik disamakan di run kedua baseline-nya **sudah** 2,16 ms tanpa index baru
+   — yang berubah hanyalah statistik yang dihitung ulang saat `CREATE INDEX`. Kalau run pertama
+   langsung dipercaya, Fase 5 akan menambah index yang tidak memberi apa-apa. Kesimpulan soal
+   index hanya sah kalau statnya disamakan lebih dulu.
+
+Isi perubahan: migration additive `2026_10_09_000001_tambah_index_urut_aktivitas`
+(nama index eksplisit `aktivitas_created_at_id_index`; `down()` drop dengan nama yang sama),
+`tests/Feature/SchemaIndexAktivitasTest.php` (2 tes, engine-agnostic — `PRAGMA index_list`/
+`index_info` di SQLite vs `SHOW INDEX` di MariaDB; assertion index bantu FK `aktivitas_user_id_foreign`
+digating per engine karena SQLite membuat constraint tanpa index terpisah — ini kegagalan pertama
+yang ditangkap suite sebelum commit), `tests/Feature/UrutAktivitasMariaDbTest.php` (1 tes lewat
+`MariaDbHarness`, PENANDA `MIX`, bersih-bersih baris log sendiri di `tearDown`). `migrate`
+dijalankan sungguhan di `pradana` development: 30 ms, index muncul di `SHOW INDEX`, 3 baris log
+asli tidak tersentuh. DB tanding disapu dari index eksperimen + baris tanaman (`UIDX`/`MIX`/`PROBE`),
+skrip pengukuran (4 file `tmp-*.php`) dihapus dan tidak ikut ter-commit.
+
+Verifikasi: **206 passed / 0 skipped** (819 assertion), `Pint` 172 file lolos, `Larastan` bersih,
+baseline tetap 5.
+
 ### Catatan lingkungan
 
-Sesuite **203 passed, 0 skipped** hanya tercapai saat MariaDB hidup: `CariArsipMariaDbTest` (10) + `AgregatMariaDbTest` (2) + `NomorSuratKeluarTest` (3) memakai koneksi `mysql_test_a`/`mysql_test_b` (`DB_TEST_DATABASE`, default `pradana_test`) dan di-skip dengan pesan kalau XAMPP mati — skip itu bukan kegagalan, tapi berarti bukti portabilitasnya belum ada. `Pint` 169 file lolos sejak Fase 4 (sebelumnya 172; selisihnya persis tiga file PHP boilerplate
-yang dihapus); `Larastan` level 5 bersih dengan baseline menyusut **26 → 5** (return type generik di 31 method relasi + `@property-read $lampiran_count` + `self::` untuk method private + delegasi umur arsip ke model bertipe konkret + catch yang ternyata tidak pernah bisa terjadi dibuang). Dev server tidak dijalankan untuk fase-fase perapian ini — verifikasinya lewat HTTP di dalam suite (feature test) dan di MariaDB asli, bukan lewat browser.
+Sesuite **206 passed, 0 skipped** hanya tercapai saat MariaDB hidup: `CariArsipMariaDbTest` (10) + `AgregatMariaDbTest` (2) + `UrutAktivitasMariaDbTest` (1) + `NomorSuratKeluarTest` (3) memakai koneksi `mysql_test_a`/`mysql_test_b` (`DB_TEST_DATABASE`, default `pradana_test`) dan di-skip dengan pesan kalau XAMPP mati — skip itu bukan kegagalan, tapi berarti bukti portabilitasnya belum ada. `Pint` 172 file lolos sejak Fase 5 (169 setelah Fase 4 membuang tiga file PHP boilerplate; 172 sekarang karena dua file tes baru + satu migration); `Larastan` level 5 bersih dengan baseline menyusut **26 → 5** (return type generik di 31 method relasi + `@property-read $lampiran_count` + `self::` untuk method private + delegasi umur arsip ke model bertipe konkret + catch yang ternyata tidak pernah bisa terjadi dibuang). Dev server tidak dijalankan untuk fase-fase perapian ini — verifikasinya lewat HTTP di dalam suite (feature test) dan di MariaDB asli, bukan lewat browser.
