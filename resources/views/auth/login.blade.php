@@ -3,6 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    {{-- Halaman login adalah satu-satunya yang bisa dibuka tanpa login — justru
+         itu yang paling dicari crawler. Header X-Robots-Tag sudah memasang
+         noindex; meta ini pengikatnya. --}}
+    <meta name="robots" content="noindex, nofollow, noarchive">
     <title>Masuk — {{ $instansi?->nama_instansi ?? 'PRADANA' }}</title>
 
     {{--

@@ -1,2 +1,14 @@
+# PRADANA adalah arsip surat masuk/keluar kantor (kelurahan/desa), dipakai dari
+# dalam, dan SEMUA halamannya butuh login. Tidak ada satu pun isi yang boleh
+# berada di mesin pencari — berkas bawaan Laravel (`Disallow:` kosong) berarti
+# kebalikannya: crawler boleh datang ke semua halaman.
+#
+# `noindex` yang sesungguhnya dijamin oleh middleware App\Http\Middleware\
+# TandaiArsipPrivat (header X-Robots-Tag di setiap respons), karena robots.txt
+# hanya larangan merayapi dan bisa tertimpa versi bawaan saat deploy.
+#
+# JANGAN tambah sitemap.xml — tidak ada yang boleh ditemukan dari luar.
+# Detail: AGENTS.md Bagian 2 (L-01) & Bagian 4.
+
 User-agent: *
-Disallow:
+Disallow: /

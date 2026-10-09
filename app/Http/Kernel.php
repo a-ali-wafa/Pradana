@@ -7,6 +7,7 @@ use App\Http\Middleware\EncryptCookies;
 use App\Http\Middleware\EnsureIsAdmin;
 use App\Http\Middleware\PreventRequestsDuringMaintenance;
 use App\Http\Middleware\RedirectIfAuthenticated;
+use App\Http\Middleware\TandaiArsipPrivat;
 use App\Http\Middleware\TrimStrings;
 use App\Http\Middleware\TrustProxies;
 use App\Http\Middleware\ValidateSignature;
@@ -54,6 +55,9 @@ class Kernel extends HttpKernel
      */
     protected $middlewareGroups = [
         'web' => [
+            // Semua yang lewat routes/web.php adalah arsip kantor: wajib ditandai
+            // "jangan di-index" di setiap respons, bukan cuma di robots.txt.
+            TandaiArsipPrivat::class,
             EncryptCookies::class,
             AddQueuedCookiesToResponse::class,
             StartSession::class,

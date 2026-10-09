@@ -3,6 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    {{-- Lapisan kedua setelah header X-Robots-Tag (TandaiArsipPrivat): kalau
+         halaman ini disimpan/diekspor sebagai berkas, pesannya ikut. --}}
+    <meta name="robots" content="noindex, nofollow, noarchive">
     <title>@yield('title', 'PRADANA')</title>
 
     {{--

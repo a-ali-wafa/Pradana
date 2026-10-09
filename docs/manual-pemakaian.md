@@ -234,6 +234,7 @@ Tekan tombol **Akun** di kanan atas → **Ganti PIN**. Popup berisi PIN lama, PI
 - Jangan menyalin, memindah, atau menamai ulang file di folder arsip computer server — sistem kehilangan jejaknya kalau nama file diubah.
 - Kalau satu surat sudah benar dan tidak ada perubahan, jangan diedit lagi hanya untuk "merapikan": setiap perubahan tercatat di log dan bisa menimbulkan pertanyaan saat audit.
 - Jangan menaruh salinan arsip **hanya** di email atau flashdisk pribadi — satu salinan resminya harus ada di computer kantor.
+- Aplikasi ini **tidak boleh muncul di Google**. Semua halaman sudah ditandai "jangan di-index" dan ada daftar larangan untuk mesin pencari. Konsekuensinya: jangan bagikan tautan halaman surat ke luar kantor (tautan tetap butuh login, tapi indeks tidak akan pernah jadi saluran resmi), dan jangan minta "halaman cek surat tanpa login" kecuali memang diputuskan sebagai fitur baru.
 - Sekali setahun (biasanya Januari): admin membuka Laporan, periode tahun lalu, unduh rekap + Buku Agenda, simpan sebagai arsip tahun.
 
 ---
@@ -302,9 +303,20 @@ php artisan tinker                                   # pemeriksaan data
 
 ### A.7 Setelah memasang
 ```bash
-php artisan test          # 123 tes; butuh DB_TEST_DATABASE untuk 3 tes penomoran di MariaDB
+php artisan test          # 165 tes; 13 di antaranya butuh DB_TEST_DATABASE (MariaDB hidup):
+                          # 3 tes penomoran + 10 tes portabilitas pencarian. Kalau MariaDB mati,
+                          # ke-13 tes itu DI-SKIP dengan pesan — bukan lulus.
 ```
 Untuk pengembangan lokal: `php artisan db:seed --class=DevSeeder` (hanya jalan saat `APP_ENV=local`), PIN akun contoh dibaca dari `DEV_PIN` di `.env`.
+
+**Cek bahwa arsip tidak terbaca mesin pencari** (30 detik, lakukan sekali setelah pasang dan setelah pindah hosting):
+```bash
+curl -sI https://ALAMAT-KANTOR/login | grep -i x-robots-tag
+# harus keluar: X-Robots-Tag: noindex, nofollow, noarchive, nosnippet
+```
+Kalau baris itu kosong, berarti `public/robots.txt` tertimpa versi bawaan Laravel atau middleware `TandaiArsipPrivat` lepas dari grup `web` — dua-duanya pernah terjadi. `public/robots.txt` harus berisi `Disallow: /` (yang bawaan berisi `Disallow:` kosong, artinya boleh menjelajahi semua halaman), dan **jangan pernah** menambahkan `sitemap.xml`.
+
+Kalau tampilan aplikasi tiba-tiba rusak setelah suatu perubahan (misalnya pratinjau logo tidak muncul lagi), sementara matikan kebijakan kontennya untuk memastikan penyebabnya: `SECURITY_CSP=false` di `.env` lalu `php artisan config:clear`. Setelah terbukti bukan CSP, kembalikan `true` — jangan dibiarkan mati.
 
 ### A.8 Batasan yang belum dibuat (diketahui, bukan kelupaan)
 - **Template PDF masih satu bentuk umum.** Multi-template sesuai kop resmi desa menunggu contoh kop dari kantor.

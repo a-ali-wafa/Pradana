@@ -597,6 +597,27 @@ Permintaan user: "berikan aku plan peningkatan project ini, misal search engine 
 - **`provinsi_*`, `kota_*`, `lokasi_fisik` ikut digali** — pencarian rak/box fisik adalah pemakaian nyata arsip desa, biayanya cuma beberapa `LIKE` tambahan.
 - **Daftar gabungan sengaja tidak punya tombol aksi** (Nyahkan/hapus/status arsip); hanya Detail. Menyatukan tombol per-jenis ke satu baris butuh logika otorisasi dua tabel di satu loop — tidak sepadan untuk kenyamanan kecil.
 
+### Susulan 9 Okt — anti-index + header keamanan (robots.txt, X-Robots-Tag, CSP)
+
+Dipilih user setelah plan disajikan ("jalankan saja semua"). Bukan SEO — arsip kantor di belakang login justru tidak boleh ter-index (L-01). Yang mengejutkan adalah kondisi awalnya: `public/robots.txt` bawaan Laravel berisi `Disallow:` KOSONG, dan nilai kosong berarti "silakan jelajahi semua halaman".
+
+| File | Status | Keterangan |
+|---|---|---|
+| `public/robots.txt` | **Diubah** | `Disallow: /` + komentar alasan (jangan tambah `sitemap.xml`; `noindex` dijamin header, bukan berkas ini). |
+| `app/Http/Middleware/TandaiArsipPrivat.php` | **Baru** | Dipasang di AWAL grup `web` (`Kernel.php`), bukan `bootstrap/app.php` — project ini masih struktur bootstrap lama. |
+| `app/Support/TandaiPrivat.php` | **Baru** | Isi header satu sumber, dipakai middleware DAN exception handler. |
+| `app/Exceptions/Handler.php` | **Diubah** | Override `render()`. Tanpa ini header tidak menempel di 404/419/500/503, karena exception di-render di luar pipeline middleware — dan halaman error itulah yang paling sering ditemui crawler. |
+| `config/security.php` | **Baru** | `csp_aktif` (dari `SECURITY_CSP`) + isi CSP. Lewat config karena `env()` mengembalikan null setelah `config:cache` (jebakan yang sama dengan `DEV_PIN`). |
+| `.env.example` | **Diubah** | +`SECURITY_CSP=true` dengan alasan singkat. Sekalian: komentar sesi yang masih menawarkan `SESSION_DRIVER=database` (S10) diperbaiki — S10 dibatalkan 4 Okt, tabel sessions/cache memang tidak dibuat. |
+| `resources/views/layouts/app.blade.php`, `auth/login.blade.php`, `errors/layout.blade.php` | **Diubah** | `<meta name="robots" content="noindex, nofollow, noarchive">` sebagai lapisan kedua. |
+| `tests/Feature/HeaderKeamananTest.php` | **Baru** | 7 tes: login/daftar/route logo publik/halaman error, isi CSP yang rawan patah (`'unsafe-inline'` untuk `@push(scripts)` & `onclick=`, `blob:` untuk pratinjau logo, dua host CDN, `form-action 'self'`), sakelar CSP, dan `robots.txt` benar-benar melarang (`Disallow: /`, tanpa direktif `Sitemap:`). |
+
+Isi CSP: `'unsafe-inline'` pada script & style itu SENGAJA dan tercatat alasannya di file — seluruh Blade memakai `@push('scripts')`/`onclick=` dan tiap dokumen PDF menulis `<style>` inline; menggantinya dengan hash/nonce berarti merombak semua view. Yang ditahan CSP adalah sumber daya host tak dikenal, form keluar, dan frame. `img-src ... blob:` dibutuhkan pratinjau logo (4 Okt); `font-src` ke cdnjs untuk Font Awesome.
+
+Verifikasi nyata (bukan hanya tes): server dev dijalankan atas izin user, login akun dev, lalu dicek lewat browser + `curl -I`. Header muncul di `/login`, daftar surat, `/instansi/logo`, `/AlamatTidakAda` (404), dan `/surat-keluar/3/cetak` yang bertipe `application/pdf`. Console browser kosong di `/surat-masuk/create` (halaman paling banyak JS) → CSP tidak memblok apa pun; `window.Swal` dan `window.bootstrap` tetap terdefinisi. Data berpemarka `UJI-CARI-*`/`UJI-SORTIR-1` (+ lampiran, draf, log-nya) dibuat untuk uji lalu dibuang lewat skrip sekali pakai yang ikut dihapus; satu surat keluar `001/02.01.01/X/2026` buatan user 3 Okt tersisa dan tidak disentuh.
+
+Yang masih terbuka dari track keamanan (sengaja belum dikerjakan, bukan kelupaan): cek MIME `finfo` untuk unggah lampiran (sekarang whitelist ekstensi saja), rate limit di jalur unduh lampiran & cetak PDF (yang ada baru login 5/menit), dan `SESSION_SECURE_COOKIE` yang baru berarti setelah HTTPS diputuskan (S14).
+
 ### Catatan lingkungan
 
-Sesuite **158 passed, 0 skipped** hanya tercapai saat MariaDB hidup: `CariArsipMariaDbTest` (10) + `NomorSuratKeluarTest` (3) memakai koneksi `mysql_test_a`/`mysql_test_b` (`DB_TEST_DATABASE`, default `pradana_test`) dan di-skip dengan pesan kalau XAMPP mati — skip itu bukan kegagalan, tapi berarti bukti portabilitasnya belum ada. `Pint` 156 file lolos; `Larastan` level 5 bersih **tanpa menambah `phpstan-baseline.neon`** (`@template TModel of Model` untuk `Builder`, `self::` untuk method private, `Collection<int, \stdClass>`).
+Sesuite **165 passed, 0 skipped** hanya tercapai saat MariaDB hidup: `CariArsipMariaDbTest` (10) + `NomorSuratKeluarTest` (3) memakai koneksi `mysql_test_a`/`mysql_test_b` (`DB_TEST_DATABASE`, default `pradana_test`) dan di-skip dengan pesan kalau XAMPP mati — skip itu bukan kegagalan, tapi berarti bukti portabilitasnya belum ada. `Pint` 160 file lolos; `Larastan` level 5 bersih **tanpa menambah `phpstan-baseline.neon`** (`@template TModel of Model` untuk `Builder`, `self::` untuk method private, `Collection<int, \stdClass>`).
