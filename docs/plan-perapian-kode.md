@@ -362,6 +362,52 @@ dan baris tanaman.
 Gerbang: `Tests: 206 passed (819 assertions) / 0 skipped` · `pint --test` PASS 172 file ·
 `phpstan analyse` [OK] No errors · baseline tetap 5.
 
+## Fase 6 — sisa daftar "ditunda" (9 Okt, setelah Fase 5 hijau)
+
+Dua dari empat item yang di Fase 3 dicatat sebagai "perubahan bentuk tanpa perubahan perilaku"
+kerucut jadi satu, dan pembahasannya membuktikan penundaan itu benar:
+
+**`UpdateStatusArsipRequest` — ternyata BUKAN refactor kosmetik.** Saat menyentuh method ini
+ditemukan bug nyata: `SuratMasukController::updateStatusArsip()` dan
+`SuratKeluarController::updateStatusArsip()` keduanya menulis flash ke kunci **`status`**,
+yang tidak dirender `layouts/app.blade.php` (hanya `success`/`error`). Jadi setelah tombol
+"Nyahkan"/"Aktifkan kembali", data berubah TAPI layarnya tidak memberi tahu apa pun — persis
+kelas bug yang `FlashKonsistenTest` (Fase 1) supposedly tangkap. Kenapa lolos: pola guardrail
+`/->with\('([a-z_]+)'\s*,/` hanya membaca `->with(` yang kutipnya ada di **baris yang sama**,
+sedangkan kedua method ini menulis multi-line. Duplikasi tidak membuat bug itu lebih kecil —
+ia membuat bug itu ada dua kali dan lebih mudah terlewat; itu alasan forms request bersama.
+
+Isi Fase 6:
+1. `app/Http/Requests/UpdateStatusArsipRequest.php` — satu sumber aturan
+   (`required` + `Rule::in(['aktif','inaktif'])`, pesan berbahasa Indonesia, `dinonaktifkan()`),
+   dipakai kedua controller. "musnah" tetap bukan nilai yang sah di sini (pemusnahan jalur sendiri, L-06).
+2. Kedua controller: flash pindah ke `success`; impor `Rule` yang jadi tidak terpakai dibuang.
+3. `FlashKonsistenTest` ditajamkan, dua lapis:
+   - pola jadi `/->with\(\s*'([a-z_]+)'\s*,/s` (mengizinkan newline);
+   - pembacaan file lewat **`token_get_all()`** dengan komentar (`T_COMMENT`, `T_DOC_COMMENT`,
+     `T_INLINE_HTML`) dibuang — tanpa ini, docblock request baru yang MENULIS
+     `->with('status', ...)` sebagai penjelasan bug malah dianggap flash sungguhan;
+   - kunci yang dirender layout juga dibaca setelah komentar Blade/HTML (`{{-- --}}`, `{# #}`,
+     `<!-- -->`) dibuang, supaya komentar tidak bisa "melegalkan" kunci liar.
+   - tes perilaku baru `test_petugas_lihat_konfirmasi_setelah_menyahkan_surat`: PATCH →
+     `status_arsip` berubah **dan** `session('success')` tidak null **dan** pesannya muncul di
+     HTML halaman show. Diverifikasi terhadap file versi `7641d5f`: pola lama mengembalikan
+     `success, status`, pola baru hanya `success`.
+4. Docblock `UserController` diganti: masih mengaku "edit/delete/ganti-PIN belum dibuat" dan
+   merujuk "Bagian 10" versi lama AGENTS.md, padahal L-07/L-12 selesai 4 Okt. Sekalian mencatat
+   batasan yang benar-benar ada (tidak ada form `edit`/`update` → ubah peran = hapus + buat ulang).
+
+Yang **tetap ditunda** setelah dilihat: `{!! sorot() !!}` → `{{ }}` (tidak bisa — `sorot()`
+justru menghasilkan markup `<mark>`; keamanannya sudah ditegakkan di dalam `CariArsip::sorot()`
+yang meng-escape sebelum menyisipkan tag, dan ada tes XSS-nya), deduplikasi
+`SuratMasuk`↔`SuratKeluar` + tiga controller klasifikasi (butuh `@template`/dynamic class-string
+yang akan menambah baseline Larastan; nilai praktisnya rendah karena perilaku keduanya sudah
+dikunci tes), angka tanggal hard-coded di JS pratinjau kop (kosmetik, layar sudah terverifikasi
+mata pada 5 Okt).
+
+Gerbang: `Tests: 207 passed (824 assertions) / 0 skipped` · `pint --test` PASS 173 file ·
+`phpstan analyse` [OK] No errors · baseline tetap 5.
+
 ## Analisis ulang (gerbang sebelum eksekusi)
 
 Setiap butir di atas harus lolos tiga pertanyaan sebelum disentuh:

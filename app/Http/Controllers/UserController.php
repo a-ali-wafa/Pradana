@@ -11,15 +11,24 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 
 /**
- * Manajemen user. Saat ini cuma index/create/store — "registrasi" user baru
- * oleh admin, sesuai asumsi sementara A3 (lihat StoreUserRequest untuk detail
- * & TODO konfirmasi — MASIH BELUM DIKONFIRMASI USER). Edit/delete/ganti-PIN
- * SENGAJA belum dibuat, di luar scope "Login/Register/Logout" yang diminta
- * sesi ini (lihat A4/A5 di Bagian 10 — "reset PIN oleh admin" & "user ganti
- * PIN sendiri" — belum diimplementasikan).
+ * Manajemen akun kantor — admin saja (A3/B3 [LOCKED]; middleware('admin') di
+ * `routes/web.php:112-114` membatasi route-nya ke index/create/store/destroy).
  *
- * Admin-only — ditangani oleh middleware('admin') di routes/web.php
- * (retrofit B1, 1 Sep 2026).
+ * Yang ADA: membuat akun (store), menghapus akun (destroy), dan reset PIN oleh
+ * admin (updatePin — jalur terpisah `PATCH users/{user}/pin`, L-12/A4, karena
+ * "ganti PIN sendiri" milik semua role dan hidup di `ProfilController`).
+ *
+ * Yang SENGAJA tidak ada: `edit`/`update`. Nama, email, dan peran tidak bisa
+ * diubah lewat layar setelah akun dibuat — kantor kecil, satu admin, dan
+ * kombinasi "hapus + buat ulang" sudah menutup kebutuhan itu tanpa membuat
+ * form baru. Konsekuensi yang perlu diketahui saat serah terima: mengubah peran
+ * pegawai → admin berarti menghapus akunnya (log aktivitas tetap menyebut id user
+ * lama; L-10: user boleh dihapus walau punya surat) lalu membuat ulang.
+ *
+ * Docblock ini diganti 9 Okt 2026 karena versi sebelumnya masih mengaku
+ * "edit/delete/ganti-PIN SENGAJA belum dibuat" dan merujuk "Bagian 10" versi lama
+ * AGENTS.md — keduanya sudah tidak benar sejak 4 Okt (L-07 & L-12 selesai), dan
+ * komentar yang salah lebih berbahaya daripada tidak ada komentar.
  */
 class UserController extends Controller
 {

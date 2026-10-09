@@ -796,6 +796,52 @@ skrip pengukuran (4 file `tmp-*.php`) dihapus dan tidak ikut ter-commit.
 Verifikasi: **206 passed / 0 skipped** (819 assertion), `Pint` 172 file lolos, `Larastan` bersih,
 baseline tetap 5.
 
+### Perapian kode & alur data — Fase 6 (9 Okt 2026, item "kosmetik" yang berisi bug)
+
+Rencana menandai `UpdateStatusArsipRequest` sebagai "perubahan bentuk tanpa perubahan perilaku".
+Salah. Begitu method-nya disentuh, ketemu bug yang kelihatan untuk petugas:
+
+- `SuratMasukController::updateStatusArsip()` **dan** `SuratKeluarController::updateStatusArsip()`
+  menulis konfirmasi lewat `back()->with('status', …)` — kunci yang TIDAK dirender
+  `resources/views/layouts/app.blade.php` (layout hanya `session('success')` / `session('error')`).
+  Efeknya: menekan "Nyahkan" mengubah `status_arsip` di database, tapi layar tidak memberi
+  respons apa pun, jadi tombol terasa mati dan petugas menekan ulang.
+- `FlashKonsistenTest` (Fase 1) dibangun persis untuk mencegah kelas bug ini dan tetap hijau.
+  Sebabnya: polanya `/->with\('([a-z_]+)'\s*,/` menuntut kutip pada **baris yang sama** dengan
+  `->with(`, sedangkan kedua method ini menulis argumennya di baris berikut (sudah diformat Pint).
+
+Perubahan:
+1. `app/Http/Requests/UpdateStatusArsipRequest.php` baru — `required` + `Rule::in(['aktif','inaktif'])`,
+   pesan berbahasa Indonesia, helper `dinonaktifkan()`. `authorize()` true karena L-08 (arsip kantor,
+   semua yang login boleh mengubah; observer yang mencatat). "musnah" sengaja bukan nilai sah:
+   pemusnahan punya jalurnya sendiri (L-06).
+2. Kedua controller pakai request itu, flash pindah ke `success`, impor `Rule` dibuang (tidak ada
+   lagi pemakaian `Rule::` di keduanya).
+3. `FlashKonsistenTest` diperkuat: pola mengizinkan newline (`/->with\(\s*'([a-z_]+)'\s*,/s`);
+   sumber dibaca lewat `token_get_all()` dengan `T_COMMENT`/`T_DOC_COMMENT`/`T_INLINE_HTML` dibuang —
+   tanpa itu, docblock request baru yang MENULIS `->with('status', ...)` sebagai penjelasan bug
+   dianggap flash sungguhan (ini benar-benar terjadi pada percobaan pertama, lalu tesnya gagal);
+   daftar kunci yang dirender layout juga dibaca setelah komentar Blade/HTML (`{{-- --}}`, `{# #}`,
+   `<!-- -->`) disingkirkan, supaya komentar tidak bisa melegalkan kunci liar.
+4. Tes perilaku baru `test_petugas_lihat_konfirmasi_setelah_menyahkan_surat`: PATCH status-arsip →
+   `status_arsip` berubah **dan** `session('success')` tidak null **dan** pesannya muncul di HTML
+   halaman show. Guardrail-nya sendiri diverifikasi terhadap file versi `7641d5f`:
+   pola lama → `success, status`; pola baru → `success`.
+5. Docblock `UserController` ditulis ulang: masih mengklaim "edit/delete/ganti-PIN SENGAJA belum
+   dibuat" dan merujuk "Bagian 10" AGENTS versi lama, padahal L-07/L-12 selesai 4 Okt 2026. Yang
+   benar-benar tersisa dan sekarang dicatat jujur: tidak ada route `edit`/`update` untuk user, jadi
+   mengubah peran = hapus + buat ulang (diperbolehkan L-10).
+
+Tetap ditunda, sekarang dengan alasan yang sudah diverifikasi: `{!! sorot() !!}` → `{{ }}` **tidak
+mungkin** (keluarannya memang markup `<mark>`; keamanan ditegakkan di dalam `CariArsip::sorot()`
+yang meng-escape sebelum menyisipkan tag, dan tes XSS-nya ada), deduplikasi `SuratMasuk`↔`SuratKeluar`
++ tiga controller klasifikasi (butuh `@template`/dynamic class-string yang akan menambah baseline
+Larastan; nilai praktisnya rendah karena perilaku keduanya sudah dikunci tes per layar), tanggal
+hard-coded di JS pratinjau kop (kosmetik, layar sudah diverifikasi mata 5 Okt).
+
+Verifikasi: **207 passed / 0 skipped** (824 assertion), `Pint` 173 file, `Larastan` bersih,
+baseline tetap 5.
+
 ### Catatan lingkungan
 
 Sesuite **206 passed, 0 skipped** hanya tercapai saat MariaDB hidup: `CariArsipMariaDbTest` (10) + `AgregatMariaDbTest` (2) + `UrutAktivitasMariaDbTest` (1) + `NomorSuratKeluarTest` (3) memakai koneksi `mysql_test_a`/`mysql_test_b` (`DB_TEST_DATABASE`, default `pradana_test`) dan di-skip dengan pesan kalau XAMPP mati — skip itu bukan kegagalan, tapi berarti bukti portabilitasnya belum ada. `Pint` 172 file lolos sejak Fase 5 (169 setelah Fase 4 membuang tiga file PHP boilerplate; 172 sekarang karena dua file tes baru + satu migration); `Larastan` level 5 bersih dengan baseline menyusut **26 → 5** (return type generik di 31 method relasi + `@property-read $lampiran_count` + `self::` untuk method private + delegasi umur arsip ke model bertipe konkret + catch yang ternyata tidak pernah bisa terjadi dibuang). Dev server tidak dijalankan untuk fase-fase perapian ini — verifikasinya lewat HTTP di dalam suite (feature test) dan di MariaDB asli, bukan lewat browser.

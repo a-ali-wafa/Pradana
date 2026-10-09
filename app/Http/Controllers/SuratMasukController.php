@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Controllers\Concerns\MenampilkanArsipGabungan;
 use App\Http\Requests\StoreSuratMasukRequest;
 use App\Http\Requests\UpdateIsiSuratMasukRequest;
+use App\Http\Requests\UpdateStatusArsipRequest;
 use App\Http\Requests\UpdateSuratMasukRequest;
 use App\Models\KlasifikasiPrimer;
 use App\Models\SuratMasuk;
@@ -12,7 +13,6 @@ use App\Support\FilterArsip;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
-use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 /**
@@ -211,18 +211,19 @@ class SuratMasukController extends Controller
      * L-19 / E8+E9: men-nyahkan arsip = status_arsip jadi "inaktif".
      * Tersedia untuk semua user login (arsip kantor, tanpa kepemilikan),
      * dan tiap perubahan tercatat otomatis lewat observer.
+     *
+     * Aturannya hidup di `UpdateStatusArsipRequest` — sama seperti jalur surat
+     * keluar. Kunci flash SENGAJA 'success': dulu kedua salinan method ini menulis
+     * 'status' yang tidak dirender layout, sehingga aksi terlihat gagal padahal
+     * sudah tersimpan (dikunci FlashKonsistenTest).
      */
-    public function updateStatusArsip(Request $request, SuratMasuk $surat_masuk): RedirectResponse
+    public function updateStatusArsip(UpdateStatusArsipRequest $request, SuratMasuk $surat_masuk): RedirectResponse
     {
-        $data = $request->validate([
-            'status_arsip' => ['required', Rule::in(['aktif', 'inaktif'])],
-        ]);
-
-        $surat_masuk->update($data);
+        $surat_masuk->update($request->validated());
 
         return back()->with(
-            'status',
-            $data['status_arsip'] === 'inaktif'
+            'success',
+            $request->dinonaktifkan()
                 ? 'Surat masuk dinonaktifkan sebagai arsip aktif.'
                 : 'Surat masuk diaktifkan kembali.'
         );

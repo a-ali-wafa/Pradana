@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Controllers\Concerns\MenampilkanArsipGabungan;
 use App\Http\Requests\StoreSuratKeluarRequest;
+use App\Http\Requests\UpdateStatusArsipRequest;
 use App\Http\Requests\UpdateSuratKeluarRequest;
 use App\Models\KlasifikasiPrimer;
 use App\Models\SuratKeluar;
@@ -13,7 +14,6 @@ use Illuminate\Database\QueryException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 /**
@@ -189,19 +189,17 @@ class SuratKeluarController extends Controller
 
     /**
      * L-19 / E8+E9: "Nyahkan" = status_arsip inaktif. Semua user login boleh,
-     * perubahannya tercatat lewat observer.
+     * perubahannya tercatat lewat observer. Aturan validasi dan kunci flash
+     * disamakan dengan surat masuk (`UpdateStatusArsipRequest`) — lihat alasan
+     * bug 'status' di method padanannya di `SuratMasukController`.
      */
-    public function updateStatusArsip(Request $request, SuratKeluar $surat_keluar): RedirectResponse
+    public function updateStatusArsip(UpdateStatusArsipRequest $request, SuratKeluar $surat_keluar): RedirectResponse
     {
-        $data = $request->validate([
-            'status_arsip' => ['required', Rule::in(['aktif', 'inaktif'])],
-        ]);
-
-        $surat_keluar->update($data);
+        $surat_keluar->update($request->validated());
 
         return back()->with(
-            'status',
-            $data['status_arsip'] === 'inaktif'
+            'success',
+            $request->dinonaktifkan()
                 ? 'Surat keluar dinonaktifkan sebagai arsip aktif.'
                 : 'Surat keluar diaktifkan kembali.'
         );
