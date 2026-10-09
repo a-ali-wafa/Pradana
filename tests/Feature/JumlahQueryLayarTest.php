@@ -228,11 +228,17 @@ class JumlahQueryLayarTest extends TestCase
 
     public function test_halaman_show_surat_masuk(): void
     {
-        $id = SuratMasuk::query()->orderBy('id')->value('id');
+        // Surat YANG PUNYA LAMPIRAN. Fixture lama mengambil surat pertama
+        // (id 1) yang kebetulan tidak punya berkas sama sekali, jadi layar ini
+        // lulus dengan ambang longgar sementara N+1 per berkas (pengunggah +
+        // status pengajuan hapus) tidak pernah terukur.
+        $berkas = Lampiran::query()->where('lampiranable_type', SuratMasuk::class)->first();
+        $id = $berkas->lampiranable_id;
 
-        // 5: 1 baca surat + lampiran + pengajuan hapus + user + composer. Tidak
-        // ada yang berulang per baris.
-        $ini = $this->hitung(route('surat-masuk.show', $id), 7, 'show surat masuk');
+        // 6: 1 baca surat + lampiran + pengajuan hapus + pengunggah + composer
+        // + klasifikasi. Bertambahnya jumlah BERKAS pada satu surat tidak boleh
+        // menambah query — itu yang diuji di sini.
+        $ini = $this->hitung(route('surat-masuk.show', $id), 8, 'show surat masuk');
         $this->logKesamaan($ini);
     }
 
@@ -253,11 +259,41 @@ class JumlahQueryLayarTest extends TestCase
 
     public function test_form_pemusnahan_kandidat(): void
     {
-        // 45 = 5 tetap + 40 `count(lampiran)` PER BARIS kandidat. Ini satu-satunya
-        // layar yang query-nya TUMBUH bersama data: 40 surat lama = 40 statement;
-        // 400 surat lama = 400 statement. `withCount()` (Fase 2) mengubah 40 itu
-        // jadi 1, dan ambang harus ikut turun waktu itu terjadi.
-        $this->hitung(route('pemusnahan-arsip.create'), 47, 'form pemusnahan (kandidat)');
+        // 45 -> 4 (Fase 2, 9 Okt 2026). Yang hilang: 40 `select count(*) from
+        // lampiran` (satu per baris kandidat) dan satu bacaan primer per kandidat
+        // yang tidak pernah ditampilkan. Sisanya tetap: 1 item yang sudah
+        // diantrikan + 1 surat masuk (dengan `withCount`) + 1 surat keluar + composer.
+        $this->hitung(route('pemusnahan-arsip.create'), 6, 'form pemusnahan (kandidat)');
+    }
+
+    public function test_form_pemusnahan_tidak_tumbuh_bersama_isi_gudang(): void
+    {
+        // Angka di atas cuma bukti separuh. Yang penting: FORM-nya tidak boleh
+        // menambah statement waktu arsip tuanya bertambah — itulah bentuk asli
+        // bug N+1. 40 kandidat -> 4 query; 80 kandidat harus tetap 4.
+        $sebelum = count($this->hitung(route('pemusnahan-arsip.create'), 60, 'kandidat 40'));
+
+        for ($i = 1; $i <= self::JUMLAH_USANG; $i++) {
+            SuratMasuk::forceCreate([
+                'user_id' => $this->admin->id,
+                'pengirim' => 'Pengirim lama tambahan '.$i,
+                'klasifikasi_primer_id' => KlasifikasiPrimer::query()->value('id'),
+                'nomor_surat' => 'UKUR-USANG-B'.$i,
+                'perihal' => 'Perihal arsip lama tambahan '.$i,
+                'tanggal_surat' => '2018-03-01',
+                'tanggal_diterima' => '2018-03-05',
+                'status_arsip' => 'inaktif',
+                'sifat' => 'biasa',
+            ]);
+        }
+
+        $sesudah = count($this->hitung(route('pemusnahan-arsip.create'), 60, 'kandidat 80'));
+
+        $this->assertSame(
+            $sebelum,
+            $sesudah,
+            'Jumlah query form pemusnahan tumbuh bersama jumlah arsip — N+1 kembali masuk.'
+        );
     }
 
     public function test_log_aktivitas(): void

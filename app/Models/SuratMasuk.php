@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\UmurArsip;
 use App\Support\CariArsip;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
@@ -20,6 +21,10 @@ class SuratMasuk extends Model
     // disembunyikan dari daftar (pulihkan lewat admin) atau dimusnahkan lewat
     // alur pemusnahan + Berita Acara.
     use SoftDeletes;
+
+    // L-21: umur arsip dihitung dari `tanggal_surat`, satu cara untuk kedua
+    // jenis surat (lihat trait-nya).
+    use UmurArsip;
 
     protected $table = 'surat_masuk';
 

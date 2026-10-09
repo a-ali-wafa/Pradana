@@ -649,6 +649,27 @@ Keputusan yang diambil agent (boleh direvisi, alasannya ada di kode): pagination
 
 Kesalahan selama pengerjaan yang dicatat supaya tidak diulang: (1) menyebut fixture pengukuran "selesai" sebelum jalur kodenya benar-benar tereksplorasi — 40 surat lama harus dibuat `inaktif` + tertanggal 2019 supaya `kandidatPemusnahan()` jalan; (2) skrip penyisip docblock yang variabelnya salah nama (`$type` alih-alih `$tipe`) sehingga docblock satu-baris ketimpa jadi dua baris rusak — ketahuan oleh `php -l` sebelum ada tes yang sempat lulus semu, dan hasilnya tetap dibaca baris per baris.
 
+### Perapian kode & alur data — Fase 2 (9 Okt 2026, hari yang sama)
+
+Lanjutan langsung dari Fase 1 dalam hari yang sama; rinciannya di `docs/plan-perapian-kode.md`. Fokus: alur data pemusnahan arsip dan halaman show surat.
+
+| File | Status | Keterangan |
+|---|---|---|
+| `app/Models/Concerns/UmurArsip.php` | **Baru** | `lewatRetensi()` + `umurTahun()`, dipakai `SuratMasuk` & `SuratKeluar`. Menutup pelanggaran L-21: view surat masuk dulu menghitung umur dari `tanggal_diterima`. |
+| `app/Support/RetensiArsip.php` | **Baru** | Satu sumber angka retensi (E1/L-04 [LOCKED], 5 tahun) + `batas()`. Dipakai trait, `PemusnahanArsipController`, dan `arsip:daftar-usang`. |
+| `app/Http/Controllers/PemusnahanArsipController.php` | **Diubah** | `kandidatPemusnahan()`: `withCount('lampiran')`, `with('primer')` dibuang, antrean dicek lewat satu query + `whereNotIn` (bukan memuat semua item lalu `in_array`). `store()`: `idLayak()` membatasi validasi ke id yang dikirim form; snapshot item dari satu query per jenis lewat `dataItem()`. 45 → 4 query, dan tidak tumbuh lagi. |
+| `app/Models/Lampiran.php` | **Diubah** | `isEligibleForDeletion()` → `layakDihapus()` (kosakata Indonesia konsisten) dan isinya mendelegasikan ke `UmurArsip::lewatRetensi()` induk, dengan guard `instanceof` karena `lampiranable` itu morph. Import `Carbon\Carbon` yang jadi mati dibuang. |
+| `app/Http/Controllers/SuratMasukController.php`, `SuratKeluarController.php` | **Diubah** | `show()` eager-load `lampiran.pengajuanHapus` + `lampiran.pengunggah`. |
+| `resources/views/surat-masuk/show.blade.php`, `surat-keluar/show.blade.php` | **Diubah** | Blok `@php $umurTahun = … @endphp` + `$lamp->pengajuanHapus()->exists()` (satu query per berkas) diganti `$surat->lewatRetensi()` + cek koleksi yang sudah dimuat. |
+| `app/Console/Commands/DaftarSuratUsangCommand.php` | **Diubah** | Default `--tahun` diambil dari `RetensiArsip::TAHUN`; opsi manual tetap bisa diisi (E5: keputusan di tangan staf). Dijalankan sungguhan dua-duanya (`arsip:daftar-usang` dan `--tahun=3`). |
+| `tests/Feature/AjukanHapusLampiranTampilTest.php` | **Baru** | 5 tes perilaku tombol "Ajukan Hapus", termasuk kasus L-21 (diterima 2019, dibuat 2025 → tidak boleh tampil) dan badge "Menunggu" per berkas. |
+| `tests/Feature/JumlahQueryLayarTest.php` | **Diubah** | Fixture layar show diganti ke surat BERBERKAS (sebelumnya surat id 1 tanpa lampiran, jadi N+1 tidak pernah terukur); ambang `/pemusnahan-arsip/create` 47 → 6; tes baru menggandakan kandidat 40 → 80 dan menuntut jumlah statement yang SAMA. |
+| `phpstan-baseline.neon` | **Diubah** | 7 → 6 entri (`Model::$tanggal_surat` di `Lampiran` hilang karena delegasi ke model bertipe konkret). |
+
+Kesalahan yang dibuat dan ditangkap suite (dicatat karena berharga): konstanta retensi pertama-tama ditaruh di trait lalu diakses sebagai `UmurArsip::BATAS_RETENSI_TAHUN` dari controller — PHP melarang akses konstanta trait dari luar kelas pemakainya, seluruh layar pemusnahan langsung 500 dan 10 tes gagal dalam sekali jalan. Perbaikannya bukan menambal satu tempat: angkanya pindah ke kelas konstanta biasa `App\Support\RetensiArsip`, yang memang bisa dibaca dari model, controller, maupun perintah artisan.
+
+Verifikasi: `php artisan test` 198 passed / 0 skipped (MariaDB hidup, jadi 15 tes engine-asli ikut jalan), `Pint` 171 file lolos, `Larastan` level 5 bersih dengan 6 entri baseline yang masing-masing sudah dibaca satu-satu. Dev server tidak dijalankan untuk fase ini — buktinya lewat HTTP di feature test, bukan lewat browser.
+
 ### Catatan lingkungan
 
-Sesuite **192 passed, 0 skipped** hanya tercapai saat MariaDB hidup: `CariArsipMariaDbTest` (10) + `AgregatMariaDbTest` (2) + `NomorSuratKeluarTest` (3) memakai koneksi `mysql_test_a`/`mysql_test_b` (`DB_TEST_DATABASE`, default `pradana_test`) dan di-skip dengan pesan kalau XAMPP mati — skip itu bukan kegagalan, tapi berarti bukti portabilitasnya belum ada. `Pint` 168 file lolos; `Larastan` level 5 bersih dengan baseline menyusut **26 → 7** (return type generik di 31 method relasi + `@property-read $lampiran_count` + `self::` untuk method private). Dev server TIDAK dijalankan untuk Fase 1 — verifikasinya lewat HTTP di dalam suite (Feature test) dan di MariaDB asli, bukan lewat browser.
+Sesuite **198 passed, 0 skipped** hanya tercapai saat MariaDB hidup: `CariArsipMariaDbTest` (10) + `AgregatMariaDbTest` (2) + `NomorSuratKeluarTest` (3) memakai koneksi `mysql_test_a`/`mysql_test_b` (`DB_TEST_DATABASE`, default `pradana_test`) dan di-skip dengan pesan kalau XAMPP mati — skip itu bukan kegagalan, tapi berarti bukti portabilitasnya belum ada. `Pint` 171 file lolos; `Larastan` level 5 bersih dengan baseline menyusut **26 → 6** (return type generik di 31 method relasi + `@property-read $lampiran_count` + `self::` untuk method private + delegasi umur arsip ke model bertipe konkret). Dev server TIDAK dijalankan untuk Fase 1 — verifikasinya lewat HTTP di dalam suite (Feature test) dan di MariaDB asli, bukan lewat browser.

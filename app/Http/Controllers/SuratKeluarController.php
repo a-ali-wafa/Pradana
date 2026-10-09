@@ -138,7 +138,13 @@ class SuratKeluarController extends Controller
 
     public function show(SuratKeluar $surat_keluar): View
     {
-        $surat_keluar->load(['primer', 'sekunder', 'tersier', 'petugas', 'drafKonten', 'lampiran']);
+        // Lihat SuratMasukController::show(): `lampiran.pengajuanHapus` +
+        // `lampiran.pengunggah` dibaca per baris lampiran di view, jadi keduanya
+        // harus ikut eager load.
+        $surat_keluar->load([
+            'primer', 'sekunder', 'tersier', 'petugas', 'drafKonten',
+            'lampiran.pengajuanHapus', 'lampiran.pengunggah',
+        ]);
 
         return view('surat-keluar.show', ['suratKeluar' => $surat_keluar]);
     }

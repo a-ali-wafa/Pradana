@@ -215,19 +215,22 @@
                                class="btn btn-sm btn-outline-primary rounded-pill px-3" title="Unduh">
                                 <i class="fas fa-download me-1"></i>Unduh
                             </a>
-                            @php
-                                $umurTahun = \Carbon\Carbon::parse($suratKeluar->tanggal_surat)->diffInYears(now());
-                            @endphp
-                            @if($umurTahun >= 5 && ! $lamp->pengajuanHapus()->whereIn('status', ['menunggu'])->exists())
-                            <form method="POST" action="{{ route('lampiran.pengajuan-hapus.store', $lamp) }}"
-                                  onsubmit="return confirm('Ajukan penghapusan lampiran ini?')">
-                                @csrf
-                                <button type="submit" class="btn btn-sm btn-outline-danger rounded-pill px-3">
-                                    <i class="fas fa-trash-alt me-1"></i>Ajukan Hapus
-                                </button>
-                            </form>
-                            @elseif($umurTahun >= 5)
-                            <span class="badge text-bg-warning rounded-pill px-2">Menunggu</span>
+                            {{-- Lihat catatan yang sama di surat-masuk/show.blade.php:
+                                 umur arsip ditanyakan ke UmurArsip::lewatRetensi()
+                                 (L-21, acuan `tanggal_surat`) dan status pengajuan dibaca
+                                 dari koleksi eager-loaded, bukan query per berkas. --}}
+                            @if($suratKeluar->lewatRetensi())
+                                @if($lamp->pengajuanHapus->where('status', 'menunggu')->isEmpty())
+                                    <form method="POST" action="{{ route('lampiran.pengajuan-hapus.store', $lamp) }}"
+                                          onsubmit="return confirm('Ajukan penghapusan lampiran ini?')">
+                                        @csrf
+                                        <button type="submit" class="btn btn-sm btn-outline-danger rounded-pill px-3">
+                                            <i class="fas fa-trash-alt me-1"></i>Ajukan Hapus
+                                        </button>
+                                    </form>
+                                @else
+                                    <span class="badge text-bg-warning rounded-pill px-2">Menunggu</span>
+                                @endif
                             @endif
                         </div>
                         @endforeach

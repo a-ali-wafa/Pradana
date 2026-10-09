@@ -97,7 +97,6 @@ baris per halaman log tetap 30 (H2/L-14 mengatur daftar surat, bukan log — ala
 ada di `AktivitasController::BARIS_PER_HALAMAN`).
 
 ## Fase 2 — alur data & query (dampak terukur)
-
 5. `PemusnahanArsipController::kandidatPemusnahan()` (`:248`, `:260`) menghitung lampiran
    per baris → ganti `withCount('lampiran')` (2 query total, bukan 2N).
    Sekalian: `with('primer')` dimuat tapi **tidak pernah dibaca** oleh bentuk hasilnya → buang.
@@ -116,6 +115,57 @@ ada di `AktivitasController::BARIS_PER_HALAMAN`).
    → pakai `count()` di database (dua query), `baris()` tetap satu sumber untuk CSV/PDF.
 10. Mode gabungan: `DaftarArsipGabungan::muat()` memuat relasi dua kali (per jenis) —
     sudah benar secara semantik; pastikan tidak membawa relasi yang tidak dirender.
+
+### Hasil Fase 2 (dijalankan 9 Okt 2026)
+
+Butir 5–10 selesai atau ternyata sudah tidak berlaku. Angka terukur
+(`LAPOR_QUERY=1 php artisan test --filter=JumlahQueryLayarTest`, 240 surat):
+
+| Layar | Baseline | Fase 1 | Fase 2 | Ambang sekarang |
+|---|---|---|---|---|
+| `/pemusnahan-arsip/create` | 47 | 45 | **4** | 6 |
+| `/surat-masuk/{id}` (dengan berkas) | 7 | 5* | **6** | 8 |
+| layar lain | — | sudah diukur | tidak berubah | sama |
+
+\* angka Fase 1 untuk layar show diukur pada surat yang TIDAK punya lampiran, jadi
+N+1 per berkas tidak kelihatan sama sekali. Fixture diganti ke surat berberkas;
+dengan eager load sekarang 6 query dan **bertambahnya berkas tidak menambah query**.
+
+Yang dikerjakan:
+
+- **`kandidatPemusnahan()`**: `withCount('lampiran')` menggantikan `$s->lampiran()->count()`
+  per baris; `with('primer')` dibuang (view tidak membacanya); "sudah diantrikan"
+  tidak lagi memuat seluruh `PemusnahanArsipItem` sebagai model lalu `in_array` —
+  sekarang satu query dua kolom, `groupBy`, dan `whereNotIn` di database.
+  40 arsip tua: 45 → 4 statement. Ditambah tes skala: 80 kandidat tetap 4 statement
+  (`test_form_pemusnahan_tidak_tumbuh_bersama_isi_gudang`).
+- **`store()`** tidak lagi menjalankan `kandidatPemusnahan()` (scan seluruh gudang)
+  untuk memvalidasi id yang dikirim form: `idLayak()` membatasi query ke id terpilih.
+  Snapshot item dibuat dari satu query `withCount` per jenis, bukan `findOrFail` +
+  `count()` per baris, lewat helper `dataItem()`.
+- **`App\Support\RetensiArsip`** = satu sumber angka retensi (E1/L-04 [LOCKED], 5 tahun).
+  Dipakai `UmurArsip::lewatRetensi()`, `PemusnahanArsipController`, dan
+  `arsip:daftar-usang`. Kenapa bukan konstanta di trait: PHP melarang akses
+  `UmurArsip::BATAS_RETENSI_TAHUN` dari luar kelas pemakainya — kesalahan yang
+  dibuat pagi ini dan langsung ditangkap 10 tes (semua layar pemusnahan 500).
+- **Trait `App\Models\Concerns\UmurArsip`** (`lewatRetensi()`, `umurTahun()`) di
+  `SuratMasuk` + `SuratKeluar`. Ini menutup pelanggaran **L-21 [LOCKED]**: view
+  surat masuk dulu menghitung umur dari `tanggal_diterima`, sedangkan server
+  (dan form pemusnahan, dan `arsip:daftar-usang`) dari `tanggal_surat` — tombol
+  "Ajukan Hapus" bisa tampil untuk surat yang pasti ditolak, atau hilang untuk
+  surat yang sebenarnya boleh diajukan. `Lampiran::isEligibleForDeletion()`
+  di-ubah namanya jadi `layakDihapus()` (konsisten kosakata Indonesia) dan isinya
+  sekarang mendelegasikan ke induknya, bukan menghitung ulang.
+- **Halaman show** masuk & keluar eager-load `lampiran.pengajuanHapus` +
+  `lampiran.pengunggah`, dan view membaca koleksi itu (`->where('status','menunggu')->isEmpty()`)
+  alih-alih `->exists()` per berkas. Perilaku dikunci `AjukanHapusLampiranTampilTest` (5 tes),
+  termasuk kasus "diterima 2019 tapi dibuat 2025 → tombol tidak boleh muncul".
+- Butir 8 (daftar surat memuat `tersier`, dashboard menyentuh `sekunder`) **tidak
+  berlaku lagi**: `tersier` sudah tidak dimuat di daftar, dan `$with` global di
+  model klasifikasi dibuang di Fase 1 — terukur, bukan diasumsikan.
+- `phpstan-baseline.neon` menyusut lagi: 7 → **6** entri. Yang tersisa semuanya
+  sudah dibaca: 4 `dead catch QueryException` (PDO runtime), 1 `Model::$primer`
+  di jalur `morphTo` perintah backup Drive, 1 nullsafe defensif.
 
 ## Fase 3 — hapus duplikasi kode (perilaku tidak berubah)
 

@@ -7,11 +7,14 @@ use App\Models\PemusnahanArsipItem;
 use App\Models\PengaturanInstansi;
 use App\Models\SuratKeluar;
 use App\Models\SuratMasuk;
+use App\Support\RetensiArsip;
 use App\Support\Terbilang;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
@@ -72,18 +75,29 @@ class PemusnahanArsipController extends Controller
             'tanggal_pelaksanaan' => ['nullable', 'date'],
         ]);
 
-        $kandidat = $this->kandidatPemusnahan();
-
-        // Validasi di server: form bisa berisi arsip yang sudah tidak memenuhi
-        // syarat sejak halaman ini dibuka (misal belum 5 tahun / masih aktif).
         $dipilih = collect($data['arsip'])->map(function ($ombol) {
             [$jenis, $id] = explode(':', $ombol);
 
             return (object) ['jenis' => $jenis, 'id' => (int) $id];
         });
 
+        // Validasi di server: form bisa berisi arsip yang sudah tidak memenuhi
+        // syarat sejak halaman ini dibuka (misal belum 5 tahun / masih aktif).
+        //
+        // Bentuk lama memanggil `kandidatPemusnahan()` di sini — yaitu MEMUAT
+        // SELURUH arsip tua kantor (+ hitung lampiran per baris) hanya untuk
+        // mengecek id yang dikirim form. Sekarang query-nya dibatasi ke id yang
+        // dipilih saja: empat statement, berapa pun isi gudangnya.
+        $idMasuk = $dipilih->where('jenis', 'masuk')->pluck('id')->all();
+        $idKeluar = $dipilih->where('jenis', 'keluar')->pluck('id')->all();
+
+        $layak = [
+            'masuk' => $this->idLayak(SuratMasuk::class, $idMasuk),
+            'keluar' => $this->idLayak(SuratKeluar::class, $idKeluar),
+        ];
+
         $tidakLayak = $dipilih->reject(
-            fn ($p) => $kandidat->contains(fn ($k) => $k->id === $p->id && $k->jenis === $p->jenis)
+            fn ($p) => in_array($p->id, $layak[$p->jenis], true)
         );
 
         if ($tidakLayak->isNotEmpty()) {
@@ -95,7 +109,7 @@ class PemusnahanArsipController extends Controller
                 ]);
         }
 
-        $pemusnahan = DB::transaction(function () use ($request, $data, $dipilih) {
+        $pemusnahan = DB::transaction(function () use ($request, $data, $layak) {
             $pemusnahan = PemusnahanArsip::create([
                 'alasan' => $data['alasan'] ?? null,
                 'status' => 'menunggu',
@@ -103,19 +117,42 @@ class PemusnahanArsipController extends Controller
                 'tanggal_pelaksanaan' => $data['tanggal_pelaksanaan'] ?? null,
             ]);
 
-            foreach ($dipilih as $pilihan) {
-                $model = $pilihan->jenis === 'masuk' ? SuratMasuk::class : SuratKeluar::class;
-                $arsip = $model::findOrFail($pilihan->id);
+            // SATU query per jenis (bukan `findOrFail` + `lampiran()->count()`
+            // per baris yang dipilih). Snapshot dibuat dari data yang sudah ada
+            // di tangan, karena pengajuannya nanti bisa disetujui setelah suratnya
+            // berubah — Berita Acara harus tetap menceritakan keadaan saat diajukan.
+            $masuk = SuratMasuk::query()
+                ->withCount('lampiran')
+                ->whereIn('id', $layak['masuk'])
+                ->get();
 
-                PemusnahanArsipItem::create([
-                    'pemusnahan_arsip_id' => $pemusnahan->id,
-                    'arsipable_type' => $arsip::class,
-                    'arsipable_id' => $arsip->id,
-                    'nomor_surat_snapshot' => $arsip->nomor_surat,
-                    'perihal_snapshot' => $arsip->perihal,
-                    'tanggal_surat_snapshot' => $arsip->tanggal_surat,
-                    'jumlah_lampiran_snapshot' => $arsip->lampiran()->count(),
-                ]);
+            foreach ($masuk as $arsip) {
+                PemusnahanArsipItem::create($this->dataItem(
+                    $pemusnahan->id,
+                    SuratMasuk::class,
+                    $arsip->id,
+                    $arsip->nomor_surat,
+                    $arsip->perihal,
+                    $arsip->tanggal_surat,
+                    $arsip->lampiran_count,
+                ));
+            }
+
+            $keluar = SuratKeluar::query()
+                ->withCount('lampiran')
+                ->whereIn('id', $layak['keluar'])
+                ->get();
+
+            foreach ($keluar as $arsip) {
+                PemusnahanArsipItem::create($this->dataItem(
+                    $pemusnahan->id,
+                    SuratKeluar::class,
+                    $arsip->id,
+                    $arsip->nomor_surat,
+                    $arsip->perihal,
+                    $arsip->tanggal_surat,
+                    $arsip->lampiran_count,
+                ));
             }
 
             return $pemusnahan;
@@ -223,44 +260,141 @@ class PemusnahanArsipController extends Controller
     }
 
     /**
-     * Arsip yang boleh diajukan: lewat retensi (L-04) DAN sudah dinonaktifkan
-     * (L-19), belum dihapus lunak, dan belum masuk pengajuan yang menunggu.
+     * Arsip yang boleh diajukan: lewat retensi (L-04 + L-21) DAN sudah
+     * dinonaktifkan (L-19), belum dihapus lunak, dan belum masuk pengajuan yang
+     * menunggu.
+     *
+     * Bentuk lama (sampai 9 Okt 2026) menghitung lampiran PER BARIS
+     * (`$s->lampiran()->count()` di dalam `map`) dan memuat SELURUH item
+     * pemusnahan sebagai model hanya untuk mengecek "sudah dipakai atau belum".
+     * Terukur di `JumlahQueryLayarTest`: 40 arsip tua = 45 statement, dan angka
+     * itu tumbuh linear bersama isi gudang (1.000 arsip tua ≈ 1.000 query —
+     * layar ini dulunya satu-satunya yang begitu di seluruh aplikasi).
+     * Sekarang jumlah statement-nya tetap berapapun kandidatnya: 1 query item
+     * terpakai + 1 query surat masuk (`withCount`) + 1 query surat keluar.
+     *
+     * `with('primer')` yang lama dibuang: view `pemusnahan-arsip/create` hanya
+     * membaca nomor, perihal, tanggal, pengirim/penerima, dan jumlah lampiran,
+     * jadi relasi itu dimuat untuk tidak pernah dipakai.
+     *
+     * Kembalinya array biasa (bukan Collection): view hanya `count()` + `foreach`,
+     * dan `Collection<int, T>` itu tidak kovarian di T — bentuk object shape hasil
+     * `(object) [...]` tidak bisa dinyatakan lulus tanpa memaksa PHPStan dibungkam.
+     *
+     * @return list<\stdClass>
      */
-    private function kandidatPemusnahan()
+    private function kandidatPemusnahan(): array
     {
-        $batas = now()->subYears(5);
-
+        /** @var Collection<string, list<int>> $terpakai */
         $terpakai = PemusnahanArsipItem::query()
             ->whereHas('pemusnahan', fn ($q) => $q->where('status', 'menunggu'))
-            ->get()
-            ->map(fn ($i) => $i->arsipable_type.'#'.$i->arsipable_id)
-            ->all();
+            ->get(['arsipable_type', 'arsipable_id'])
+            ->groupBy('arsipable_type')
+            ->map(fn ($kelompok) => $kelompok->pluck('arsipable_id')->all());
+
+        $batas = RetensiArsip::batas();
 
         $masuk = SuratMasuk::query()
             ->where('tanggal_surat', '<', $batas)
             ->where('status_arsip', 'inaktif')
-            ->with('primer')
+            ->when(
+                $terpakai->has(SuratMasuk::class),
+                fn ($q) => $q->whereNotIn('id', $terpakai->get(SuratMasuk::class, []))
+            )
+            ->withCount('lampiran')
             ->get()
-            ->reject(fn ($s) => in_array(SuratMasuk::class.'#'.$s->id, $terpakai, true))
-            ->map(fn ($s) => (object) [
-                'id' => $s->id, 'jenis' => 'masuk', 'nomor_surat' => $s->nomor_surat,
-                'perihal' => $s->perihal, 'tanggal_surat' => $s->tanggal_surat,
-                'pengirim' => $s->pengirim, 'lampiran' => $s->lampiran()->count(),
+            ->map(fn (SuratMasuk $s) => (object) [
+                'id' => $s->id,
+                'jenis' => 'masuk',
+                'nomor_surat' => $s->nomor_surat,
+                'perihal' => $s->perihal,
+                'tanggal_surat' => $s->tanggal_surat,
+                'pengirim' => $s->pengirim,
+                'lampiran' => $s->lampiran_count,
             ]);
 
         $keluar = SuratKeluar::query()
             ->where('tanggal_surat', '<', $batas)
             ->where('status_arsip', 'inaktif')
-            ->with('primer')
+            ->when(
+                $terpakai->has(SuratKeluar::class),
+                fn ($q) => $q->whereNotIn('id', $terpakai->get(SuratKeluar::class, []))
+            )
+            ->withCount('lampiran')
             ->get()
-            ->reject(fn ($s) => in_array(SuratKeluar::class.'#'.$s->id, $terpakai, true))
-            ->map(fn ($s) => (object) [
-                'id' => $s->id, 'jenis' => 'keluar', 'nomor_surat' => $s->nomor_surat,
-                'perihal' => $s->perihal, 'tanggal_surat' => $s->tanggal_surat,
-                'pengirim' => $s->penerima, 'lampiran' => $s->lampiran()->count(),
+            ->map(fn (SuratKeluar $s) => (object) [
+                'id' => $s->id,
+                'jenis' => 'keluar',
+                'nomor_surat' => $s->nomor_surat,
+                'perihal' => $s->perihal,
+                'tanggal_surat' => $s->tanggal_surat,
+                'pengirim' => $s->penerima,
+                'lampiran' => $s->lampiran_count,
             ]);
 
-        return $masuk->concat($keluar)->sortByDesc('tanggal_surat')->values();
+        return $masuk->concat($keluar)->sortByDesc('tanggal_surat')->values()->all();
+    }
+
+    /**
+     * Dari daftar id yang dikirim form, mana yang MASIH memenuhi syarat
+     * pemusnahan saat ini (lewat retensi, inaktif, belum diantrikan).
+     *
+     * Batas umurnya dari `App\Support\RetensiArsip` — sumber yang sama dengan
+     * `UmurArsip::lewatRetensi()` (yang dipakai view & jalur hapus lampiran) dan
+     * perintah `arsip:daftar-usang`. Kalau nanti kantor mengubah angka 5 tahun
+     * itu, tidak ada satu pun dari ketiganya yang boleh tertinggal.
+     *
+     * @template TModel of Model
+     *
+     * @param  class-string<TModel>  $model
+     * @param  list<int>  $id
+     * @return list<int>
+     */
+    private function idLayak(string $model, array $id): array
+    {
+        if ($id === []) {
+            return [];
+        }
+
+        $terpakai = PemusnahanArsipItem::query()
+            ->where('arsipable_type', $model)
+            ->whereIn('arsipable_id', $id)
+            ->whereHas('pemusnahan', fn ($q) => $q->where('status', 'menunggu'))
+            ->pluck('arsipable_id')
+            ->all();
+
+        return $model::query()
+            ->whereIn('id', $id)
+            ->where('tanggal_surat', '<', RetensiArsip::batas())
+            ->where('status_arsip', 'inaktif')
+            ->when($terpakai !== [], fn ($q) => $q->whereNotIn('id', $terpakai))
+            ->pluck('id')
+            ->all();
+    }
+
+    /**
+     * Isi satu baris item pengajuan (snapshot — lihat komentar `store()`).
+     *
+     * @return array<string, mixed>
+     */
+    private function dataItem(
+        int $pemusnahanId,
+        string $modelArsip,
+        int $arsipId,
+        string $nomorSurat,
+        ?string $perihal,
+        ?\DateTimeInterface $tanggalSurat,
+        int $jumlahLampiran
+    ): array {
+        return [
+            'pemusnahan_arsip_id' => $pemusnahanId,
+            'arsipable_type' => $modelArsip,
+            'arsipable_id' => $arsipId,
+            'nomor_surat_snapshot' => $nomorSurat,
+            'perihal_snapshot' => $perihal,
+            'tanggal_surat_snapshot' => $tanggalSurat,
+            'jumlah_lampiran_snapshot' => $jumlahLampiran,
+        ];
     }
 
     private function buatNomorBeritaAcara(PemusnahanArsip $pemusnahan): string

@@ -233,20 +233,31 @@
                                class="btn btn-sm btn-outline-primary rounded-pill px-3" title="Unduh">
                                 <i class="fas fa-download me-1"></i>Unduh
                             </a>
-                            {{-- Pengajuan hapus: hanya tampil jika surat sudah >5 tahun --}}
-                            @php
-                                $umurTahun = \Carbon\Carbon::parse($surat_masuk->tanggal_diterima)->diffInYears(now());
-                            @endphp
-                            @if($umurTahun >= 5 && ! $lamp->pengajuanHapus()->whereIn('status', ['menunggu'])->exists())
-                            <form method="POST" action="{{ route('lampiran.pengajuan-hapus.store', $lamp) }}"
-                                  onsubmit="return confirm('Ajukan penghapusan lampiran ini?')">
-                                @csrf
-                                <button type="submit" class="btn btn-sm btn-outline-danger rounded-pill px-3" title="Ajukan Hapus">
-                                    <i class="fas fa-trash-alt me-1"></i>Ajukan Hapus
-                                </button>
-                            </form>
-                            @elseif($umurTahun >= 5)
-                            <span class="badge text-bg-warning rounded-pill px-2">Menunggu</span>
+                            {{--
+                                Tombol "Ajukan Hapus" hanya untuk surat yang sudah lewat retensi
+                                (L-04: lebih dari 5 tahun; L-21: acuannya `tanggal_surat`).
+                                Dulu blok ini menghitung umurnya sendiri dari `tanggal_diterima`,
+                                jadi surat masuk bisa menampilkan tombol yang ditolak server
+                                (dan aturan 5 tahun punya dua dasar hitung di satu aplikasi).
+                                Sekarang pertanyaan umurnya diajukan ke `UmurArsip::lewatRetensi()`
+                                — sama persis dengan yang ditegakkan
+                                PengajuanHapusLampiranController::store().
+                                `pengajuanHapus` dibaca dari koleksi yang sudah di-eager-load di
+                                controller; bentuk lama `$lamp->pengajuanHapus()->exists()` berarti
+                                satu query TAMBAHAN untuk setiap berkas di daftar ini.
+                            --}}
+                            @if($surat_masuk->lewatRetensi())
+                                @if($lamp->pengajuanHapus->where('status', 'menunggu')->isEmpty())
+                                    <form method="POST" action="{{ route('lampiran.pengajuan-hapus.store', $lamp) }}"
+                                          onsubmit="return confirm('Ajukan penghapusan lampiran ini?')">
+                                        @csrf
+                                        <button type="submit" class="btn btn-sm btn-outline-danger rounded-pill px-3" title="Ajukan Hapus">
+                                            <i class="fas fa-trash-alt me-1"></i>Ajukan Hapus
+                                        </button>
+                                    </form>
+                                @else
+                                    <span class="badge text-bg-warning rounded-pill px-2">Menunggu</span>
+                                @endif
                             @endif
                         </div>
                         @endforeach

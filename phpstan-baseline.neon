@@ -35,9 +35,3 @@ parameters:
 			identifier: catch.neverThrown
 			count: 1
 			path: app/Http/Controllers/SuratMasukController.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$tanggal_surat\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Models/Lampiran.php

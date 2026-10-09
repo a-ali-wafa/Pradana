@@ -38,7 +38,7 @@ class PengajuanHapusLampiranController extends Controller
         ]);
 
         abort_unless(
-            $lampiran->isEligibleForDeletion(),
+            $lampiran->layakDihapus(),
             403,
             'Lampiran hanya bisa diajukan untuk dihapus kalau suratnya sudah berumur lebih dari 5 tahun.'
         );

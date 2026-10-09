@@ -29,30 +29,30 @@ class LampiranTest extends TestCase
             'tanggal_diterima' => now(), // sengaja baru: tidak boleh dipakai sebagai acuan
         ]);
 
-        $this->assertTrue($this->lampiranUntuk($surat)->isEligibleForDeletion());
+        $this->assertTrue($this->lampiranUntuk($surat)->layakDihapus());
     }
 
     public function test_surat_masuk_baru_belum_boleh_dihapus(): void
     {
         $surat = new SuratMasuk(['tanggal_surat' => now()->subYears(2)]);
 
-        $this->assertFalse($this->lampiranUntuk($surat)->isEligibleForDeletion());
+        $this->assertFalse($this->lampiranUntuk($surat)->layakDihapus());
     }
 
     public function test_surat_keluar_dinuksi_umurnya_dari_tanggal_surat(): void
     {
         $surat = new SuratKeluar(['tanggal_surat' => now()->subYears(6)]);
 
-        $this->assertTrue($this->lampiranUntuk($surat)->isEligibleForDeletion());
+        $this->assertTrue($this->lampiranUntuk($surat)->layakDihapus());
     }
 
     public function test_tidak_eligible_kalau_surat_induk_hilang(): void
     {
-        $this->assertFalse((new Lampiran)->isEligibleForDeletion());
+        $this->assertFalse((new Lampiran)->layakDihapus());
     }
 
     public function test_tidak_eligible_kalau_tanggal_surat_kosong(): void
     {
-        $this->assertFalse($this->lampiranUntuk(new SuratMasuk)->isEligibleForDeletion());
+        $this->assertFalse($this->lampiranUntuk(new SuratMasuk)->layakDihapus());
     }
 }

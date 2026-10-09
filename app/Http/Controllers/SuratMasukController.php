@@ -108,7 +108,13 @@ class SuratMasukController extends Controller
 
     public function show(SuratMasuk $surat_masuk): View
     {
-        $surat_masuk->load(['primer', 'sekunder', 'tersier', 'petugas', 'lampiran']);
+        // `lampiran.pengajuanHapus` + `lampiran.pengunggah` ikut dimuat karena
+        // kedua hal itu dibaca untuk SETIAP baris lampiran di view; tanpa eager
+        // load, halaman show dengan 10 berkas menjalankan 20 query tambahan.
+        $surat_masuk->load([
+            'primer', 'sekunder', 'tersier', 'petugas',
+            'lampiran.pengajuanHapus', 'lampiran.pengunggah',
+        ]);
 
         return view('surat-masuk.show', compact('surat_masuk'));
     }
