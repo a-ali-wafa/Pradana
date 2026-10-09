@@ -2,11 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Concerns\MenampilkanArsipGabungan;
 use App\Http\Requests\StoreSuratKeluarRequest;
 use App\Http\Requests\UpdateSuratKeluarRequest;
 use App\Models\KlasifikasiPrimer;
 use App\Models\SuratKeluar;
 use App\Services\NomorSuratKeluarGenerator;
+use App\Support\FilterArsip;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -24,16 +26,19 @@ use Illuminate\View\View;
  */
 class SuratKeluarController extends Controller
 {
+    use MenampilkanArsipGabungan;
+
     public function __construct(private readonly NomorSuratKeluarGenerator $nomorSurat)
     {
         $this->middleware('auth');
     }
 
     /**
-     * Daftar surat keluar dengan filter tahun, status arsip, klasifikasi primer,
-     * sifat, dan pencarian teks bebas. Pencarian menggali nomor, perihal,
-     * penerima/instansi, ringkasan, DAN isi surat di draf konten (L-15).
-     * `?sampah=1` (admin saja) menampilkan surat yang dihapus lunak.
+     * Daftar surat keluar. Filternya identik dengan daftar surat masuk (L-14)
+     * dan semuanya dikerjakan FilterArsip + SuratKeluar::scopeCari: nomor,
+     * perihal, penerima/instansi, ringkasan, ISI draf konten + tembusan, dan
+     * nama berkas lampiran (L-15). `?sampah=1` (admin saja) = surat terhapus,
+     * `?jenis=semua` = urutan gabungan masuk + keluar.
      */
     public function index(Request $request): View
     {
@@ -41,65 +46,38 @@ class SuratKeluarController extends Controller
 
         abort_unless(! $melihatSampah || $request->user()->isAdmin(), 403);
 
+        // Lihat SuratMasukController::index() — cabang gabungan punya perilaku
+        // yang sama dan memang sengaja dipakai dua halaman.
+        if (! $melihatSampah && FilterArsip::gabungan($request)) {
+            return $this->arsipGabungan($request, 'surat-keluar.index');
+        }
+
         $query = SuratKeluar::query()->with(['primer', 'sekunder', 'tersier', 'petugas']);
 
         if ($melihatSampah) {
             $query->onlyTrashed();
         }
 
-        if ($request->filled('tahun')) {
-            $query->whereYear('tanggal_surat', $request->integer('tahun'));
+        FilterArsip::terapkan($query, $request);
+
+        $cari = FilterArsip::cari($request);
+
+        if ($cari !== null) {
+            $query->palingRelevan($cari);
         }
 
-        if ($request->filled('status_arsip')) {
-            $query->where('status_arsip', $request->input('status_arsip'));
-        }
-
-        if ($request->filled('klasifikasi_primer_id')) {
-            $query->where('klasifikasi_primer_id', $request->integer('klasifikasi_primer_id'));
-        }
-
-        if ($request->filled('sifat')) {
-            $query->where('sifat', $request->input('sifat'));
-        }
-
-        if ($request->filled('cari')) {
-            $kataKunci = $request->input('cari');
-
-            // L-15: `isi_surat` di draf konten ikut digali lewat relasi, karena
-            // isi surat keluar tidak disimpan di tabel surat. Ini pengganti
-            // halaman /pencarian yang dihapus 5 Okt 2026.
-            $query->where(function ($q) use ($kataKunci) {
-                $q->where('perihal', 'like', "%{$kataKunci}%")
-                    ->orWhere('penerima', 'like', "%{$kataKunci}%")
-                    ->orWhere('instansi_penerima', 'like', "%{$kataKunci}%")
-                    ->orWhere('nomor_surat', 'like', "%{$kataKunci}%")
-                    ->orWhere('ringkasan', 'like', "%{$kataKunci}%")
-                    ->orWhereHas('drafKonten', function ($d) use ($kataKunci) {
-                        $d->where('isi_surat', 'like', "%{$kataKunci}%")
-                            ->orWhere('tembusan', 'like', "%{$kataKunci}%");
-                    });
-            });
-        }
-
-        $usang = $request->query('usang') === '1';
-
-        // L-04: hanya menampilkan daftar arsip lewat retensi 5 tahun; keputusan
-        // menonaktifkan tetap milik user (umur dihitung dari tanggal_surat, L-21).
-        if ($usang) {
-            $query->where('tanggal_surat', '<', now()->subYears(5));
-        }
-
-        $suratKeluar = $query->orderByDesc('tanggal_surat')
+        $arsip = $query->orderByDesc('tanggal_surat')
             ->orderByDesc('id')
             ->paginate(20)
             ->withQueryString();
 
         return view('surat-keluar.index', [
-            'suratKeluar' => $suratKeluar,
+            'arsip' => $arsip,
             'klasifikasiPrimer' => KlasifikasiPrimer::orderBy('kode')->get(),
             'melihatSampah' => $melihatSampah,
-            'usang' => $usang,
+            'usang' => FilterArsip::usang($request),
+            'cari' => $cari,
+            'gabung' => false,
         ]);
     }
 

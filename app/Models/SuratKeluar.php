@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Support\CariArsip;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasOne;
@@ -14,6 +16,25 @@ class SuratKeluar extends Model
     use SoftDeletes;
 
     protected $table = 'surat_keluar';
+
+    /**
+     * Kolom yang digali kotak "cari" (L-15). Isi surat keluar TIDAK ada di
+     * tabel ini — ia di `draf_konten_surat_keluar`, lihat RELASI_CARI.
+     */
+    private const KOLOM_CARI = [
+        'nomor_surat', 'perihal', 'penerima', 'jabatan_penerima', 'instansi_penerima',
+        'kota_tujuan', 'provinsi_tujuan', 'lokasi_fisik', 'ringkasan',
+    ];
+
+    /**
+     * `isi_surat` + `tembusan` (draf konten) dan `nama_file` (lampiran) ikut
+     * digali. Daftar ini dulu hidup dua kali di controller dengan isi sedikit
+     * berbeda; sekarang satu tempat.
+     */
+    private const RELASI_CARI = [
+        'drafKonten' => ['isi_surat', 'tembusan'],
+        'lampiran' => ['nama_file'],
+    ];
 
     protected $fillable = [
         'penerima', 'jabatan_penerima', 'instansi_penerima',
@@ -55,5 +76,26 @@ class SuratKeluar extends Model
     public function lampiran(): MorphMany
     {
         return $this->morphMany(Lampiran::class, 'lampiranable');
+    }
+
+    /**
+     * Satu-satunya jalur filter "cari" untuk surat keluar — dipakai daftar
+     * surat keluar dan mode gabungan "Semua arsip".
+     *
+     * @param  Builder<SuratKeluar>  $query
+     * @return Builder<SuratKeluar>
+     */
+    public function scopeCari(Builder $query, ?string $masukan): Builder
+    {
+        return CariArsip::terapkan($query, $masukan, self::KOLOM_CARI, self::RELASI_CARI);
+    }
+
+    /**
+     * @param  Builder<SuratKeluar>  $query
+     * @return Builder<SuratKeluar>
+     */
+    public function scopePalingRelevan(Builder $query, ?string $masukan): Builder
+    {
+        return CariArsip::peringkat($query, $masukan);
     }
 }

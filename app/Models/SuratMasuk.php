@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Support\CariArsip;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
@@ -15,6 +17,23 @@ class SuratMasuk extends Model
     use SoftDeletes;
 
     protected $table = 'surat_masuk';
+
+    /**
+     * Kolom yang digali kotak "cari" (L-15).
+     *
+     * `isi_hasil_baca` ikut sejak 9 Okt 2026: fitur baca otomatis isi lampiran
+     * (5 Okt 2026) menyimpan teks hasil baca PDF/DOCX/XLSX di kolom itu, tapi
+     * tidak ada satu pun query yang mencarinya — jadi isinya terbaca ke layar
+     * dan tetap tidak bisa ditemukan. `ringkasan` saja tidak cukup karena ia
+     * hanya berubah kalau user mencentang "jadikan ringkasan".
+     */
+    private const KOLOM_CARI = [
+        'nomor_surat', 'perihal', 'pengirim', 'jabatan_pengirim', 'instansi_pengirim',
+        'kota_asal', 'provinsi_asal', 'lokasi_fisik', 'ringkasan', 'isi_hasil_baca',
+    ];
+
+    /** Nama berkas lampiran ikut digali — orang mengingat "scan pembayaran", bukan nomornya. */
+    private const RELASI_CARI = ['lampiran' => ['nama_file']];
 
     protected $fillable = [
         'pengirim', 'jabatan_pengirim', 'instansi_pengirim',
@@ -62,5 +81,27 @@ class SuratMasuk extends Model
     public function lampiran(): MorphMany
     {
         return $this->morphMany(Lampiran::class, 'lampiranable');
+    }
+
+    /**
+     * Satu-satunya jalur filter "cari" untuk surat masuk. Dipakai daftar surat
+     * masuk dan mode gabungan "Semua arsip" supaya keduanya tidak bisa
+     * menyimpulkan sendiri (lihat header kelas App\Support\CariArsip).
+     *
+     * @param  Builder<SuratMasuk>  $query
+     * @return Builder<SuratMasuk>
+     */
+    public function scopeCari(Builder $query, ?string $masukan): Builder
+    {
+        return CariArsip::terapkan($query, $masukan, self::KOLOM_CARI, self::RELASI_CARI);
+    }
+
+    /**
+     * @param  Builder<SuratMasuk>  $query
+     * @return Builder<SuratMasuk>
+     */
+    public function scopePalingRelevan(Builder $query, ?string $masukan): Builder
+    {
+        return CariArsip::peringkat($query, $masukan);
     }
 }

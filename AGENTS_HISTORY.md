@@ -561,3 +561,42 @@ Permintaan user satu kalimat empat bagian ("tingkatkan PDF-nya ke standar perkan
 ### Catatan lingkungan
 
 `composer require smalot/pdfparser` butuh **±6,5 menit** untuk tahap `dump-autoload -o` di laptop user (classmap 44.295 kelas di bawah Windows/Defender). Perintah yang tampak "menggantung tanpa output" sebenarnya sedang dipotong timeout; akibatnya paket ada di disk + `installed.json` tapi TIDAK terdaftar di autoloader (`class_exists` false, `autoload_namespaces.php` kosong). Pemulihannya satu kali: `composer dump-autoload -o --no-scripts` dengan timeout panjang — bukan `composer install` berulang kali. Ini pengulangan jebakan yang sudah dicatat 4 Okt.
+
+## 13.9 Okt — Pencarian arsip dibenahi: multi-kata, isi lampiran tergali, peringkat relevansi, tab "Semua arsip" (9 Okt 2026)
+
+Permintaan user: "berikan aku plan peningkatan project ini, misal search engine optimization dan lain lain". Dua hal diluruskan sebelum kode ditulis: (1) SEO klasik **bukan** target — aplikasi ini arsip kantor di belakang login, membuatnya ter-index Google justru melanggar L-01; yang benar adalah anti-indexing (`public/robots.txt` bawaan Laravel isinya `Disallow:` kosong = boleh crawl), dan itu **belum dikerjakan** (masuk track keamanan, belum dieksekusi). (2) "search engine" yang bisa dioptimasi adalah pencarian arsip di dalam aplikasi. User memilih **Track 1a+1b** dan memutuskan **FULLTEXT ditahan** ("Tahan LIKE dulu, FULLTEXT nanti") → keputusan S11 tidak direvisi, **tidak ada migration baru sama sekali**.
+
+### File dibuat / diubah
+
+| File | Status | Keterangan |
+|---|---|---|
+| `app/Support/CariArsip.php` | **Baru** | Split kata (maks 8, tiap kata maks 60 char), escape LIKE, `terapkan()` (OR antar kolom + `whereHas`, AND antar kata), `peringkat()`/`ekspresiSkor()` (CASE 4 tier), `sorot()` (escape dulu, baru `<mark>`). |
+| `app/Support/FilterArsip.php` | **Baru** | Isi kotak filter satu sumber (L-14): cari, sifat, klasifikasi primer, status arsip, tahun (interval terbuka), usang + `gabungan()` penanda `?jenis=semua`. |
+| `app/Services/DaftarArsipGabungan.php` | **Baru** | Kerangka UNION (id, jenis, tanggal_surat, skor) + `LengthAwarePaginator` 20/halaman, model + relasi dimuat hanya untuk baris halaman itu. Pola diwarisi dari `PencarianController` lama (git `b244cff~1`). |
+| `app/Http/Controllers/Concerns/MenampilkanArsipGabungan.php` | **Baru** | Cabang `?jenis=semua` dipakai dua controller — menyalinnya dua kali adalah sumber perbedaan perilaku yang sudah terbukti di project ini. |
+| `app/Models/SuratMasuk.php`, `SuratKeluar.php` | **Diubah** | `scopeCari()` + `scopePalingRelevan()`, daftar kolom & relasi pencarian jadi konstanta di model. `isi_hasil_baca` masuk daftar — kolomnya sudah ada sejak 5 Okt tapi tidak pernah dicari. |
+| `app/Http/Controllers/SuratMasukController.php`, `SuratKeluarController.php` | **Diubah** | `index()` tinggal `FilterArsip::terapkan()` + `palingRelevan()`; blok filter tersalin (~50 baris per controller) dibuang; `whereYear` → interval terbuka. |
+| `resources/views/partials/tab-arsip.blade.php` | **Baru** | Surat Masuk / Surat Keluar / **Semua arsip**. Tab ketiga cuma menambah `?jenis=semua` di halaman asal — **tidak ada route baru**, lihat L-15. |
+| `resources/views/partials/daftar-gabung.blade.php` | **Baru** | Tabel gabungan; sengaja tidak ada tombol Nyahkan/destroy di sini (aksi destruktif butuh halaman suratnya, L-05). |
+| `resources/views/surat-masuk/index.blade.php`, `surat-keluar/index.blade.php` | **Diubah** | `$suratMasuk`/`$suratKeluar` → `$arsip`; +tab; hidden `jenis` di form filter (supaya filter tidak diam-diam mengeluarkan user dari mode gabungan); `<mark>` di nomor/pengirim-penerima/perihal; teks bantuan filter ditulis ulang. |
+| `tests/Feature/CariArsipTest.php` | **Baru** | 25 tes SQLite. Helper `nomorDiLayar()` mengambil nomor dari tautan detail, bukan seluruh HTML, supaya `assertNotContains` tidak lolos kena teks lain. |
+| `tests/Feature/CariArsipMariaDbTest.php` | **Baru** | 10 tes di MariaDB asli (`mysql_test_a`), skip dengan pesan jelas kalau XAMPP mati. Membersihkan barisnya sendiri: `PENANDA='MJT'`, klasifikasi `ZC`. |
+| `docs/manual-pemakaian.md` | **Diubah** | Bagian 7 ditulis ulang: multi-kata, yang paling mirip dulu, tab Semua arsip, `%`/`_` huruf biasa, trik "kurangi kata". |
+| `AGENTS.md` | **Diubah** | Header tanggal; Bagian 3 "Perubahan 9 Okt" + jumlah tes 123 → 158; baris L-15 diperluas. |
+
+### Bug nyata yang ditemukan (dua-duanya lewat tes, bukan lewat membaca kode)
+
+- **`orWhereHas()` menempel OR ke constraint relasi.** `whereHas('drafKonten', fn ($d) => $d->where('isi_surat', $like)->orWhere('tembusan', $like))` memberi `WHERE fk = surat.id AND isi_surat LIKE ? OR tembusan LIKE ?`; AND menang, jadi `tembusan LIKE ?` berdiri sendiri dan satu baris draf milik surat lain membuat SEMUA surat cocok. Lampiran punya lubang yang sama (`... type = ? OR nama_file LIKE ?`). Ini **cacat kode lama** (5 Okt) yang tidak kelihatan sampai ada tes dengan dua surat dan hanya satu berdraf. Perbaikan: bungkus `$rel->where(fn ($d) => ...)` di dalam callback relasi.
+- **Kolom `date` disimpan beda oleh dua engine.** Eloquent menulis cast `date` pakai format `Y-m-d H:i:s`. MariaDB (kolom DATE) memotong jam; SQLite menyimpan string utuh. Jadi `whereBetween('tanggal_surat', ['2026-01-01','2026-12-31'])` **membuang surat tertanggal 31 Desember di SQLite saja** — persis di engine tempat suite berjalan. Yang menangkap: tes yang membandingkan hasil baru dengan `whereYear` lama. Solusi: interval setengah terbuka `>= 1 Jan` dan `< 1 Jan tahun depan`, benar di dua engine dan tetap memakai index `tanggal_surat`.
+
+### Keputusan yang diambil agent ([DEFAULT-agent], boleh direvisi tanpa tanya user)
+
+- **Karakter escape LIKE = `!`, bukan `\`.** Satu-satunya pilihan yang sintaksnya identik di MariaDB dan SQLite: `ESCAPE '\'` dimakan parser stringliteral MariaDB, `'\\'` di SQLite berarti dua karakter dan ESCAPE menuntut satu. Ditulis di kepala kelas `CariArsip` supaya tidak "dirapikan" jadi `\` oleh orang/kemudian hari.
+- **Mode gabungan tidak dapat route sendiri**, dan `?sampah=1` selalu menang atasnya: tempat sampah memang per-jenis, dan tombol Pulihkan dari daftar campuran tidak jelas arahnya.
+- **Peringkat relevansi cuma 4 tier berbasis CASE**, tanpa bobot TF/IDF: tujuannya "nomor yang orang ketik muncul pertama", bukan mesin peringkat. Naik level = pindah FULLTEXT, itu keputusan user.
+- **`provinsi_*`, `kota_*`, `lokasi_fisik` ikut digali** — pencarian rak/box fisik adalah pemakaian nyata arsip desa, biayanya cuma beberapa `LIKE` tambahan.
+- **Daftar gabungan sengaja tidak punya tombol aksi** (Nyahkan/hapus/status arsip); hanya Detail. Menyatukan tombol per-jenis ke satu baris butuh logika otorisasi dua tabel di satu loop — tidak sepadan untuk kenyamanan kecil.
+
+### Catatan lingkungan
+
+Sesuite **158 passed, 0 skipped** hanya tercapai saat MariaDB hidup: `CariArsipMariaDbTest` (10) + `NomorSuratKeluarTest` (3) memakai koneksi `mysql_test_a`/`mysql_test_b` (`DB_TEST_DATABASE`, default `pradana_test`) dan di-skip dengan pesan kalau XAMPP mati — skip itu bukan kegagalan, tapi berarti bukti portabilitasnya belum ada. `Pint` 156 file lolos; `Larastan` level 5 bersih **tanpa menambah `phpstan-baseline.neon`** (`@template TModel of Model` untuk `Builder`, `self::` untuk method private, `Collection<int, \stdClass>`).

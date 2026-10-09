@@ -109,14 +109,22 @@ Yang perlu diketahui pemakai:
 
 Menu **Pencarian Arsip** sudah tidak ada sejak 5 Okt 2026 — pencariannya pindah ke tempat orang memang mencarinya: kotak **Cari** di halaman **Surat Masuk** dan di halaman **Surat Keluar**.
 
-Kotak itu menggali **nomor surat, perihal, pengirim atau penerima, instansi, ringkasan, dan isi surat keluar** (termasuk isi draf yang diketik di halaman draf). Jadi cukup mengetik potongan kata, misalnya `irigasi`, tanpa perlu hafal nomornya.
+Kotak itu menggali **nomor surat, perihal, pengirim atau penerima, instansi, kota, lokasi berkas fisik, ringkasan, isi draf surat keluar beserta tembusannya, teks hasil baca lampiran, dan nama berkas lampiran**. Jadi cukup mengetik potongan kata, misalnya `irigasi`, tanpa perlu hafal nomornya.
 
-Samping kotak ada saringan yang bekerja bersama kata kunci: **tahun, sifat, status arsip, klasifikasi primer**. Hasil ditampilkan **20 per halaman**; kosongkan kotak untuk melihat semua.
+Sejak 9 Okt 2026, mengetik **beberapa kata sekaligus** juga berfungsi: setiap kata harus ditemukan, tapi **tidak harus berurutan dan boleh berada di kolom berbeda**. Contohnya `koperasi 2026` tetap menemukan surat yang perihalnya menyebut "koperasi" dan ringkasannya menyebut "2026". Sebelum ini kalimat semacam itu harus ada persis utuh, jadi sering memberi hasil kosong.
+
+Dua hal lain yang perlu diketahui:
+
+- **Yang paling mirip tampil paling atas.** Kalau kata kunci berupa nomor (misalnya `471`), surat yang nomornya cocok didahulukan, walau ada surat lebih baru yang cuma menyebut angka itu di dalam isi.
+- **Tab "Semua arsip"** ada di atas daftar: Surat Masuk | Surat Keluar | Semua arsip. Pakai tab ini kalau lupa apakah suratnya masuk atau keluar — kedua jenis digabung dalam satu urutan, dan kata kunci ikut terbawa saat pindah tab. Ini bukan halaman pencarian baru, hanya mode di dalam halaman yang sedang dibuka.
+
+Samping kotak ada saringan yang bekerja bersama kata kunci: **tahun, sifat, status arsip, klasifikasi primer**. Hasil ditampilkan **20 per halaman**; kosongkan kotak untuk melihat semua. Kata yang ditemukan ditandai berblok kuning di daftar, jadi kelihatan kenapa surat itu muncul.
 
 Sedikit trik yang berguna:
 
 - Surat yang sedang di **tempat sampah** tidak muncul di pencarian. Untuk itu, buka daftar surat lalu centang/tekan penyaring tempat sampah (khusus admin).
-- Kalau kata kunci panjang (satu kalimat) tidak ketemu, coba potongan yang lebih pendek — sistem mencari teks persis, bukan sinonim.
+- Kalau tidak ketemu, **kurangi jumlahnya**, jangan tambah. Tiga kata sekaligus jarang muncul di satu surat. Sistem juga mencari teks, bukan sinonim: `surat jalan` tidak akan menemukan `permisi berjalan`.
+- Tanda `%` dan `_` dianggap huruf biasa, bukan karakter khusus. Jadi `scan_pembayaran` menemukan berkas `scan_pembayaran.pdf` dan tidak ikut menarik nama lain yang mirip.
 - Isi surat masuk yang berasal dari lampiran terbaca hanya kalau lampirannya PDF/DOCX/XLSX (lihat bagian 6). Foto/hasil scan tidak ikut ketemu karena isinya belum terbaca sistem.
 
 ---

@@ -1,5 +1,11 @@
 @extends('layouts.app')
 
+@php
+    use App\Support\CariArsip;
+    /* sorot() men-escape teks dulu baru menyisipkan <mark> — lihat partial
+       partials/daftar-gabung.blade.php. `{!! !!}` di halaman ini hanya untuk itu. */
+@endphp
+
 @section('title', 'Surat Keluar - PRADANA')
 @section('page-title', 'Surat Keluar')
 
@@ -20,14 +26,16 @@
 <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
         <h4 class="fw-bold mb-1">
-            <i class="fas fa-{{ $melihatSampah ? 'trash' : 'paper-plane' }} me-2 text-{{ $melihatSampah ? 'danger' : 'primary' }}"></i>
-            {{ $melihatSampah ? 'Tempat Sampah Surat Keluar' : 'Daftar Surat Keluar' }}
+            <i class="fas fa-{{ $melihatSampah ? 'trash' : ($gabung ? 'layer-group' : 'paper-plane') }} me-2 text-{{ $melihatSampah ? 'danger' : 'primary' }}"></i>
+            {{ $melihatSampah ? 'Tempat Sampah Surat Keluar' : ($gabung ? 'Semua Arsip' : 'Daftar Surat Keluar') }}
         </h4>
         <p class="text-secondary small mb-0">
             @if($melihatSampah)
-                {{ $suratKeluar->total() }} surat dihapus lunak — belum dimusnahkan, masih bisa dipulihkan.
+                {{ $arsip->total() }} surat dihapus lunak — belum dimusnahkan, masih bisa dipulihkan.
+            @elseif($gabung)
+                {{ $arsip->total() }} surat cocok (surat masuk + surat keluar jadi satu urutan).
             @else
-                Total {{ $suratKeluar->total() }} surat terdaftar
+                Total {{ $arsip->total() }} surat terdaftar
             @endif
         </p>
     </div>
@@ -39,7 +47,7 @@
                 {{ $melihatSampah ? 'Kembali ke arsip' : 'Tempat sampah' }}
             </a>
         @endif
-        @if(! $melihatSampah)
+        @if(! $melihatSampah && ! $gabung)
             <a href="{{ route('surat-keluar.create') }}" class="btn btn-primary rounded-pill px-4">
                 <i class="fas fa-plus me-1"></i> Tambah Surat Keluar
             </a>
@@ -47,16 +55,29 @@
     </div>
 </div>
 
+{{-- Tab Surat Masuk | Surat Keluar | Semua arsip — tanpa route baru. --}}
+@if(! $melihatSampah)
+    @include('partials.tab-arsip', ['aktif' => $gabung ? 'semua' : 'keluar', 'routeAsal' => 'surat-keluar.index'])
+@endif
+
 {{-- Filter --}}
 @if(! $melihatSampah)
 <div class="card mb-4">
     <div class="card-body">
         <form method="GET" action="{{ route('surat-keluar.index') }}" class="row g-2 align-items-end">
+            {{-- Filter tidak boleh diam-diam mengeluarkan user dari tab "Semua arsip". --}}
+            @if($gabung)
+                <input type="hidden" name="jenis" value="semua">
+            @endif
             <div class="col-md-3">
                 <label class="form-label small fw-bold text-secondary mb-1">Cari Nomor / Perihal / Penerima / Isi</label>
                 <input type="text" name="cari" class="form-control"
                        placeholder="Ketik kata kunci..." value="{{ request('cari') }}">
-                <div class="form-text">Pencarian ikut menggali <strong>isi surat di draf konten</strong> (L-15), bukan cuma nomor &amp; perihal.</div>
+                <div class="form-text">
+                    Tiap kata harus cocok (boleh di kolom berbeda), tidak harus berurutan.
+                    Yang digali: nomor, perihal, penerima/instansi, <strong>ringkasan</strong>,
+                    <strong>isi surat &amp; tembusan di draf konten</strong>, dan nama berkas lampiran (L-15).
+                </div>
             </div>
             <div class="col-md-2">
                 <label class="form-label small fw-bold text-secondary mb-1">Tahun</label>
@@ -118,13 +139,16 @@
 @endif
 
 {{-- Tabel --}}
+@if($gabung)
+    @include('partials.daftar-gabung')
+@else
 <div class="card">
     <div class="card-header d-flex justify-content-between align-items-center">
-        <span><i class="fas fa-table me-2"></i>{{ $melihatSampah ? 'Tempat Sampah' : 'Hasil Pencarian' }}</span>
-        <span class="badge bg-primary rounded-pill">{{ $suratKeluar->count() }} dari {{ $suratKeluar->total() }}</span>
+        <span><i class="fas fa-table me-2"></i>{{ $melihatSampah ? 'Tempat Sampah' : ($cari ? 'Hasil Pencarian' : 'Daftar Surat') }}</span>
+        <span class="badge bg-primary rounded-pill">{{ $arsip->count() }} dari {{ $arsip->total() }}</span>
     </div>
     <div class="card-body p-0">
-        @if($suratKeluar->isEmpty())
+        @if($arsip->isEmpty())
             <div class="text-center py-5 text-secondary">
                 <i class="fas fa-{{ $melihatSampah ? 'trash' : 'paper-plane' }} fa-3x mb-3 opacity-25"></i>
                 <p class="mb-0">
@@ -154,7 +178,7 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @foreach($suratKeluar as $surat)
+                        @foreach($arsip as $surat)
                         <tr>
                             <td class="ps-4 text-secondary small">
                                 {{ \Carbon\Carbon::parse($surat->tanggal_surat)->format('d M Y') }}
@@ -162,17 +186,17 @@
                             <td>
                                 <a href="{{ route('surat-keluar.show', $surat) }}"
                                    class="fw-semibold text-decoration-none text-primary">
-                                    {{ $surat->nomor_surat }}
+                                    {!! CariArsip::sorot($surat->nomor_surat, $cari) !!}
                                 </a>
                             </td>
                             <td>
-                                <div class="fw-semibold">{{ $surat->penerima }}</div>
+                                <div class="fw-semibold">{!! CariArsip::sorot($surat->penerima, $cari) !!}</div>
                                 @if($surat->instansi_penerima)
-                                    <div class="small text-secondary">{{ $surat->instansi_penerima }}</div>
+                                    <div class="small text-secondary">{!! CariArsip::sorot($surat->instansi_penerima, $cari) !!}</div>
                                 @endif
                             </td>
                             <td>
-                                <div>{{ Str::limit($surat->perihal, 55) }}</div>
+                                <div>{!! CariArsip::sorot(Str::limit($surat->perihal, 55), $cari) !!}</div>
                                 @if($surat->primer)
                                     <span class="badge text-bg-light border small">
                                         {{ $surat->primer->kode }}
@@ -245,14 +269,15 @@
             {{-- Pagination --}}
             <div class="px-4 py-3 border-top d-flex justify-content-between align-items-center">
                 <div class="text-secondary small">
-                    Menampilkan {{ $suratKeluar->firstItem() }}–{{ $suratKeluar->lastItem() }}
-                    dari {{ $suratKeluar->total() }} surat
+                    Menampilkan {{ $arsip->firstItem() }}–{{ $arsip->lastItem() }}
+                    dari {{ $arsip->total() }} surat
                 </div>
-                {{ $suratKeluar->withQueryString()->links('pagination::bootstrap-5') }}
+                {{ $arsip->withQueryString()->links('pagination::bootstrap-5') }}
             </div>
         @endif
     </div>
 </div>
+@endif
 
 @endsection
 
