@@ -3,11 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Http\Controllers\Concerns\MenampilkanArsipGabungan;
+use App\Http\Controllers\Concerns\MengelolaArsipSurat;
 use App\Http\Requests\StoreSuratMasukRequest;
 use App\Http\Requests\UpdateIsiSuratMasukRequest;
 use App\Http\Requests\UpdateStatusArsipRequest;
 use App\Http\Requests\UpdateSuratMasukRequest;
-use App\Models\KlasifikasiPrimer;
 use App\Models\SuratMasuk;
 use App\Support\FilterArsip;
 use Illuminate\Http\RedirectResponse;
@@ -25,6 +25,7 @@ use Illuminate\View\View;
 class SuratMasukController extends Controller
 {
     use MenampilkanArsipGabungan;
+    use MengelolaArsipSurat;
 
     public function __construct()
     {
@@ -47,46 +48,37 @@ class SuratMasukController extends Controller
             return $this->arsipGabungan($request, 'surat-masuk.index');
         }
 
-        $query = SuratMasuk::query()->with(['primer', 'sekunder', 'tersier', 'petugas']);
+        $arsip = SuratMasuk::query()->with(['primer', 'sekunder', 'tersier', 'petugas']);
 
         if ($melihatSampah) {
-            $query->onlyTrashed();
+            $arsip->onlyTrashed();
         }
 
         // Isi filter tidak lagi ditulis di sini: FilterArsip dipakai bersama oleh
         // daftar masuk, daftar keluar, dan mode gabungan, supaya ketiganya tidak
         // bisa berbeda kesimpulan (L-14). Pencarian ikut menggali `ringkasan`
         // DAN teks hasil baca lampiran (`isi_hasil_baca`) + nama berkasnya (L-15).
-        FilterArsip::terapkan($query, $request);
+        FilterArsip::terapkan($arsip, $request);
 
         $cari = FilterArsip::cari($request);
 
         // Nomor surat yang cocok persis didahulukan; urutan tanggal yang lama
-        // tetap berlaku sebagai pemecah seri.
+        // tetap berlaku sebagai pemecah seri. Scope ini sengaja dipakai di sini,
+        // bukan di dalam helper bersama: `$arsip` masih bertipe konkret
+        // Builder<SuratMasuk>, dan di dalam trait helper itu akan menjadi
+        // Builder<Model> yang tidak mengenal scope sendiri.
         if ($cari !== null) {
-            $query->palingRelevan($cari);
+            $arsip->palingRelevan($cari);
         }
 
-        $arsip = $query->orderByDesc('tanggal_diterima')
-            ->orderByDesc('id')
-            ->paginate(20)
-            ->withQueryString();
-
-        return view('surat-masuk.index', [
-            'arsip' => $arsip,
-            'klasifikasiPrimer' => KlasifikasiPrimer::orderBy('kode')->get(),
-            'melihatSampah' => $melihatSampah,
-            'usang' => FilterArsip::usang($request),
-            'cari' => $cari,
-            'gabung' => false,
-        ]);
+        return $this->daftarArsip($request, $arsip, 'surat-masuk', 'tanggal_diterima', $melihatSampah);
     }
 
     public function create(): View
     {
-        $klasifikasiPrimer = KlasifikasiPrimer::with('sekunder.tersier')->orderBy('kode')->get();
-
-        return view('surat-masuk.create', compact('klasifikasiPrimer'));
+        return view('surat-masuk.create', [
+            'klasifikasiPrimer' => $this->pohonKlasifikasi(),
+        ]);
     }
 
     public function store(StoreSuratMasukRequest $request): RedirectResponse
@@ -120,11 +112,9 @@ class SuratMasukController extends Controller
 
     public function edit(SuratMasuk $surat_masuk): View
     {
-        $klasifikasiPrimer = KlasifikasiPrimer::with('sekunder.tersier')->orderBy('kode')->get();
-
         return view('surat-masuk.edit', [
             'suratMasuk' => $surat_masuk,
-            'klasifikasiPrimer' => $klasifikasiPrimer,
+            'klasifikasiPrimer' => $this->pohonKlasifikasi(),
         ]);
     }
 
@@ -180,53 +170,30 @@ class SuratMasukController extends Controller
     }
 
     /**
-     * L-05: hapus = soft delete, dan hanya admin (L-07). Baris + lampiran +
-     * file fisiknya tetap utuh supaya bisa dipulihkan lewat `restore()`.
+     * L-05: hapus = soft delete, dan hanya admin (L-07). Baris, lampiran, dan
+     * file fisiknya tetap ada supaya bisa dipulihkan; pemusnahan sungguhan hanya
+     * lewat modul Pemusnahan Arsip + Berita Acara (L-06).
      */
     public function destroy(Request $request, SuratMasuk $surat_masuk): RedirectResponse
     {
-        abort_unless(
-            $request->user()->isAdmin(),
-            403,
-            'Hanya admin yang boleh menghapus arsip surat.'
+        return $this->buangArsip(
+            $request,
+            $surat_masuk,
+            'surat-masuk',
+            'Surat masuk dipindahkan ke tempat sampah (masih bisa dipulihkan).',
+            'Hanya admin yang boleh menghapus arsip surat.',
         );
-
-        // L-05: ini soft delete — UPDATE kolom `deleted_at`, bukan DELETE baris.
-        // Karena itu TIDAK dibungkus catch(QueryException): bentuk lama menjanjikan
-        // "tidak bisa dihapus karena masih direferensikan data lain", padahal FK
-        // restrict tidak pernah tersentuh oleh soft delete — pesan itu tidak bisa
-        // muncul, dan kalau muncul berarti kesalahan lain yang justru jadi tersamar.
-        // SuratKeluarController::destroy() memang sudah tidak punya catch begitu.
-        //
-        // Baris, lampiran, dan file fisiknya tetap ada dan bisa dipulihkan admin.
-        // Pemusnahan sungguhan hanya lewat modul Pemusnahan Arsip (Berita Acara).
-        $surat_masuk->delete();
-
-        return redirect()
-            ->route('surat-masuk.index')
-            ->with('success', 'Surat masuk dipindahkan ke tempat sampah (masih bisa dipulihkan).');
     }
 
     /**
-     * L-19 / E8+E9: men-nyahkan arsip = status_arsip jadi "inaktif".
-     * Tersedia untuk semua user login (arsip kantor, tanpa kepemilikan),
-     * dan tiap perubahan tercatat otomatis lewat observer.
-     *
-     * Aturannya hidup di `UpdateStatusArsipRequest` — sama seperti jalur surat
-     * keluar. Kunci flash SENGAJA 'success': dulu kedua salinan method ini menulis
-     * 'status' yang tidak dirender layout, sehingga aksi terlihat gagal padahal
-     * sudah tersimpan (dikunci FlashKonsistenTest).
+     * L-19 / E8+E9: men-nyahkan arsip = status_arsip jadi "inaktif". Semua user
+     * login boleh (L-08: arsip kantor, tanpa kepemilikan) dan observer mencatat
+     * perubahannya. Aturannya di `UpdateStatusArsipRequest`, kunci flash 'success'
+     * — sejarah bug-nya di trait `MengelolaArsipSurat`.
      */
     public function updateStatusArsip(UpdateStatusArsipRequest $request, SuratMasuk $surat_masuk): RedirectResponse
     {
-        $surat_masuk->update($request->validated());
-
-        return back()->with(
-            'success',
-            $request->dinonaktifkan()
-                ? 'Surat masuk dinonaktifkan sebagai arsip aktif.'
-                : 'Surat masuk diaktifkan kembali.'
-        );
+        return $this->ubahStatusArsip($request, $surat_masuk, 'Surat masuk');
     }
 
     /**
@@ -236,13 +203,11 @@ class SuratMasukController extends Controller
      */
     public function restore(Request $request, int $suratMasuk): RedirectResponse
     {
-        abort_unless($request->user()->isAdmin(), 403, 'Hanya admin yang bisa memulihkan arsip.');
-
-        $surat = SuratMasuk::withTrashed()->findOrFail($suratMasuk);
-        $surat->restore();
-
-        return redirect()
-            ->route('surat-masuk.show', $surat)
-            ->with('success', 'Surat masuk dipulihkan dari tempat sampah.');
+        return $this->pulihkanArsip(
+            $request,
+            SuratMasuk::withTrashed()->findOrFail($suratMasuk),
+            'surat-masuk',
+            'Surat masuk',
+        );
     }
 }

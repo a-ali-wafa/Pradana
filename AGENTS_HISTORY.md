@@ -842,6 +842,84 @@ hard-coded di JS pratinjau kop (kosmetik, layar sudah diverifikasi mata 5 Okt).
 Verifikasi: **207 passed / 0 skipped** (824 assertion), `Pint` 173 file, `Larastan` bersih,
 baseline tetap 5.
 
+### Perapian kode & alur data — Fase 7 (9 Okt 2026, dependency + deduplikasi + layar)
+
+Tiga hal yang sebelumnya dipisah sekarang dikerjakan setelah user menyetujui eksplisit
+("kerjakan sekarang" untuk composer; "dedup + jaga baseline tetap 5" untuk controller;
+"Ya, jalankan & verifikasi" untuk dev server).
+
+**Dependency.** `laravel/sail` keluar; `nunomaduro/larastan` → `larastan/larastan` v3.13.0
+(dari itu ikut `phpstan/phpstan` 2.2.16 → 2.3.1 dan `iamcal/sql-parser`; `vendor/nunomaduro/`
+kini hanya berisi collision + termwind). Urutan perintah supaya autoloader tidak dibongkar dua
+kali: `composer remove --dev ... --no-scripts --no-install` (5,5 s) → `composer require --dev
+"larastan/larastan:^3.12" --no-scripts --no-install` (6,5 s) → satu `composer install`.
+Yang terakhir ini makan **51 menit 10 detik** — jauh di atas catatan lama "dump-autoload ±6,5
+menit", karena install harus menulis ulang paket + classmap di disk Windows, bukan cuma dump.
+`phpstan.neon` ikut diubah (include `vendor/larastan/larastan/extension.neon`) + komentarnya
+diperbarui (dulu menyebut "29 temuan", padahal baseline sudah menyusut ke 5).
+Gejala kalau include tidak diganti: `Invalid configuration: Service 'sqlParser': Class or
+interface 'Larastan\Larastan\SQL\SqlParser' not found` — dan menghapus cache phpstan di temp
+TIDAK menolong, karena yang salah adalah path include, bukan hasil analisis yang basi.
+`composer validate` tetap "valid"; `laravel/pint` tidak tersentuh perubahannya.
+
+**Deduplikasi.** Trait baru `Concerns/MengelolaArsipSurat` (daftar + paginasi + susun data view,
+pohon klasifikasi, "Nyahkan", soft delete, restore) dipakai `SuratMasukController` (247 → 213
+baris) dan `SuratKeluarController` (221 → 196); trait baru `Concerns/MengelolaKlasifikasi`
+(daftar, redirect+flash, hapus dengan catch FK) dipakai tiga controller klasifikasi.
+Yang SENGAJA tinggal di controller: kelas model, relasi eager load per tingkat, nama view,
+kolom urut (`tanggal_diterima` vs `tanggal_surat`), dan kalimat flash yang menyebut nomor surat.
+
+Dua penemuan tipe yang tidak bisa ditebak dari kode:
+1. Helper dengan param `Model` polos langsung menghasilkan dua error nyata
+   `Call to an undefined method Illuminate\Database\Eloquent\Model::restore()` — `restore()`
+   datang dari trait `SoftDeletes`. Diperbaiki dengan union `SuratMasuk|SuratKeluar` pada param
+   model (dan itu memang pernyataan yang benar: helper ini khusus dua model arsip), bukan lewat
+   baseline. `daftarArsip()` memakai `@template TModel of Model`; scope `palingRelevan` dan
+   `onlyTrashed` sengaja ditinggal di controller karena pada `Builder<Model>` Larastan tidak
+   mengenalinya — itu persis sebab pola `@template` yang sama sudah dipakai sejak Fase 1.
+2. Menyatukan kode TIDAK menyatukan laporan PHPStan: error dalam trait dilaporkan *"in context of
+   class"* pemakainya, jadi tiga entri `dead catch` controller klasifikasi tetap tiga. Karena itu
+   `--generate-baseline` dijalankan dan hasilnya dibandingkan: **byte-identik** dengan baseline
+   sebelumnya (`diff -q` lolos) — jadi "baseline 5" kali ini berarti, bukan kebetulan.
+   (Bug kecil yang dibuat dan ditangkap sendiri pada tahap ini: trait ditulis dengan
+   `use App\Models\Model;` yang salah — yang benar `Illuminate\Database\Eloquent\Model` —
+   dan PHPStan langsung memberi 26 error tipe `argument.type`. Fiksanya satu baris impor.)
+
+**Tes.** `grep route('klasifikasi-` di `tests/` = **nol** hasil: tiga controller itu akan
+direfactor tanpa jaring sama sekali. Ditulis `KlasifikasiCrudTest` (5 tes): daftar urut `kode`
+dibaca dari urutan badge kode di HTML tabel (bukan dari query), `store`/`update`/`destroy`
+menulis flash pada kunci yang dirender layout + redirect ke index tingkatnya, `destroy` pada kode
+yang masih dipakai surat TIDAK menghapus baris dan memberi pesan ramah — bukti hidup bahwa
+`catch (QueryException)` bukan dead code (SQLite menegakkan FK karena `foreign_key_constraints`
+= true), staf boleh membaca tapi 403 saat mutasi, dan unique kode berlaku per induk (kode sama di
+bawah induk berbeda diterima). Ditambah `SuratTempatSampahTest::test_surat_keluar_mengikuti_jalur_
+nyahkan_yang_sama_dan_memberi_konfirmasi` untuk jalur kedua trait (asserts `session('success')`
+berisi kalimat "dinonaktifkan sebagai arsip aktif" dan muncul di HTML halaman show keluar).
+Tiga kesalahan fixture/asersi milik sendiri ditangkap suite sebelum commit: mengharapkan baris
+dari tes lain (`RefreshDatabase` memisahkan tiap tes), loop yang menuntut string dua tingkat pada
+satu halaman, dan `url()->previous()` yang mengembalikan 404 di tes.
+
+**Verifikasi layar (dev server diizinkan).** `php artisan serve` dijalankan di 127.0.0.1:8000.
+Login lewat Browser Connector TIDAK berhasil tiga kali: field terisi, tidak ada error ter-render,
+halaman tetap `/login` — sedangkan POST kredensial yang sama lewat `curl` menghasilkan
+`302 → /dashboard`, jadi ini kegagalan otomasi browser, bukan aplikasi; aku catat apa adanya dan
+melanjutkan verifikasi lewat HTTP nyata ke server yang sama (kode render yang diuji identik).
+Yang dibuktikan di HTML sungguhan: flash "Surat masuk berhasil ditambahkan." tampil sesudah
+store; `UJI-DEDUP-1` muncul di daftar (jalur `daftarArsip`); halaman show terisi; **PATCH
+status-arsip → kalimat "Surat masuk dinonaktifkan sebagai arsip aktif." benar-benar ada di
+respons** — ini konfirmasi ujung-ke-ujung perbaikan bug Fase 6 melalui trait baru, yang sebelumnya
+mustahil terlihat karena suite hanya mengecek data, bukan jawaban layar; "Aktifkan Kembali" muncul
+lagi; soft delete → tempat sampah (`?sampah=1`) → pulihkan, tiga-tiganya memberi flash yang
+terbaca; `/klasifikasi-primer`, `-sekunder`, `-tersier`, `/surat-keluar`, `/surat-keluar/create`,
+`/aktivitas`, `/laporan`, `/dashboard` semuanya 200 dengan layout utuh.
+Artefak dibuang (`UJI-DEDUP-1` di-`forceDelete` + 10 baris `aktivitas` yang merujuknya);
+`pradana` kembali seperti saat diterima: 0 surat masuk, 1 surat keluar milik user
+(`001/02.01.01/X/2026`), 3 baris log, 3 user, 2 klasifikasi primer. Skrip sekali-pakai dihapus,
+dev server dihentikan.
+
+Gerbang akhir: **213 passed / 0 skipped** (871 assertion) · `Pint` 176 file · `Larastan` [OK] No
+errors · baseline 5 entri (identik dengan sebelum).
+
 ### Catatan lingkungan
 
 Sesuite **206 passed, 0 skipped** hanya tercapai saat MariaDB hidup: `CariArsipMariaDbTest` (10) + `AgregatMariaDbTest` (2) + `UrutAktivitasMariaDbTest` (1) + `NomorSuratKeluarTest` (3) memakai koneksi `mysql_test_a`/`mysql_test_b` (`DB_TEST_DATABASE`, default `pradana_test`) dan di-skip dengan pesan kalau XAMPP mati — skip itu bukan kegagalan, tapi berarti bukti portabilitasnya belum ada. `Pint` 172 file lolos sejak Fase 5 (169 setelah Fase 4 membuang tiga file PHP boilerplate; 172 sekarang karena dua file tes baru + satu migration); `Larastan` level 5 bersih dengan baseline menyusut **26 → 5** (return type generik di 31 method relasi + `@property-read $lampiran_count` + `self::` untuk method private + delegasi umur arsip ke model bertipe konkret + catch yang ternyata tidak pernah bisa terjadi dibuang). Dev server tidak dijalankan untuk fase-fase perapian ini — verifikasinya lewat HTTP di dalam suite (feature test) dan di MariaDB asli, bukan lewat browser.

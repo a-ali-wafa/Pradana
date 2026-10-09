@@ -96,6 +96,56 @@ class SuratTempatSampahTest extends TestCase
             ->assertSessionHasErrors('status_arsip');
     }
 
+    public function test_surat_keluar_mengikuti_jalur_nyahkan_yang_sama_dan_memberi_konfirmasi(): void
+    {
+        // Trait `MengelolaArsipSurat` sekarang melayani KEDUA controller. Tanpa tes
+        // ini, jalur surat keluar cuma terverifikasi lewat browser — dan bug Fase 6
+        // (flash 'status' yang tidak dirender layout) justru lahir dari salinan
+        // kedua yang tidak diuji.
+        $klasifikasi = KlasifikasiPrimer::forceCreate(['kode' => '07', 'nama' => 'Perencanaan']);
+
+        $keluar = SuratKeluar::forceCreate([
+            'user_id' => $this->pegawai->id,
+            'penerima' => 'Kecamatan',
+            'klasifikasi_primer_id' => $klasifikasi->id,
+            'nomor_surat' => '001/07/I/2026',
+            'perihal' => 'Undangan koordinasi',
+            'tanggal_surat' => '2026-01-07',
+        ]);
+
+        $this->actingAs($this->pegawai)
+            ->patch(route('surat-keluar.status-arsip', $keluar), ['status_arsip' => 'inaktif'])
+            ->assertRedirect();
+
+        $keluar->refresh();
+        $this->assertSame('inaktif', $keluar->status_arsip);
+        $this->assertNull($keluar->deleted_at, 'Men-nyahkan bukan hapus — L-05 masih berlaku untuk surat keluar.');
+
+        $pesan = session('success');
+
+        $this->assertNotNull(
+            $pesan,
+            'Surat keluar tidak menulis flash pada kunci yang dirender layout (bug Fase 6 terulang di jalur kedua).'
+        );
+        $this->assertStringContainsString('Surat keluar dinonaktifkan sebagai arsip aktif.', $pesan);
+
+        $this->actingAs($this->pegawai)
+            ->get(route('surat-keluar.show', $keluar))
+            ->assertOk()
+            ->assertSee('Surat keluar dinonaktifkan sebagai arsip aktif.');
+
+        // Aktifkan kembali lewat helper yang sama.
+        $this->actingAs($this->pegawai)
+            ->patch(route('surat-keluar.status-arsip', $keluar), ['status_arsip' => 'aktif'])
+            ->assertRedirect();
+
+        $this->assertStringContainsString(
+            'diaktifkan kembali',
+            (string) session('success'),
+            'Kalimat aktifkan kembali harus datang dari helper bersama, bukan ditulis ulang per controller.'
+        );
+    }
+
     public function test_hapus_surat_adalah_soft_delete_dan_berkas_tetap_utuh(): void
     {
         $lampiran = $this->tempelLampiran();

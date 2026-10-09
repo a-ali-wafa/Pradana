@@ -408,6 +408,75 @@ mata pada 5 Okt).
 Gerbang: `Tests: 207 passed (824 assertions) / 0 skipped` · `pint --test` PASS 173 file ·
 `phpstan analyse` [OK] No errors · baseline tetap 5.
 
+## Fase 7 — pass dependency + deduplikasi controller (9 Okt, atas persetujuan user)
+
+Tiga hal yang sebelumnya sengaja dipisah dikerjakan setelah user bilang "kerjakan sekarang"
+dan "dedup + jaga baseline tetap 5".
+
+**1. Dependency pass.** `laravel/sail` dibuang, `nunomaduro/larastan` → `larastan/larastan`
+(v3.13.0; ikut `phpstan/phpstan` 2.2.16 → 2.3.1 dan `iamcal/sql-parser`). Karena `remove`
+tidak punya `--no-autoloader`, urutannya: `composer remove --no-scripts --no-install` →
+`composer require --no-scripts --no-install` (hanya menyentuh composer.json + lock, 6 detik)
+→ satu `composer install` untuk sinkron vendor. **Biaya sebenarnya: 51 menit** — jauh lebih
+seret dari catatan "dump-autoload ±6,5 menit" yang sudah ada; angka lama itu untuk dump saja,
+sedangkan install harus menghapus/menulis ulang paket + regenerate classmap di atas disk Windows.
+Pesan untuk agent berikutnya: pass dependency **bukan** pekerjaan sampingan; jadwalkan.
+`phpstan.neon` wajib ikut diganti (include `vendor/nunomaduro/...` → `vendor/larastan/...`);
+kalau tidak, analisis mati dengan `Service 'sqlParser': Class or interface
+'Larastan\Larastan\SQL\SqlParser' not found` — dan cache phpstan di temp tidak membantu
+karena yang basi adalah include path, bukan hasil analisis.
+
+**2. Deduplikasi.** Dua trait baru:
+`Concerns/MengelolaArsipSurat` (daftar + paginasi, pohon klasifikasi, "Nyahkan", soft delete,
+restore) dipakai `SuratMasukController` + `SuratKeluarController` (247→213 dan 221→196 baris),
+dan `Concerns/MengelolaKlasifikasi` (daftar, redirect+flash, hapus dengan `catch QueryException`)
+dipakai ketiga controller klasifikasi. Yang sengaja TETAP di controller: kelas model, relasi
+eager load per tingkat, nama view, kolom urut (`tanggal_diterima` vs `tanggal_surat`), dan
+kalimat flash yang menyebut nomor surat — memaksanya masuk hanya menghasilkan helper berisi
+parameter.
+
+Tipe, bukan bungkam: helper yang param-nya `Model` polos menghasilkan dua error nyata
+`Call to an undefined method Model::restore()` — `restore()` datang dari trait `SoftDeletes`.
+Diperbaiki dengan union `SuratMasuk|SuratKeluar` pada param model (helper ini memang khusus dua
+model arsip itu), BUKAN dengan menambah entri baseline. `daftarArsip()` tetap `@template TModel
+of Model` supaya `Builder<SuratMasuk>` masuk tanpa melonggarkan tipe, dan scope model
+(`palingRelevan`, `onlyTrashed`) ditinggal di controller karena pada `Builder<Model>` Larastan
+tidak mengenalinya.
+
+**Baseline: 5 → 5, dan itu jujur.** Setelah dedup, `--generate-baseline` menghasilkan file yang
+**byte-identik** dengan sebelumnya (dibandingkan dengan `diff -q`). Tiga entri `dead catch
+QueryException` tetap ada di path controller klasifikasi karena PHPStan melaporkan error dari
+trait **dalam konteks kelas yang memakainya** — jadi menyatukan kode tidak menyatukan laporannya.
+Angka tidak turun, tapi tidak naik dan tidak ada yang dibungkam diam-diam.
+
+**3. Tes yang belum pernah ada.** `tests/Feature/KlasifikasiCrudTest.php` (5 tes) — digaringi
+dulu, `route('klasifikasi-` di seluruh tests/ = **nol** hasil, jadi tiga controller itu direfactor
+tanpa jaring sama sekali. Yang dikunci: daftar urut `kode` untuk ketiga tingkat (dibaca dari
+position kode di HTML tabel, bukan dari query), `store`/`update`/`destroy` menulis flash pada
+kunci yang dirender layout, `destroy` pada kode yang masih dipakai surat tidak menghapus apa pun
+dan memberi pesan ramah (bukti `catch (QueryException)` hidup — SQLite menegakkan FK karena
+`foreign_key_constraints=true`), staf boleh membaca tapi mutasi 403, dan unique kode bersifat
+per-induk. Ditambah `test_surat_keluar_mengikuti_jalur_nyahkan_yang_sama_dan_memberi_konfirmasi`
+di `SuratTempatSampahTest` — jalur kedua trait, yang selama ini cuma diwakili surat masuk.
+
+**4. Verifikasi layar sungguhan (izin user: "Ya, jalankan & verifikasi").** Dev server
+`127.0.0.1:8000` dijalankan. Browser in-app (Browser Connector) tiga kali mengisi form login
+tanpa mengirimnya (field terisi, tidak ada error ter-render, tetap di `/login`) — login dengan
+kredensial yang sama terbukti sukses lewat HTTP (`302 → /dashboard`), jadi ini kegagalan
+otomasi browser, bukan aplikasi. Verifikasi karena itu dijalankan lewat HTTP nyata ke server
+yang sama, dan itu mengode render yang sama: daftar surat, mode gabungan, form create, halaman
+show, **PATCH nyahkan → kalimat "Surat masuk dinonaktifkan sebagai arsip aktif." benar-benar
+tampil di HTML** (ini bukti ujung-ke-ujung perbaikan Fase 6 lewat trait baru), aktifkan kembali,
+soft delete → tempat sampah → pulihkan (tiga flash tampil), lalu `/klasifikasi-primer`,
+`-sekunder`, `-tersier`, `/surat-keluar`, `/surat-keluar/create`, `/aktivitas`, `/laporan`,
+`/dashboard` semuanya 200 dengan layout utuh. Artefaknya (`UJI-DEDUP-1` + 10 baris log-nya)
+dibuang lewat `forceDelete`; `pradana` kembali seperti semula: 0 surat masuk, 1 surat keluar
+milik user (`001/02.01.01/X/2026`), 3 baris log, 3 user, 2 klasifikasi primer. Dev server sudah
+dihentikan lagi.
+
+Gerbang: `Tests: 213 passed (871 assertions) / 0 skipped` · `pint --test` PASS 176 file ·
+`phpstan analyse` [OK] No errors · baseline 5 (identik).
+
 ## Analisis ulang (gerbang sebelum eksekusi)
 
 Setiap butir di atas harus lolos tiga pertanyaan sebelum disentuh:

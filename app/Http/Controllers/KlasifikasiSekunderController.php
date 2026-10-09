@@ -2,11 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Concerns\MengelolaKlasifikasi;
 use App\Http\Requests\StoreKlasifikasiSekunderRequest;
 use App\Http\Requests\UpdateKlasifikasiSekunderRequest;
 use App\Models\KlasifikasiPrimer;
 use App\Models\KlasifikasiSekunder;
-use Illuminate\Database\QueryException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
 
@@ -21,44 +21,42 @@ use Illuminate\View\View;
  * - unique komposit per parent: (klasifikasi_primer_id, kode).
  *
  * Route `show` tidak didaftarkan; admin-only mutasi (B3 [DEFAULT]) ditangani oleh
- * middleware('admin') di routes/web.php (retrofit B1, 1 Sep 2026);
- * FK restrict ditangkap jadi pesan ramah — pola sama seperti KlasifikasiPrimerController.
+ * middleware('admin') di routes/web.php (retrofit B1, 1 Sep 2026). Daftar, redirect,
+ * dan hapus-FK-restrict lewat trait `MengelolaKlasifikasi` (9 Okt 2026); dropdown
+ * induknya tetap di sini karena hanya tingkat ini yang butuh daftar primer.
  */
 class KlasifikasiSekunderController extends Controller
 {
+    use MengelolaKlasifikasi;
+
     public function index(): View
     {
-        $klasifikasiSekunder = KlasifikasiSekunder::with('primer')
-            ->withCount('tersier')
-            ->orderBy('kode')
-            ->paginate(20);
-
-        return view('klasifikasi-sekunder.index', compact('klasifikasiSekunder'));
+        return $this->daftarKlasifikasi(
+            KlasifikasiSekunder::query()->with('primer')->withCount('tersier'),
+            'klasifikasi-sekunder',
+            'klasifikasiSekunder',
+        );
     }
 
     public function create(): View
     {
-        $klasifikasiPrimer = KlasifikasiPrimer::orderBy('kode')->get();
-
-        return view('klasifikasi-sekunder.create', compact('klasifikasiPrimer'));
+        return view('klasifikasi-sekunder.create', [
+            'klasifikasiPrimer' => KlasifikasiPrimer::orderBy('kode')->get(),
+        ]);
     }
 
     public function store(StoreKlasifikasiSekunderRequest $request): RedirectResponse
     {
         KlasifikasiSekunder::create($request->validated());
 
-        return redirect()
-            ->route('klasifikasi-sekunder.index')
-            ->with('success', 'Klasifikasi sekunder berhasil ditambahkan.');
+        return $this->selesaiKlasifikasi('klasifikasi-sekunder', 'Klasifikasi sekunder berhasil ditambahkan.');
     }
 
     public function edit(KlasifikasiSekunder $klasifikasi_sekunder): View
     {
-        $klasifikasiPrimer = KlasifikasiPrimer::orderBy('kode')->get();
-
         return view('klasifikasi-sekunder.edit', [
             'klasifikasiSekunder' => $klasifikasi_sekunder,
-            'klasifikasiPrimer' => $klasifikasiPrimer,
+            'klasifikasiPrimer' => KlasifikasiPrimer::orderBy('kode')->get(),
         ]);
     }
 
@@ -66,24 +64,16 @@ class KlasifikasiSekunderController extends Controller
     {
         $klasifikasi_sekunder->update($request->validated());
 
-        return redirect()
-            ->route('klasifikasi-sekunder.index')
-            ->with('success', 'Klasifikasi sekunder berhasil diperbarui.');
+        return $this->selesaiKlasifikasi('klasifikasi-sekunder', 'Klasifikasi sekunder berhasil diperbarui.');
     }
 
     public function destroy(KlasifikasiSekunder $klasifikasi_sekunder): RedirectResponse
     {
-        try {
-            $klasifikasi_sekunder->delete();
-        } catch (QueryException $e) {
-            return back()->with(
-                'error',
-                'Klasifikasi sekunder tidak bisa dihapus karena masih dipakai di klasifikasi tersier/surat masuk/keluar.'
-            );
-        }
-
-        return redirect()
-            ->route('klasifikasi-sekunder.index')
-            ->with('success', 'Klasifikasi sekunder berhasil dihapus.');
+        return $this->hapusKlasifikasi(
+            $klasifikasi_sekunder,
+            'klasifikasi-sekunder',
+            'Klasifikasi sekunder',
+            'klasifikasi tersier/surat masuk/keluar',
+        );
     }
 }

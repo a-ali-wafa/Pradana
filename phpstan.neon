@@ -1,9 +1,12 @@
 includes:
-    - vendor/nunomaduro/larastan/extension.neon
-    # 29 temuan hasil `--generate-baseline` (4 Okt 2026): semuanya ketidaktahuan
-    # statis terhadap relasi polymorphic (`morphTo` mengembalikan Model, sehingga
-    # `$lampiran->lampiranable?->primer` dan `hapusBerkasFisik()` tidak bisa
-    # dibuktikan) + `catch (QueryException)` yang memang dilempar PDO saat runtime.
+    # 9 Okt 2026: paketnya pindah nama — `nunomaduro/larastan` sudah di-mark
+    # "abandoned" oleh composer dan diganti `larastan/larastan` (versi 3.13.0).
+    - vendor/larastan/larastan/extension.neon
+    # Entri hasil `--generate-baseline`, dibaca satu-satu, bukan dibungkam massal.
+    # Terakhir disentuh 9 Okt (Fase 7): 4 `catch (QueryException)` controller
+    # klasifikasi menyatu jadi SATU di trait MengelolaKlasifikasi — PHPStan tidak
+    # bisa melihat bahwa PDO melempar constraint violation saat runtime, padahal
+    # justru itu jalur yang dipakai surat yang masih memakai sebuah kode.
     # Regenerasi kalau file-file itu berubah: vendor/bin/phpstan --generate-baseline
     - phpstan-baseline.neon
 

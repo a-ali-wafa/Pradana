@@ -3,10 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Http\Controllers\Concerns\MenampilkanArsipGabungan;
+use App\Http\Controllers\Concerns\MengelolaArsipSurat;
 use App\Http\Requests\StoreSuratKeluarRequest;
 use App\Http\Requests\UpdateStatusArsipRequest;
 use App\Http\Requests\UpdateSuratKeluarRequest;
-use App\Models\KlasifikasiPrimer;
 use App\Models\SuratKeluar;
 use App\Services\NomorSuratKeluarGenerator;
 use App\Support\FilterArsip;
@@ -27,6 +27,7 @@ use Illuminate\View\View;
 class SuratKeluarController extends Controller
 {
     use MenampilkanArsipGabungan;
+    use MengelolaArsipSurat;
 
     public function __construct(private readonly NomorSuratKeluarGenerator $nomorSurat)
     {
@@ -46,45 +47,36 @@ class SuratKeluarController extends Controller
 
         abort_unless(! $melihatSampah || $request->user()->isAdmin(), 403);
 
-        // Lihat SuratMasukController::index() — cabang gabungan punya perilaku
-        // yang sama dan memang sengaja dipakai dua halaman.
+        // Lihat SuratMasukController::index() — cabang gabungan dan daftar biasa
+        // hidup di trait `MengelolaArsipSurat`, jadi kedua halaman ini tidak bisa
+        // lagi berbeda perilaku.
         if (! $melihatSampah && FilterArsip::gabungan($request)) {
             return $this->arsipGabungan($request, 'surat-keluar.index');
         }
 
-        $query = SuratKeluar::query()->with(['primer', 'sekunder', 'tersier', 'petugas']);
+        $arsip = SuratKeluar::query()->with(['primer', 'sekunder', 'tersier', 'petugas']);
 
         if ($melihatSampah) {
-            $query->onlyTrashed();
+            $arsip->onlyTrashed();
         }
 
-        FilterArsip::terapkan($query, $request);
+        FilterArsip::terapkan($arsip, $request);
 
         $cari = FilterArsip::cari($request);
 
         if ($cari !== null) {
-            $query->palingRelevan($cari);
+            $arsip->palingRelevan($cari);
         }
 
-        $arsip = $query->orderByDesc('tanggal_surat')
-            ->orderByDesc('id')
-            ->paginate(20)
-            ->withQueryString();
-
-        return view('surat-keluar.index', [
-            'arsip' => $arsip,
-            'klasifikasiPrimer' => KlasifikasiPrimer::orderBy('kode')->get(),
-            'melihatSampah' => $melihatSampah,
-            'usang' => FilterArsip::usang($request),
-            'cari' => $cari,
-            'gabung' => false,
-        ]);
+        // Surat keluar tidak punya `tanggal_diterima` — urutan daftarnya memang
+        // tanggal surat, dan itu satu-satunya perbedaan bentuk dengan masuk.
+        return $this->daftarArsip($request, $arsip, 'surat-keluar', 'tanggal_surat', $melihatSampah);
     }
 
     public function create(): View
     {
         return view('surat-keluar.create', [
-            'klasifikasiPrimer' => KlasifikasiPrimer::with('sekunder.tersier')->orderBy('kode')->get(),
+            'klasifikasiPrimer' => $this->pohonKlasifikasi(),
         ]);
     }
 
@@ -153,7 +145,7 @@ class SuratKeluarController extends Controller
     {
         return view('surat-keluar.edit', [
             'suratKeluar' => $surat_keluar,
-            'klasifikasiPrimer' => KlasifikasiPrimer::with('sekunder.tersier')->orderBy('kode')->get(),
+            'klasifikasiPrimer' => $this->pohonKlasifikasi(),
         ]);
     }
 
@@ -167,53 +159,38 @@ class SuratKeluarController extends Controller
     }
 
     /**
-     * Hapus lunak (L-05): tabel ini sekarang punya soft delete, jadi surat tidak
-     * pernah hilang sungguhan dari layar ini — lampiran & file fisiknya tetap
-     * utuh dan bisa dipulihkan admin. Pemusnahan resmi lewat modul Pemusnahan.
+     * Hapus lunak (L-05): surat tidak pernah hilang sungguhan dari layar ini —
+     * lampiran & file fisiknya tetap utuh dan bisa dipulihkan admin. Yang berbeda
+     * dari surat masuk cuma kalimat flash-nya, yang menyebut nomor surat.
      */
     public function destroy(Request $request, SuratKeluar $surat_keluar): RedirectResponse
     {
-        abort_unless(
-            $request->user()->isAdmin(),
-            403,
-            'Hanya admin yang boleh menghapus arsip surat keluar.'
+        return $this->buangArsip(
+            $request,
+            $surat_keluar,
+            'surat-keluar',
+            "Surat keluar {$surat_keluar->nomor_surat} dipindahkan ke tempat sampah (masih bisa dipulihkan).",
+            'Hanya admin yang boleh menghapus arsip surat keluar.',
         );
-
-        $nomorSurat = $surat_keluar->nomor_surat;
-        $surat_keluar->delete();
-
-        return redirect()
-            ->route('surat-keluar.index')
-            ->with('success', "Surat keluar {$nomorSurat} dipindahkan ke tempat sampah (masih bisa dipulihkan).");
     }
 
     /**
      * L-19 / E8+E9: "Nyahkan" = status_arsip inaktif. Semua user login boleh,
-     * perubahannya tercatat lewat observer. Aturan validasi dan kunci flash
-     * disamakan dengan surat masuk (`UpdateStatusArsipRequest`) — lihat alasan
-     * bug 'status' di method padanannya di `SuratMasukController`.
+     * perubahannya tercatat lewat observer. Aturannya di `UpdateStatusArsipRequest`,
+     * flash 'success' — sejarah bug kuncinya di trait `MengelolaArsipSurat`.
      */
     public function updateStatusArsip(UpdateStatusArsipRequest $request, SuratKeluar $surat_keluar): RedirectResponse
     {
-        $surat_keluar->update($request->validated());
-
-        return back()->with(
-            'success',
-            $request->dinonaktifkan()
-                ? 'Surat keluar dinonaktifkan sebagai arsip aktif.'
-                : 'Surat keluar diaktifkan kembali.'
-        );
+        return $this->ubahStatusArsip($request, $surat_keluar, 'Surat keluar');
     }
 
     public function restore(Request $request, int $suratKeluar): RedirectResponse
     {
-        abort_unless($request->user()->isAdmin(), 403, 'Hanya admin yang bisa memulihkan arsip.');
-
-        $surat = SuratKeluar::withTrashed()->findOrFail($suratKeluar);
-        $surat->restore();
-
-        return redirect()
-            ->route('surat-keluar.show', $surat)
-            ->with('success', 'Surat keluar dipulihkan dari tempat sampah.');
+        return $this->pulihkanArsip(
+            $request,
+            SuratKeluar::withTrashed()->findOrFail($suratKeluar),
+            'surat-keluar',
+            'Surat keluar',
+        );
     }
 }

@@ -2,10 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Concerns\MengelolaKlasifikasi;
 use App\Http\Requests\StoreKlasifikasiPrimerRequest;
 use App\Http\Requests\UpdateKlasifikasiPrimerRequest;
 use App\Models\KlasifikasiPrimer;
-use Illuminate\Database\QueryException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
 
@@ -22,18 +22,21 @@ use Illuminate\View\View;
  * - Route `show` sengaja tidak didaftarkan (->except(['show'])), lihat 12.11.
  * - Admin-only untuk semua mutasi (B3 [DEFAULT]) — ditangani oleh middleware('admin')
  *   yang didaftarkan di routes/web.php (retrofit B1, 1 Sep 2026).
- * - FK restrict (surat_masuk/surat_keluar -> klasifikasi_primer_id) ditangkap jadi
- *   pesan ramah, bukan dibiarkan crash 500 (pola sama di Sekunder & Tersier).
+ * - Daftar, redirect+flash, dan hapus-FK-restrict pindah ke trait
+ *   `MengelolaKlasifikasi` (9 Okt 2026) supaya tidak bisa lagi melenceng bertiga;
+ *   yang tertinggal di sini hanya yang khas primer: jumlah sekunder per kode.
  */
 class KlasifikasiPrimerController extends Controller
 {
+    use MengelolaKlasifikasi;
+
     public function index(): View
     {
-        $klasifikasiPrimer = KlasifikasiPrimer::withCount('sekunder')
-            ->orderBy('kode')
-            ->paginate(20);
-
-        return view('klasifikasi-primer.index', compact('klasifikasiPrimer'));
+        return $this->daftarKlasifikasi(
+            KlasifikasiPrimer::query()->withCount('sekunder'),
+            'klasifikasi-primer',
+            'klasifikasiPrimer',
+        );
     }
 
     public function create(): View
@@ -45,9 +48,7 @@ class KlasifikasiPrimerController extends Controller
     {
         KlasifikasiPrimer::create($request->validated());
 
-        return redirect()
-            ->route('klasifikasi-primer.index')
-            ->with('success', 'Klasifikasi primer berhasil ditambahkan.');
+        return $this->selesaiKlasifikasi('klasifikasi-primer', 'Klasifikasi primer berhasil ditambahkan.');
     }
 
     public function edit(KlasifikasiPrimer $klasifikasi_primer): View
@@ -61,24 +62,16 @@ class KlasifikasiPrimerController extends Controller
     {
         $klasifikasi_primer->update($request->validated());
 
-        return redirect()
-            ->route('klasifikasi-primer.index')
-            ->with('success', 'Klasifikasi primer berhasil diperbarui.');
+        return $this->selesaiKlasifikasi('klasifikasi-primer', 'Klasifikasi primer berhasil diperbarui.');
     }
 
     public function destroy(KlasifikasiPrimer $klasifikasi_primer): RedirectResponse
     {
-        try {
-            $klasifikasi_primer->delete();
-        } catch (QueryException $e) {
-            return back()->with(
-                'error',
-                'Klasifikasi primer tidak bisa dihapus karena masih dipakai di surat masuk/keluar.'
-            );
-        }
-
-        return redirect()
-            ->route('klasifikasi-primer.index')
-            ->with('success', 'Klasifikasi primer berhasil dihapus.');
+        return $this->hapusKlasifikasi(
+            $klasifikasi_primer,
+            'klasifikasi-primer',
+            'Klasifikasi primer',
+            'surat masuk/keluar',
+        );
     }
 }
