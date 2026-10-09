@@ -94,7 +94,7 @@ class SuratKeluarController extends Controller
 
         return redirect()
             ->route('surat-keluar.show', $suratKeluar)
-            ->with('status', "Surat keluar {$suratKeluar->nomor_surat} berhasil disimpan.");
+            ->with('success', "Surat keluar {$suratKeluar->nomor_surat} berhasil disimpan.");
     }
 
     /**
@@ -157,7 +157,7 @@ class SuratKeluarController extends Controller
 
         return redirect()
             ->route('surat-keluar.show', $surat_keluar)
-            ->with('status', "Surat keluar {$surat_keluar->nomor_surat} berhasil diperbarui.");
+            ->with('success', "Surat keluar {$surat_keluar->nomor_surat} berhasil diperbarui.");
     }
 
     /**
@@ -178,7 +178,7 @@ class SuratKeluarController extends Controller
 
         return redirect()
             ->route('surat-keluar.index')
-            ->with('status', "Surat keluar {$nomorSurat} dipindahkan ke tempat sampah (masih bisa dipulihkan).");
+            ->with('success', "Surat keluar {$nomorSurat} dipindahkan ke tempat sampah (masih bisa dipulihkan).");
     }
 
     /**
@@ -210,6 +210,6 @@ class SuratKeluarController extends Controller
 
         return redirect()
             ->route('surat-keluar.show', $surat)
-            ->with('status', 'Surat keluar dipulihkan dari tempat sampah.');
+            ->with('success', 'Surat keluar dipulihkan dari tempat sampah.');
     }
 }

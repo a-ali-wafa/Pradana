@@ -280,8 +280,9 @@
                                 </span>
                             </div>
                             @php
-                                $maxTotal = $klasifikasiTerpopuler->first()->total ?? 1;
-                                $percentage = $maxTotal > 0 ? min(100, round(($populer->total / $maxTotal) * 100)) : 0;
+                                $percentage = $maksTotalKlasifikasi > 0
+                                    ? min(100, round(($populer->total / $maksTotalKlasifikasi) * 100))
+                                    : 0;
                             @endphp
                             <div class="progress" style="height: 6px;">
                                 <div class="progress-bar bg-primary" role="progressbar" style="width: {{ $percentage }}%"></div>

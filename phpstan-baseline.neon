@@ -1,15 +1,3 @@
-# Dibaselinesean 5 Okt 2026 (regen setelah halaman /pencarian dihapus & fitur baca isi
-# lampiran masuk). Isi file ini BUKAN dibungkam massal: semuanya sudah dibaca satu-satu
-# dan masuk salah satu dari empat kelompok yang diketahui:
-#   - property.notFound / method.notFound (16+4): relasi polymorphic (lampiranable,
-#     subjek aktivitas) — Larastan tidak tahu model aslinya, jadi `$s->primer?->kode`
-#     dibaca sebagai Model tanpa kolom. Cara bersihnya: relasi return type generik
-#     `BelongsTo<KlasifikasiPrimer, SuratMasuk>`, sudah dikerjakan 4 Okt untuk relasi
-#     biasa; sisanya yang lewat morphTo.
-#   - catch.neverThrown (4): `catch (QueryException)` yang memang dilempar PDO saat
-#     runtime (duplicate key/FK), tidak terlihat oleh analisis statis.
-#   - nullsafe.neverNull (1) + argument.unresolvableType (1): presisi tipe collection.
-# Regenerasi: vendor/bin/phpstan analyse --generate-baseline
 parameters:
 	ignoreErrors:
 		-
@@ -17,12 +5,6 @@ parameters:
 			identifier: property.notFound
 			count: 1
 			path: app/Console/Commands/SinkronkanLampiranKeDriveCommand.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$kode\.$#'
-			identifier: property.notFound
-			count: 3
-			path: app/Http/Controllers/CetakSuratKeluarController.php
 
 		-
 			message: '#^Dead catch \- Illuminate\\Database\\QueryException is never thrown in the try block\.$#'
@@ -43,94 +25,10 @@ parameters:
 			path: app/Http/Controllers/KlasifikasiTersierController.php
 
 		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$kode\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Controllers/LampiranController.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$nama\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Controllers/LampiranController.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$lampiran_count\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Controllers/LaporanController.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$nomor_surat\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Controllers/LaporanController.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$perihal\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Controllers/LaporanController.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$primer\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Controllers/LaporanController.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$sifat\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Controllers/LaporanController.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$status_arsip\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Controllers/LaporanController.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$tanggal_diterima\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Controllers/LaporanController.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$tanggal_surat\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Controllers/LaporanController.php
-
-		-
-			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,Illuminate\\Database\\Eloquent\\Model\>\:\:map\(\) contains unresolvable type\.$#'
-			identifier: argument.unresolvableType
-			count: 1
-			path: app/Http/Controllers/LaporanController.php
-
-		-
 			message: '#^Using nullsafe property access "\?\-\>nama_lengkap" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
 			identifier: nullsafe.neverNull
 			count: 1
 			path: app/Http/Controllers/LaporanController.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$arsipable_id\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Controllers/PemusnahanArsipController.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$arsipable_type\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Controllers/PemusnahanArsipController.php
-
-		-
-			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:hapusBerkasFisik\(\)\.$#'
-			identifier: method.notFound
-			count: 1
-			path: app/Http/Controllers/PengajuanHapusLampiranController.php
 
 		-
 			message: '#^Dead catch \- Illuminate\\Database\\QueryException is never thrown in the try block\.$#'
@@ -143,27 +41,3 @@ parameters:
 			identifier: property.notFound
 			count: 1
 			path: app/Models/Lampiran.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$nomor_surat\.$#'
-			identifier: property.notFound
-			count: 3
-			path: app/Observers/DrafKontenSuratKeluarObserver.php
-
-		-
-			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:hapusBerkasFisik\(\)\.$#'
-			identifier: method.notFound
-			count: 1
-			path: app/Observers/SuratKeluarObserver.php
-
-		-
-			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:hapusBerkasFisik\(\)\.$#'
-			identifier: method.notFound
-			count: 1
-			path: app/Observers/SuratMasukObserver.php
-
-		-
-			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:tersier\(\)\.$#'
-			identifier: method.notFound
-			count: 2
-			path: database/seeders/DevSeeder.php

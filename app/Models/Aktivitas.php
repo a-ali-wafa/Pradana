@@ -12,6 +12,7 @@ class Aktivitas extends Model
 
     protected $fillable = ['user_id', 'aksi', 'subjek_type', 'subjek_id'];
 
+    /** @return BelongsTo<User, $this> */
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class)->withTrashed();

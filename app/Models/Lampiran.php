@@ -26,6 +26,7 @@ class Lampiran extends Model
         return $this->morphTo();
     }
 
+    /** @return BelongsTo<User, $this> */
     public function pengunggah(): BelongsTo
     {
         return $this->belongsTo(User::class, 'diunggah_oleh');
@@ -34,6 +35,8 @@ class Lampiran extends Model
     /**
      * Riwayat pengajuan hapus file ini (menunggu/disetujui/ditolak).
      * Dipakai di halaman show surat dan daftar pengajuan admin.
+     *
+     * @return HasMany<PengajuanHapusLampiran, $this>
      */
     public function pengajuanHapus(): HasMany
     {

@@ -20,6 +20,7 @@ class PemusnahanArsipItem extends Model
         'tanggal_surat_snapshot' => 'date',
     ];
 
+    /** @return BelongsTo<PemusnahanArsip, $this> */
     public function pemusnahan(): BelongsTo
     {
         // Nama FK eksplisit: tanpa ini Eloquent menebak `pemusnahan_id` dari nama

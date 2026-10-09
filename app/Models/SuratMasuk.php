@@ -9,6 +9,11 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
+/**
+ * @property-read int $lampiran_count Kolom virtual hasil `withCount('lampiran')`
+ *          (bukan kolom di tabel). Dinyatakan di sini supaya PHPStan dan IDE
+ *          mengenalnya di query yang memakai withCount — lihat LaporanController.
+ */
 class SuratMasuk extends Model
 {
     // L-05: surat tidak pernah hilang benar-benar dari sistem; yang ada hanya
@@ -58,26 +63,41 @@ class SuratMasuk extends Model
         'isi_terverifikasi_pada' => 'datetime',
     ];
 
+    /**
+     * Petugas yang mencatat surat ini. `withTrashed()` supaya nama tetap tampil
+     * walau usernya sudah dihapus (L-10: tidak ada sistem kepemilikan).
+     *
+     * Return type generik (`BelongsTo<User, $this>`, bukan `BelongsTo` polos)
+     * dipakai PHPStan/IDE untuk tahu MODEL sebelah mana yang kembali: tanpa itu
+     * `$surat->petugas?->nama_lengkap` cuma `Model` buta dan setiap pemakainya
+     * masuk baseline Larastan. Urutan parameter: related dulu, declaring belakangan.
+     *
+     * @return BelongsTo<User, $this>
+     */
     public function petugas(): BelongsTo
     {
         return $this->belongsTo(User::class, 'user_id')->withTrashed();
     }
 
+    /** @return BelongsTo<KlasifikasiPrimer, $this> */
     public function primer(): BelongsTo
     {
         return $this->belongsTo(KlasifikasiPrimer::class, 'klasifikasi_primer_id');
     }
 
+    /** @return BelongsTo<KlasifikasiSekunder, $this> */
     public function sekunder(): BelongsTo
     {
         return $this->belongsTo(KlasifikasiSekunder::class, 'klasifikasi_sekunder_id');
     }
 
+    /** @return BelongsTo<KlasifikasiTersier, $this> */
     public function tersier(): BelongsTo
     {
         return $this->belongsTo(KlasifikasiTersier::class, 'klasifikasi_tersier_id');
     }
 
+    /** @return MorphMany<Lampiran, $this> */
     public function lampiran(): MorphMany
     {
         return $this->morphMany(Lampiran::class, 'lampiranable');

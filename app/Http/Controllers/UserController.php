@@ -54,7 +54,7 @@ class UserController extends Controller
             'role' => $validated['role'],
         ]);
 
-        return redirect()->route('users.index')->with('status', 'User baru berhasil ditambahkan.');
+        return redirect()->route('users.index')->with('success', 'User baru berhasil ditambahkan.');
     }
 
     /**
@@ -71,7 +71,7 @@ class UserController extends Controller
     {
         $user->update(['pin' => Hash::make($request->validated('pin'))]);
 
-        return back()->with('status', "PIN {$user->nama_lengkap} sudah diganti. Sampaikan PIN barunya secara langsung.");
+        return back()->with('success', "PIN {$user->nama_lengkap} sudah diganti. Sampaikan PIN barunya secara langsung.");
     }
 
     /**
@@ -94,6 +94,6 @@ class UserController extends Controller
 
         $user->delete(); // soft delete (model pakai SoftDeletes)
 
-        return redirect()->route('users.index')->with('status', "Akun {$user->nama_lengkap} berhasil dihapus.");
+        return redirect()->route('users.index')->with('success', "Akun {$user->nama_lengkap} berhasil dihapus.");
     }
 }

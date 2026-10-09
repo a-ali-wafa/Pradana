@@ -185,7 +185,7 @@ class PemusnahanArsipController extends Controller
 
         return redirect()
             ->route('pemusnahan-arsip.show', $pemusnahan_arsip)
-            ->with('status', 'Pengajuan pemusnahan ditolak.');
+            ->with('success', 'Pengajuan pemusnahan ditolak.');
     }
 
     /**

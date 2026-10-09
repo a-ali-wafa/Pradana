@@ -245,6 +245,10 @@ class CariArsip
      * Nama kolom datang dari daftar statis di model, bukan dari request —
      * tetap dijaga regex karena ini satu-satunya tempat nama kolom masuk ke
      * SQL sebagai teks.
+     *
+     * Tetap private: pemakai di luar pencarian arsip (kotak cari log aktivitas)
+     * dipanggil lewat `terapkan()` saja, supaya aturan escape LIKE tidak bisa
+     * dilewati dan berakhir jadi `LIKE ?` polos dengan wildcard lepas.
      */
     private static function like(string $kolom): string
     {

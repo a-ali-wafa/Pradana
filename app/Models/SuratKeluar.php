@@ -10,6 +10,10 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
+/**
+ * @property-read int $lampiran_count Kolom virtual hasil `withCount('lampiran')`,
+ *          lihat catatan yang sama di SuratMasuk.
+ */
 class SuratKeluar extends Model
 {
     // Lihat SuratMasuk: soft delete sesuai keputusan L-05.
@@ -48,31 +52,42 @@ class SuratKeluar extends Model
         'tanggal_surat' => 'date',
     ];
 
+    /**
+     * Return type generik di seluruh model (format `BelongsTo<User, $this>`):
+     * alasannya ada di SuratMasuk, file yang sama, perapian 9 Okt 2026.
+     *
+     * @return BelongsTo<User, $this>
+     */
     public function petugas(): BelongsTo
     {
         return $this->belongsTo(User::class, 'user_id')->withTrashed();
     }
 
+    /** @return BelongsTo<KlasifikasiPrimer, $this> */
     public function primer(): BelongsTo
     {
         return $this->belongsTo(KlasifikasiPrimer::class, 'klasifikasi_primer_id');
     }
 
+    /** @return BelongsTo<KlasifikasiSekunder, $this> */
     public function sekunder(): BelongsTo
     {
         return $this->belongsTo(KlasifikasiSekunder::class, 'klasifikasi_sekunder_id');
     }
 
+    /** @return BelongsTo<KlasifikasiTersier, $this> */
     public function tersier(): BelongsTo
     {
         return $this->belongsTo(KlasifikasiTersier::class, 'klasifikasi_tersier_id');
     }
 
+    /** @return HasOne<DrafKontenSuratKeluar, $this> */
     public function drafKonten(): HasOne
     {
         return $this->hasOne(DrafKontenSuratKeluar::class);
     }
 
+    /** @return MorphMany<Lampiran, $this> */
     public function lampiran(): MorphMany
     {
         return $this->morphMany(Lampiran::class, 'lampiranable');

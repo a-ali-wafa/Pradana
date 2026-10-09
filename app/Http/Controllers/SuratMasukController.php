@@ -103,7 +103,7 @@ class SuratMasukController extends Controller
 
         return redirect()
             ->route('surat-masuk.index')
-            ->with('status', 'Surat masuk berhasil ditambahkan.');
+            ->with('success', 'Surat masuk berhasil ditambahkan.');
     }
 
     public function show(SuratMasuk $surat_masuk): View
@@ -129,7 +129,7 @@ class SuratMasukController extends Controller
 
         return redirect()
             ->route('surat-masuk.index')
-            ->with('status', 'Surat masuk berhasil diperbarui.');
+            ->with('success', 'Surat masuk berhasil diperbarui.');
     }
 
     /**
@@ -200,7 +200,7 @@ class SuratMasukController extends Controller
 
         return redirect()
             ->route('surat-masuk.index')
-            ->with('status', 'Surat masuk dipindahkan ke tempat sampah (masih bisa dipulihkan).');
+            ->with('success', 'Surat masuk dipindahkan ke tempat sampah (masih bisa dipulihkan).');
     }
 
     /**
@@ -238,6 +238,6 @@ class SuratMasukController extends Controller
 
         return redirect()
             ->route('surat-masuk.show', $surat)
-            ->with('status', 'Surat masuk dipulihkan dari tempat sampah.');
+            ->with('success', 'Surat masuk dipulihkan dari tempat sampah.');
     }
 }

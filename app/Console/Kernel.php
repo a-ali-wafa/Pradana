@@ -19,7 +19,13 @@ class Kernel extends ConsoleKernel
             ->withoutOverlapping();
 
         // Sekali seminggu ke staf, daftar arsip yang sudah lewat retensi (L-04).
-        $schedule->command('arsip:daftar-usang')->weekly();
+        // withoutOverlapping: klaim lama di AGENTS.md bilang jadwal ini sudah
+        // memilikinya, padahal tidak — dua jadwal lain saja. Kalau tabel arsip
+        // membesar dan pemindaian itu makan waktu lebih dari seminggu, tanpa
+        // penggunci ini dua instances bisa jalan bersamaan.
+        $schedule->command('arsip:daftar-usang')
+            ->weekly()
+            ->withoutOverlapping();
 
         // Retensi log aktivitas (E6): bulanan, jejak pemusnahan tidak pernah dibuang.
         $schedule->command('arsip:bersihkan-log')->monthly()->withoutOverlapping();

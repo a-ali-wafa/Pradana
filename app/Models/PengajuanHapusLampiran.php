@@ -24,16 +24,19 @@ class PengajuanHapusLampiran extends Model
         'diproses_pada' => 'datetime',
     ];
 
+    /** @return BelongsTo<Lampiran, $this> */
     public function lampiran(): BelongsTo
     {
         return $this->belongsTo(Lampiran::class);
     }
 
+    /** @return BelongsTo<User, $this> */
     public function pengaju(): BelongsTo
     {
         return $this->belongsTo(User::class, 'diajukan_oleh');
     }
 
+    /** @return BelongsTo<User, $this> */
     public function pemroses(): BelongsTo
     {
         return $this->belongsTo(User::class, 'diproses_oleh');

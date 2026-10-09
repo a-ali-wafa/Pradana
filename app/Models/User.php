@@ -37,16 +37,19 @@ class User extends Authenticatable
         return $this->pin;
     }
 
+    /** @return HasMany<SuratMasuk, $this> */
     public function suratMasuk(): HasMany
     {
         return $this->hasMany(SuratMasuk::class);
     }
 
+    /** @return HasMany<SuratKeluar, $this> */
     public function suratKeluar(): HasMany
     {
         return $this->hasMany(SuratKeluar::class);
     }
 
+    /** @return HasMany<Aktivitas, $this> */
     public function aktivitas(): HasMany
     {
         return $this->hasMany(Aktivitas::class);

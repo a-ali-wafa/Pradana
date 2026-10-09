@@ -79,9 +79,27 @@ class AppServiceProvider extends ServiceProvider
                 return;
             }
 
+            // SATU round-trip untuk dua angka. Composer ini menempel di
+            // `layouts.app`, jadi dia jalan di SETIAP halaman aplikasi — dua
+            // `count()` terpisah berarti dua statement tambahan di setiap klik
+            // user, selamanya. Bentuk UNION tetap memakai builder model (bukan
+            // nama tabel mentah) supaya scope soft delete masing-masing model
+            // tidak ikut hilang.
+            $baris = PengajuanHapusLampiran::query()
+                ->selectRaw("'lampiran' as sumber, count(*) as jumlah")
+                ->where('status', 'menunggu')
+                ->unionAll(
+                    PemusnahanArsip::query()
+                        ->selectRaw("'pemusnahan' as sumber, count(*) as jumlah")
+                        ->where('status', 'menunggu')
+                )
+                ->get();
+
+            $antrian = $baris->pluck('jumlah', 'sumber');
+
             $view->with([
-                'antrianHapusLampiran' => PengajuanHapusLampiran::where('status', 'menunggu')->count(),
-                'antrianPemusnahan' => PemusnahanArsip::where('status', 'menunggu')->count(),
+                'antrianHapusLampiran' => (int) $antrian->get('lampiran', 0),
+                'antrianPemusnahan' => (int) $antrian->get('pemusnahan', 0),
             ]);
         });
 

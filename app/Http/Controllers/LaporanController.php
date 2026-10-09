@@ -6,9 +6,11 @@ use App\Models\KlasifikasiPrimer;
 use App\Models\PengaturanInstansi;
 use App\Models\SuratKeluar;
 use App\Models\SuratMasuk;
+use App\Support\RentangTanggal;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
@@ -40,9 +42,17 @@ class LaporanController extends Controller
         // Jumlah baris ditampilkan sebelum mengunduh: rekap kosong tanpa
         // penjelasan biasanya disimpulkan sebagai "aplikasinya rusak", bukan
         // "periodenya memang tidak ada surat".
+        //
+        // ANGKA-nya diambil dari COUNT di database, bukan dari menghitung hasil
+        // `baris()` yang sudah dimuat ke memori. `baris()` membentuk satu model
+        // + relasi + withCount per surat, jadi untuk periode setahun penuh itu
+        // berarti mengangkat seluruh arsip ke PHP hanya untuk satu angka di
+        // layar. `jumlah()` dan `baris()` berbagi satu pembangun query
+        // (`tanyakan()`), jadi angka di layar dan isi CSV/PDF tetap tidak bisa
+        // berbeda kesimpulan.
         return view('laporan.index', [
             'periode' => $periode,
-            'jumlah' => $this->baris($request, $dari, $sampai)->count(),
+            'jumlah' => $this->jumlah($request, $dari, $sampai),
             'klasifikasiPrimer' => KlasifikasiPrimer::orderBy('kode')->get(),
             'filter' => $request->only(['jenis', 'klasifikasi_primer_id', 'status_arsip']),
         ]);
@@ -142,47 +152,146 @@ class LaporanController extends Controller
      *
      * @return Collection<int, array<string, mixed>>
      */
-    private function baris(Request $request, $dari, $sampai)
+    private function baris(Request $request, Carbon $dari, Carbon $sampai): Collection
     {
         $jenis = $this->jenis($request);
-        $klasifikasi = $request->query('klasifikasi_primer_id');
-        $statusArsip = $request->query('status_arsip');
-
-        $susun = function (string $model, string $jenisSurat, string $kolomLawan) use ($dari, $sampai, $klasifikasi, $statusArsip) {
-            /** @var Builder $q */
-            $q = $model::query()
-                ->with(['primer', 'petugas'])
-                ->withCount('lampiran')
-                ->whereBetween('tanggal_surat', [$dari->toDateString(), $sampai->toDateString()])
-                ->when($klasifikasi, fn ($b) => $b->where('klasifikasi_primer_id', (int) $klasifikasi))
-                ->when($statusArsip, fn ($b) => $b->where('status_arsip', $statusArsip));
-
-            return $q->orderBy('tanggal_surat')->orderBy('id')->get()
-                ->map(fn ($s) => [
-                    'jenis' => $jenisSurat,
-                    'tanggal_surat' => $s->tanggal_surat?->format('Y-m-d'),
-                    'tanggal_diterima' => $jenisSurat === 'masuk' ? $s->tanggal_diterima?->format('Y-m-d') : null,
-                    'nomor_surat' => $s->nomor_surat,
-                    'lawan' => $s->{$kolomLawan},
-                    'perihal' => $s->perihal,
-                    'sifat' => $s->sifat,
-                    'klasifikasi' => $s->primer ? $s->primer->kode.' '.$s->primer->nama : '-',
-                    'status_arsip' => $s->status_arsip,
-                    'jumlah_lampiran' => $s->lampiran_count,
-                    'petugas' => $s->petugas?->nama_lengkap ?? '-',
-                ]);
-        };
-
-        $hasil = collect();
+        $baris = [];
 
         if ($jenis !== 'keluar') {
-            $hasil = $hasil->concat($susun(SuratMasuk::class, 'masuk', 'pengirim'));
+            $baris = array_merge($baris, $this->barisMasuk($request, $dari, $sampai));
         }
 
         if ($jenis !== 'masuk') {
-            $hasil = $hasil->concat($susun(SuratKeluar::class, 'keluar', 'penerima'));
+            $baris = array_merge($baris, $this->barisKeluar($request, $dari, $sampai));
         }
 
-        return $hasil->sortBy([['tanggal_surat', 'asc'], ['jenis', 'asc']])->values();
+        return collect($baris)
+            ->sortBy([['tanggal_surat', 'asc'], ['jenis', 'asc']])
+            ->values();
+    }
+
+    /**
+     * Jumlah surat di periode yang sama, TANPA mengangkat barisnya ke memori.
+     * Memakai `tanyakan()` yang sama dengan `baris()`, jadi caption "N surat
+     * cocok" di layar tidak bisa berbeda dari isi CSV/PDF.
+     */
+    private function jumlah(Request $request, Carbon $dari, Carbon $sampai): int
+    {
+        $jenis = $this->jenis($request);
+        $total = 0;
+
+        if ($jenis !== 'keluar') {
+            $total += $this->tanyakan(SuratMasuk::class, $request, $dari, $sampai)->count();
+        }
+
+        if ($jenis !== 'masuk') {
+            $total += $this->tanyakan(SuratKeluar::class, $request, $dari, $sampai)->count();
+        }
+
+        return $total;
+    }
+
+    /**
+     * Kerangka query laporan: periode + filter, satu sumber untuk `barisMasuk()`,
+     * `barisKeluar()`, dan `jumlah()`.
+     *
+     * Batas periodenya interval SETENGAH TERBUKA (lihat App\Support\RentangTanggal).
+     * Sebelum ini `whereBetween('tanggal_surat', [$dari, $sampai])` dengan string
+     * tanggal: di MariaDB kolom DATE memotong jam jadi masih benar, tapi di SQLite
+     * nilainya tersimpan '2026-12-31 00:00:00' dan `<= '2026-12-31'` bernilai
+     * FALSE — surat tertanggal hari TERAKHIR hilang dari rekap dan Buku Agenda.
+     * Itu dibuktikan tes BatasTanggalLaporanTest sebelum perapian ini.
+     *
+     * `@template TModel` dipakai supaya pemanggilnya punya tipe MODEL sungguhan:
+     * `$s->primer->kode` dan `$s->lampiran_count` hanya bisa diperiksa PHPStan
+     * kalau builder-nya `Builder<SuratMasuk>`, bukan `Builder<Model>`.
+     *
+     * @template TModel of Model
+     *
+     * @param  class-string<TModel>  $model
+     * @return Builder<TModel>
+     */
+    private function tanyakan(string $model, Request $request, Carbon $dari, Carbon $sampai): Builder
+    {
+        [$bawah, $atas] = RentangTanggal::rentang($dari, $sampai);
+
+        return $model::query()
+            ->where('tanggal_surat', '>=', $bawah)
+            ->where('tanggal_surat', '<', $atas)
+            ->when(
+                $request->query('klasifikasi_primer_id'),
+                fn ($b) => $b->where('klasifikasi_primer_id', (int) $request->query('klasifikasi_primer_id'))
+            )
+            ->when(
+                $request->query('status_arsip'),
+                fn ($b) => $b->where('status_arsip', $request->query('status_arsip'))
+            )
+            ->orderBy('tanggal_surat')
+            ->orderBy('id');
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    private function barisMasuk(Request $request, Carbon $dari, Carbon $sampai): array
+    {
+        return $this->tanyakan(SuratMasuk::class, $request, $dari, $sampai)
+            ->with(['primer', 'petugas'])
+            ->withCount('lampiran')
+            ->get()
+            ->map(fn (SuratMasuk $s) => $this->isiUmum($s, 'masuk') + [
+                'tanggal_diterima' => $s->tanggal_diterima?->format('Y-m-d'),
+                'lawan' => $s->pengirim,
+            ])
+            ->values()
+            ->all();
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    private function barisKeluar(Request $request, Carbon $dari, Carbon $sampai): array
+    {
+        return $this->tanyakan(SuratKeluar::class, $request, $dari, $sampai)
+            ->with(['primer', 'petugas'])
+            ->withCount('lampiran')
+            ->get()
+            ->map(fn (SuratKeluar $s) => $this->isiUmum($s, 'keluar') + [
+                // Surat keluar tidak pernah "diterima"; kolomnya tetap ada di
+                // baris hasil supaya CSV & agenda punya header yang sama.
+                'tanggal_diterima' => null,
+                'lawan' => $s->penerima,
+            ])
+            ->values()
+            ->all();
+    }
+
+    /**
+     * Bagian yang identik dari kedua jenis surat.
+     *
+     * Dipisah jadi array terpisah (bukan satu method dengan `$model` string +
+     * `$kolomLawan` string) karena nama kolom dinamis membuat PHPStan buta dan
+     * membuat kedua bentuk surat menyatu jadi `Model` polos — itu persis bentuk
+     * yang membuat 9 temuan lama masuk baseline. Yang hanya ada di salah satu
+     * tabel (`pengirim`/`penerima`, `tanggal_diterima`) sengaja TIDAK di sini.
+     *
+     * @template TModel of SuratMasuk|SuratKeluar
+     *
+     * @param  TModel  $s
+     * @return array<string, mixed>
+     */
+    private function isiUmum(Model $s, string $jenisSurat): array
+    {
+        return [
+            'jenis' => $jenisSurat,
+            'tanggal_surat' => $s->tanggal_surat?->format('Y-m-d'),
+            'nomor_surat' => $s->nomor_surat,
+            'perihal' => $s->perihal,
+            'sifat' => $s->sifat,
+            'klasifikasi' => $s->primer ? $s->primer->kode.' '.$s->primer->nama : '-',
+            'status_arsip' => $s->status_arsip,
+            'jumlah_lampiran' => $s->lampiran_count,
+            'petugas' => $s->petugas?->nama_lengkap ?? '-',
+        ];
     }
 }

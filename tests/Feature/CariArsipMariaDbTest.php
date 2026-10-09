@@ -2,21 +2,19 @@
 
 namespace Tests\Feature;
 
-use App\Models\KlasifikasiPrimer;
 use App\Models\Lampiran;
 use App\Models\SuratKeluar;
 use App\Models\SuratMasuk;
-use App\Models\User;
 use App\Services\DaftarArsipGabungan;
 use App\Support\FilterArsip;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
-use Tests\TestCase;
+use Tests\MariaDbHarness;
 
 /**
  * Jalur pencarian yang paling rawan beda engine, dijalankan di MariaDB SUNGGUHAN
  * (bukti, bukan asumsi) — pola yang sama dengan NomorSuratKeluarTest, L-24/Q1=b.
+ * Plumbing koneksi/skip/bersih-bersih ada di Tests\MariaDbHarness.
  *
  * Suite utama berjalan di SQLite in-memory, dan ada tiga hal yang TIDAK bisa
  * dibuktikan dari sana:
@@ -30,96 +28,12 @@ use Tests\TestCase;
  * Kolom DATE MariaDB juga memotong bagian jam, sedangkan SQLite menyimpan
  * '2026-12-31 00:00:00' — selisih yang membuat filter tahun versi BETWEEN salah
  * di salah satu engine. Diuji dua-duanya.
- *
- * Kalau XAMPP/MariaDB mati, semua tes di kelas ini DI-SKIP dengan pesan yang
- * jelas, bukan lulus semu.
  */
-class CariArsipMariaDbTest extends TestCase
+class CariArsipMariaDbTest extends MariaDbHarness
 {
-    private const PENANDA = 'MJT';
+    protected const PENANDA = 'MJT';
 
-    private int $primerId;
-
-    private int $userId;
-
-    public static function setUpBeforeClass(): void
-    {
-        try {
-            $pdo = new \PDO(
-                'mysql:host='.(getenv('DB_HOST') ?: '127.0.0.1').';port='.(getenv('DB_PORT') ?: '3306'),
-                getenv('DB_USERNAME') ?: 'root',
-                getenv('DB_PASSWORD') ?: '',
-            );
-        } catch (\Throwable) {
-            return; // markTestSkipped() di setUp()
-        }
-
-        $namaDb = preg_replace('/[^A-Za-z0-9_]/', '', getenv('DB_TEST_DATABASE') ?: 'pradana_test');
-        $pdo->exec("CREATE DATABASE IF NOT EXISTS `{$namaDb}` CHARACTER SET utf8mb4");
-    }
-
-    protected function setUp(): void
-    {
-        parent::setUp();
-
-        if (! $this->mariaHidup()) {
-            $this->markTestSkipped(
-                'MariaDB (XAMPP) tidak berjalan — tes portabilitas pencarian dilewati. '.
-                'Nyalakan MySQL di XAMPP lalu jalankan: php artisan test --filter=CariArsipMariaDbTest'
-            );
-        }
-
-        Artisan::call('migrate', ['--database' => 'mysql_test_a', '--force' => true]);
-
-        config(['database.default' => 'mysql_test_a']);
-
-        $this->bersihkan();
-
-        $this->primerId = KlasifikasiPrimer::query()->create(['kode' => 'ZC', 'nama' => 'Uji Cari'])->id;
-
-        $petugas = User::query()->where('email', 'petugas.cari@example.test')->first();
-        if (! $petugas) {
-            $petugas = User::query()->create([
-                'nama_lengkap' => 'Petugas Uji Cari',
-                'email' => 'petugas.cari@example.test',
-                'pin' => bcrypt('12345678'),
-                'role' => 'pegawai',
-            ]);
-        }
-
-        $this->userId = $petugas->id;
-    }
-
-    protected function tearDown(): void
-    {
-        $this->bersihkan();
-
-        config(['database.default' => 'mysql']);
-
-        parent::tearDown();
-    }
-
-    private function bersihkan(): void
-    {
-        $idMasuk = SuratMasuk::query()->where('nomor_surat', 'like', self::PENANDA.'-%')->pluck('id')->all();
-
-        if ($idMasuk !== []) {
-            Lampiran::query()->where('lampiranable_type', SuratMasuk::class)
-                ->whereIn('lampiranable_id', $idMasuk)->delete();
-        }
-
-        $idKeluar = SuratKeluar::query()->where('nomor_surat', 'like', self::PENANDA.'-%')->pluck('id')->all();
-
-        if ($idKeluar !== []) {
-            DB::table('draf_konten_surat_keluar')->whereIn('surat_keluar_id', $idKeluar)->delete();
-            Lampiran::query()->where('lampiranable_type', SuratKeluar::class)
-                ->whereIn('lampiranable_id', $idKeluar)->delete();
-        }
-
-        SuratMasuk::query()->where('nomor_surat', 'like', self::PENANDA.'-%')->forceDelete();
-        SuratKeluar::query()->where('nomor_surat', 'like', self::PENANDA.'-%')->forceDelete();
-        KlasifikasiPrimer::query()->where('kode', 'ZC')->delete();
-    }
+    protected const KODE_PRIMER = 'ZC';
 
     private function masuk(array $ubah = []): SuratMasuk
     {
@@ -151,17 +65,6 @@ class CariArsipMariaDbTest extends TestCase
             'status_arsip' => 'aktif',
             'sifat' => 'biasa',
         ], $ubah));
-    }
-
-    private function mariaHidup(): bool
-    {
-        try {
-            DB::connection('mysql_test_a')->getPdo();
-
-            return true;
-        } catch (\Throwable) {
-            return false;
-        }
     }
 
     /**

@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\Aktivitas;
 use App\Models\User;
+use App\Support\CariArsip;
+use App\Support\RentangTanggal;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\Request;
 
@@ -18,6 +20,17 @@ use Illuminate\Http\Request;
  */
 class AktivitasController extends Controller
 {
+    /**
+     * 30 baris per halaman, BUKAN 20 seperti daftar surat (H2/L-14).
+     *
+     * Sengaja, dan di luar jangkauan H2: keputusan itu dibuat untuk daftar surat
+     * yang satu barisnya berat (klasifikasi, sifat, tombol aksi). Baris log cuma
+     * tiga kolom teks dan satu relasi `user` yang sudah di-eager-load, jadi
+     * layar bisa memuat lebih banyak tanpa biaya query tambahan — berguna justru
+     * karena layar ini dipakai untuk memindai jejak, bukan membuka satu arsip.
+     */
+    private const BARIS_PER_HALAMAN = 30;
+
     public function __construct()
     {
         $this->middleware(['auth', 'admin']);
@@ -28,24 +41,35 @@ class AktivitasController extends Controller
         $query = Aktivitas::query()->with('user');
 
         if ($request->filled('cari')) {
-            $kata = $request->input('cari');
-            $query->where('aksi', 'like', "%{$kata}%");
+            // Lewat `CariArsip::terapkan()`: karakter `%` dan `_` di-escape dan
+            // diberi `ESCAPE '!'` (bentuk lama `like "%$kata%"` memperlakukan
+            // keduanya sebagai wildcard), dan beberapa kata yang diketik admin
+            // berarti "semuanya harus ada" alih-alih "harus persis beruntun".
+            CariArsip::terapkan($query, $request->input('cari'), ['aksi']);
         }
 
         if ($request->filled('user_id')) {
             $query->where('user_id', $request->integer('user_id'));
         }
 
-        if ($request->filled('dari')) {
-            $query->whereDate('created_at', '>=', $request->input('dari'));
-        }
+        $batas = $this->batasPeriode($request);
 
-        if ($request->filled('sampai')) {
-            $query->whereDate('created_at', '<=', $request->input('sampai'));
+        if ($batas !== null) {
+            if ($batas[0] !== null) {
+                $query->where('created_at', '>=', $batas[0]);
+            }
+
+            if ($batas[1] !== null) {
+                $query->where('created_at', '<', $batas[1]);
+            }
         }
 
         return view('aktivitas.index', [
-            'aktivitas' => $query->latest()->latest('id')->paginate(30)->withQueryString(),
+            'aktivitas' => $query
+                ->latest('created_at')
+                ->latest('id')
+                ->paginate(self::BARIS_PER_HALAMAN)
+                ->withQueryString(),
             'pilihanUser' => User::orderBy('nama_lengkap')->get(['id', 'nama_lengkap']),
             'filter' => [
                 'cari' => $request->input('cari'),
@@ -54,5 +78,42 @@ class AktivitasController extends Controller
                 'sampai' => $request->input('sampai'),
             ],
         ]);
+    }
+
+    /**
+     * Rentang `created_at` sebagai interval setengah terbuka `[awal, akhir+1hari)`.
+     *
+     * Dulu `whereDate('created_at', '<=', $sampai)` — hasilnya benar, tapi
+     * `date()` di atas kolom membuat index tidak terpakai, dan maknanya
+     * "sampai jam nol hari itu" kalau kolomnya dibaca sebagai datetime.
+     *
+     * Sisi yang tidak diisi dibiarkan null (bukan dipasang batas palsu), jadi
+     * filter "Dari" saja atau "Sampai" saja tetap berfungsi.
+     *
+     * Periode terbalik dibalik, bukan dibiarkan kosong — sama seperti
+     * `LaporanController::periode()`: orang yang tertukar mengisi dua kotak
+     * tanggal maksudnya jelas.
+     *
+     * @return array{0: ?string, 1: ?string}|null null kalau tidak ada filter tanggal
+     */
+    private function batasPeriode(Request $request): ?array
+    {
+        $dari = $request->filled('dari') ? $request->input('dari') : null;
+        $sampai = $request->filled('sampai') ? $request->input('sampai') : null;
+
+        if ($dari === null && $sampai === null) {
+            return null;
+        }
+
+        if ($dari !== null && $sampai !== null && $dari > $sampai) {
+            // Perbandingan string aman di sini: kotaknya `input type=date`, jadi
+            // isinya selalu YYYY-MM-DD dan urutan leksikografis = urutan kronologis.
+            [$dari, $sampai] = [$sampai, $dari];
+        }
+
+        return [
+            $dari === null ? null : RentangTanggal::satuHari($dari)[0],
+            $sampai === null ? null : RentangTanggal::satuHari($sampai)[1],
+        ];
     }
 }

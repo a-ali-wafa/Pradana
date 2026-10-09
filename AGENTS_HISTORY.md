@@ -618,6 +618,37 @@ Verifikasi nyata (bukan hanya tes): server dev dijalankan atas izin user, login 
 
 Yang masih terbuka dari track keamanan (sengaja belum dikerjakan, bukan kelupaan): cek MIME `finfo` untuk unggah lampiran (sekarang whitelist ekstensi saja), rate limit di jalur unduh lampiran & cetak PDF (yang ada baru login 5/menit), dan `SESSION_SECURE_COOKIE` yang baru berarti setelah HTTPS diputuskan (S14).
 
+### Perapian kode & alur data — Fase 1 (9 Okt 2026)
+
+Permintaan user: "rapikan semua code dan alur data nya dan lainnya yang bisa di
+rapikan/optimalkan, analisis, buat plan lalu analisis lagi, baru dijalankan".
+Rencana + tabel pengukuran ada di `docs/plan-perapian-kode.md`; bagian ini riwayat
+keputusannya. Fase 2–5 belum dikerjakan.
+
+| File | Status | Keterangan |
+|---|---|---|
+| `app/Support/RentangTanggal.php` | **Baru** | `satuHari`/`rentang`/`bulan`/`terapkan` — interval setengah terbuka `[awal, akhir+1hari)` untuk semua filter tanggal. `self::` (bukan `static::`) untuk method private: PHPStan menemukannya, PHP sendiri memanggil versi kelas induk diam-diam. |
+| `app/Http/Controllers/LaporanController.php` | **Diubah** | `tanyakan()` (`@template TModel of Model`), `barisMasuk()`/`barisKeluar()`/`isiUmum()`, `jumlah()` = COUNT di database. Nama kolom dinamis `$kolomLawan` dibuang. |
+| `app/Http/Controllers/DashboardController.php` | **Diubah** | 9 `count()` → 2 agregat `SUM(CASE WHEN …)`; `whereMonth`+`whereYear` → `RentangTanggal::bulan()`; `KlasifikasiPrimer::all()` → `get(['id','kode','nama'])`; `maksTotalKlasifikasi` dihitung di controller. |
+| `app/Http/Controllers/AktivitasController.php` | **Diubah** | Cari lewat `CariArsip::terapkan()` (escape + multi-kata), rentang tanggal setengah terbuka satu/dua sisi, periode terbalik dibalik, `latest('created_at')+latest('id')`, `BARIS_PER_HALAMAN = 30` dengan alasan kenapa TIDAK 20. |
+| `app/Providers/AppServiceProvider.php` | **Diubah** | Badge antrian `layouts.app`: dua `count()` → satu `UNION ALL` lewat builder model. Composer ini jalan di SETIAP halaman. |
+| `app/Models/*.php` (12 file) | **Diubah** | 31 method relasi sekarang `@return BelongsTo<Related, $this>` / `HasMany<…>` / `MorphMany<…>`; `SuratMasuk`/`SuratKeluar` dapat `@property-read int $lampiran_count`; `$with` global di `KlasifikasiPrimer`/`KlasifikasiSekunder` dibuang (terukur: `klasifikasi_sekunder` dibaca 3× per muat dashboard). |
+| `app/Console/Kernel.php` | **Diubah** | `arsip:daftar-usang` mingguan + `withoutOverlapping()`. |
+| `phpstan-baseline.neon` | **Diubah** | **26 → 7 entri**, hasil analisis ulang, bukan pembungkaman. |
+| `tests/MariaDbHarness.php` | **Baru** | Plumbing tes engine-asli: skip dengan pesan kalau MariaDB mati, migrate `mysql_test_a`, bersih-bersih lewat prefix `PENANDA` + kode klasifikasi. `NomorSuratKeluarTest` sengaja tidak ikut (butuh dua koneksi). |
+| `tests/Feature/{JumlahQueryLayar,BatasTanggalLaporan,StatistikDashboard,LogAktivitasFilter,FlashKonsisten,AgregatMariaDb}Test.php` | **Baru** | 28 tes; rinciannya di AGENTS.md Bagian 3. `CariArsipMariaDbTest` kehilangan ±90 baris plumbing yang kini dipakai bersama. |
+
+Yang dibuktikan, bukan diasumsikan:
+
+- **Surat 31 Desember hilang dari rekap & Buku Agenda.** Sebelum perbaikan, CSV dari fixture 4 surat hanya memuat `UKU-DEPAN` dan `UKU-TENGAH`. Penyebabnya `whereBetween` + cast `date` yang ditulis Eloquent sebagai `Y-m-d H:i:s` (MariaDB memotong jam, SQLite tidak).
+- **Angka dashboard identik sebelum/sesudah** (`StatistikDashboardTest`) — refactor agregat tidak boleh mengubah satu pun kartu.
+- **`SUM(CASE …)` dan `UNION ALL` diterima MariaDB** lewat HTTP, dengan assertion SELISIH (`AgregatMariaDbTest`), karena `mysql_test_a` juga dipakai `NomorSuratKeluarTest` dan dashboard menghitung seluruh tabel.
+- **Semua kunci flash dirender layout** (`FlashKonsistenTest` memindai `->with('kunci',` di `app/` vs `session('kunci')` di `layouts/app.blade.php`).
+
+Keputusan yang diambil agent (boleh direvisi, alasannya ada di kode): pagination log tetap 30; `isiUmum()` mempertahankan `?-> … ?? '-'` yang oleh PHPStan dianggap berlebihan (defensif untuk baris yatim, masuk baseline); ambang guardrail = angka terukur + 2.
+
+Kesalahan selama pengerjaan yang dicatat supaya tidak diulang: (1) menyebut fixture pengukuran "selesai" sebelum jalur kodenya benar-benar tereksplorasi — 40 surat lama harus dibuat `inaktif` + tertanggal 2019 supaya `kandidatPemusnahan()` jalan; (2) skrip penyisip docblock yang variabelnya salah nama (`$type` alih-alih `$tipe`) sehingga docblock satu-baris ketimpa jadi dua baris rusak — ketahuan oleh `php -l` sebelum ada tes yang sempat lulus semu, dan hasilnya tetap dibaca baris per baris.
+
 ### Catatan lingkungan
 
-Sesuite **165 passed, 0 skipped** hanya tercapai saat MariaDB hidup: `CariArsipMariaDbTest` (10) + `NomorSuratKeluarTest` (3) memakai koneksi `mysql_test_a`/`mysql_test_b` (`DB_TEST_DATABASE`, default `pradana_test`) dan di-skip dengan pesan kalau XAMPP mati — skip itu bukan kegagalan, tapi berarti bukti portabilitasnya belum ada. `Pint` 160 file lolos; `Larastan` level 5 bersih **tanpa menambah `phpstan-baseline.neon`** (`@template TModel of Model` untuk `Builder`, `self::` untuk method private, `Collection<int, \stdClass>`).
+Sesuite **192 passed, 0 skipped** hanya tercapai saat MariaDB hidup: `CariArsipMariaDbTest` (10) + `AgregatMariaDbTest` (2) + `NomorSuratKeluarTest` (3) memakai koneksi `mysql_test_a`/`mysql_test_b` (`DB_TEST_DATABASE`, default `pradana_test`) dan di-skip dengan pesan kalau XAMPP mati — skip itu bukan kegagalan, tapi berarti bukti portabilitasnya belum ada. `Pint` 168 file lolos; `Larastan` level 5 bersih dengan baseline menyusut **26 → 7** (return type generik di 31 method relasi + `@property-read $lampiran_count` + `self::` untuk method private). Dev server TIDAK dijalankan untuk Fase 1 — verifikasinya lewat HTTP di dalam suite (Feature test) dan di MariaDB asli, bukan lewat browser.

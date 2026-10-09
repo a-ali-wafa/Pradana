@@ -21,16 +21,19 @@ class PemusnahanArsip extends Model
         'tanggal_pelaksanaan' => 'date',
     ];
 
+    /** @return HasMany<PemusnahanArsipItem, $this> */
     public function items(): HasMany
     {
         return $this->hasMany(PemusnahanArsipItem::class, 'pemusnahan_arsip_id');
     }
 
+    /** @return BelongsTo<User, $this> */
     public function pengaju(): BelongsTo
     {
         return $this->belongsTo(User::class, 'diajukan_oleh');
     }
 
+    /** @return BelongsTo<User, $this> */
     public function pemroses(): BelongsTo
     {
         return $this->belongsTo(User::class, 'diproses_oleh');

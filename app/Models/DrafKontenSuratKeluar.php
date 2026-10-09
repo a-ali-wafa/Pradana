@@ -17,6 +17,7 @@ class DrafKontenSuratKeluar extends Model
         'atas_nama', 'jabatan_penandatangan', 'nip_nik', 'tembusan',
     ];
 
+    /** @return BelongsTo<SuratKeluar, $this> */
     public function suratKeluar(): BelongsTo
     {
         return $this->belongsTo(SuratKeluar::class);
