@@ -82,3 +82,10 @@ jobs:
 
       - name: phpstan / larastan level 5
         run: vendor/bin/phpstan analyse --no-progress --memory-limit=1G
+
+      # Helper konfirmasi JS tidak bisa diuji PHPUnit (dia hidup di browser), tapi
+      # 18 jalur perilakunya bisa diuji tanpa browser lewat stub DOM kecil. Node ada
+      # di runner ubuntu bawaan; ini ALAT UJI, bukan langkah build — aplikasi tetap
+      # tanpa Node/Vite (X1=a), tidak ada package.json dan tidak ada dependency.
+      - name: uji perilaku helper JS (fallback Swal + guard klik dobel)
+        run: node bin/uji-pradana-arsip.js

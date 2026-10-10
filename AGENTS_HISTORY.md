@@ -1023,6 +1023,49 @@ Verifikasi layar lewat dev server TIDAK dilakukan pada session ini (butuh izin u
 terbukti di browser sungguhan: kotak Swal muncul, confirm() bawaan muncul saat Swal dihapus, dan
 form Tolak/Reset PIN terlihat tanpa JavaScript).
 
+### 10 Okt sore — push pertama, CI hijau, MariaDB dev korup lalu dipulihkan, dan bug klik-dobel di helper JS
+
+User menyalakan XAMPP dan mengizinkan push ("aku mendukung semua tindakan yang membantu project
+ini"). Urutan kejadian sebenarnya, termasuk yang gagal:
+
+1. **Push pertama** `ce5f134..ac92029` → workflow `CI` run #38035333559 **success dalam 42 detik**,
+   8 langkah semuanya OK. Tidak perlu `gh` (tidak terpasang): status dibaca lewat API publik repo
+   `actions/runs`. Ini juga bukti bahwa `cp .env.example .env` + `key:generate --force` cukup untuk
+   boot Laravel di mesin bersih.
+2. **`mysqladmin ping` yang menjawab "Access denied" membuatku menyimpulkan server hidup** — dan
+   memang hidup, tapi mati sedetik kemudian. Run suite pertama melaporkan 13 FAILED (`2002 ...
+   actively refused`). Kesimpulan yang benar hanya bisa datang dari `tasklist` + `netstat` +
+   `Test-NetConnection`, bukan dari satu ping.
+3. **Akar kerusakan:** `mysqld --console` menghasilkan `[FATAL] InnoDB: Trying to read page number
+   32769 in space 0 (innodb_system), which is outside the tablespace bounds` — redo log menuntut
+   `ibdata1` ±512 MB, filenya 79,7 MB; `ib_logfile0` (mtime 14:40) dan `ib_logfile1` (mtime 00:49)
+   jelas dari generasi berbeda. Setelah redo log diganti, server sempat "ready for connections"
+   lalu crash pada `btr0cur.cc:342` (`btr_page_get_prev(...) == page_get_page_no(page)`) — index
+   rusak, dan `information_schema.INNODB_SYS_TABLESPACES` menunjukkan `space=912` = **`pradana_test`**
+   (gudang pengukuranku 9 Okt), bukan `pradana` milik kantor. Ada juga folder `mysql_corrupted`
+   di datadir: kerusakan seperti ini pernah terjadi sebelumnya di laptop ini dan tidak dicatat.
+4. **Pemulihan (izin user, dengan salinan utuh 172 MB di `C:\Users\asus\prd-mysql-data-backup-20261010`
+   sebelum apa pun disentuh):** `--innodb-force-recovery=2` membuat server hidup → `mysqldump`
+   semua database (`pradana` 26,6 KB selamat termasuk surat asli `001/02.01.01/X/2026`; `pradana_test`
+   mati di `aktivitas`) → `mysqladmin shutdown` → pindahkan folder `pradana_test` → start normal =
+   **masih gagal** (`1813 Tablespace for table pradana_test.migrations exists. Please DISCARD the
+   tablespace before IMPORT`) → `DROP DATABASE IF EXISTS pradana_test` melepas entri dictionary →
+   server normal. Setelah itu **16 tes engine-asli lolos** dan suite penuh **233 passed / 0 skipped**
+   (1029 assertion, 33 detik).
+5. **Pelajaran yang dibawa ke desain project:** database scratch untuk pengukuran tidak boleh tinggal
+   di datadir yang sama dengan database kantor, dan `arsip:backup-db` + uji pulih (X5) berubah dari
+   formalitas jadi kebutuhan yang barusan terbukti. Kredensial tidak pernah lewat baris perintah —
+   semuanya lewat `--defaults-extra-file` yang dibuat dari config lalu dihapus.
+6. **Bug nyata di helper JS yang hanya kelihatan lewat alat uji Node.** `bin/uji-pradana-arsip.js`
+   (stub DOM minimal, 18 pemeriksaan, tanpa dependency; Node di sini alat uji, bukan langkah build —
+   `package.json` tetap tidak ada) menemukan bahwa **guard anti-dua-klik tidak bekerja**: flag
+   `pradanaDikonfirmasi` baru ditulis SETELAH dialog dijawab, jadi dua klik cepat = dua dialog =
+   **dua kali submit** untuk aksi DELETE. Diperbaiki jadi state machine `dataset.pradanaStatus`
+   (`ditable` → abaikan klik tambahan; `dikirim` → biarkan lolos tanpa dialog; kosong lagi saat
+   dibatalkan atau saat validasi HTML5 menahan pengiriman, dengan reset `setTimeout(…, 0)`).
+   Guardrail-nya diverifikasi dua arah: guard dibuka lewat `sed` → skrip gagal dengan exit code 1,
+   dan sekarang CI menjalankan `node bin/uji-pradana-arsip.js` di setiap push.
+
 ### Catatan lingkungan
 
 Suite sekarang **233 tes dalam 36 kelas**; yang tercapai saat MariaDB **mati** hanyalah

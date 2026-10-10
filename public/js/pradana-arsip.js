@@ -86,31 +86,55 @@
             return;
         }
 
-        // Form yang sudah dikonfirmasi sedang disubmit — jangan tanya dua kali.
-        // Flag ini juga yang membuat dua klik cepat tetap menghasilkan SATU permintaan.
-        if (form.dataset.pradanaDikonfirmasi === '1') {
+        var status = form.dataset.pradanaStatus;
+
+        // Dialog masih terbuka dan ada klik tambahan -> abaikan diam-diam, JANGAN
+        // tanya dua kali. Tanpa hal ini, dua klik cepat menghasilkan dua dialog dan
+        // DUA submit (itu yang ditemukan skrip verifikasi node 10 Okt, bukan teori).
+        if (status === 'ditable') {
+            event.preventDefault();
+
+            return;
+        }
+
+        // Permintaan submit yang berasal dari kita sendiri: biarkan lewat, tidak
+        // ada preventDefault dan tidak ada dialog lagi.
+        if (status === 'dikirim') {
             return;
         }
 
         event.preventDefault();
+        form.dataset.pradanaStatus = 'ditable';
 
         tanya(form).then(function (setuju) {
             if (! setuju) {
+                // Dibatalkan -> status dibersihkan supaya petugas bisa mencoba lagi
+                // dan tetap mendapat konfirmasi.
+                form.dataset.pradanaStatus = '';
+
                 return;
             }
 
-            form.dataset.pradanaDikonfirmasi = '1';
+            form.dataset.pradanaStatus = 'dikirim';
 
-            // `requestSubmit()` duluan: dia menjalankan validasi HTML5 bawaan dan
-            // mengirim lewat jalur biasa, jadi form yang punya `required`/`pattern`
-            // (form user, form draf) tetap divalidasi browser. `submit()` hanya
-            // dipakai sebagai fallback browser lama — dan aman dipanggil setelah
-            // flag di atas karena listener ini keluar lebih dulu.
+            // `requestSubmit()` duluan: dia menjalankan validasi HTML5 bawaan, jadi
+            // form dengan `required`/`pattern` tetap divalidasi browser. `submit()`
+            // hanya fallback browser lama.
             if (typeof form.requestSubmit === 'function') {
                 form.requestSubmit();
             } else {
                 form.submit();
             }
+
+            // Kalau validasi HTML5 menahan pengiriman, status "dikirim" tidak boleh
+            // tertinggal — kalau tidak, submit berikutnya lolos TANPA konfirmasi.
+            // Permintaan yang benar-benar terkirim sudah meninggalkan halaman, jadi
+            // reset di akhir task ini aman.
+            window.setTimeout(function () {
+                if (form.dataset.pradanaStatus === 'dikirim') {
+                    form.dataset.pradanaStatus = '';
+                }
+            }, 0);
         });
     });
 
