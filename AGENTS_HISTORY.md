@@ -1385,12 +1385,36 @@ dua arah dengan `sed` (tanggal tulisan tangan + span duplikat ditanam kembali �
 dikembalikan dari /tmp → hijau), dan sekali lagi guardrail ini menggigit dokumentasinya sendiri:
 komentar yang mengutip tanggal lama membuat tes gagal sampai komentar itu ditulis tanpa tanggal.
 
-Yang TETAP belum terlihat: tata letak ≥992 px. Panel browser di IDE hanya 638 px CSS (dpr 1,25),
-`window.resizeTo()` diblok (jendela bukan buatan skrip), `Ctrl+-` tidak sampai ke chrome browser,
-`window.open` dengan ukuran ditolak popup blocker, dan `user-browser-use` tidak punya tab
-terhubung. Jadi satu-satunya klaim yang masih berupa pembacaan CSS adalah sidebar sticky pada
-layar kantor — dan itu memang hanya berlaku di atas 768 px, di bawahnya layout sengaja berubah
-jadi hamburger.
+Yang belum terlihat pada saat bagian ini ditulis: tata letak ≥992 px. Panel browser di IDE hanya
+638 px CSS (dpr 1,25), `window.resizeTo()` diblok (jendela bukan buatan skrip), `Ctrl+-` tidak
+sampai ke chrome browser, `window.open` dengan ukuran ditolak popup blocker, dan `user-browser-use`
+belum punya tab terhubung. Jadi klaim "sidebar sticky di layar kantor" waktu itu masih pembacaan
+CSS (media query baru menimpa di ≤768 px), bukan pengamatan — dan itu ditutup beberapa menit
+kemudian, lihat subseksi Chrome di bawah.
+
+#### ...dan akhirnya dilihat di Chrome asli (user memasang Browser Connector)
+
+Viewport sungguhan **1490 × 734**. Login lewat connector berhasil; semua angka di bawah diukur di
+halaman hidup, bukan disimpulkan dari stylesheet.
+
+- `.sidebar`: computed `position: sticky`, lebar 260 px, tinggi = viewport. Pada `scrollY = 300` di
+  `/surat-masuk/create` (dokumennya +603 px) puncaknya tetap `0` — navigasi benar-benar tidak ikut
+  bergerak. Screenshot sebelum/sesudah menggulir juga membuktikan footer tetap di kolom konten.
+- "Tidak usah scroll" terukur, bukan dijanjikan: `/surat-masuk?cari=pengadaan`, `/laporan`,
+  `/aktivitas`, dan `/users` semuanya `scrollHeight == innerHeight` (nol pixel perlu menggulir),
+  dan baris filter daftar surat jadi SATU baris (cari + sifat + klasifikasi + status + tahun).
+- Pratinjau kop memang dua kolom di lebar itu (kolom kanan mulai x = 979, lebar 474 px).
+- **Cacat keempat, mustahil kelihatan di pane 638 px:** kartu Pratinjau Kop sudah `position: sticky`
+  tapi dengan `top: 1rem`, padahal `.topbar` juga sticky dan tingginya 68 px — begitu halaman
+  digulir, 52 px bagian atas kartu (termasuk judul "Pratinjau Kop Surat") tertutup topbar.
+  Perbaikannya bukan angka baru di satu tempat: `--tinggi-topbar: 68px` masuk ke `:root` layout dan
+  kelas `.pradana-sticky-kop { top: calc(var(--tinggi-topbar) + 12px) }` dipakai view. Diukur ulang
+  di Chrome: pada `scrollY = 180`, tepi bawah topbar 68 px dan kartu berhenti di 80 px.
+- Screenshot Chrome kadang `timed out` (40 dtk) pada halaman yang sama sementara pengukuran DOM
+  tetap jalan — jadi verifikasi di sini angka + screenshot yang berhasil, bukan screenshot saja.
+
+Satu guardrail teks sengaja TIDAK dibuat untuk kasus sticky ini (melarang `position: sticky` inline
+di view): pemakainya cuma satu, dan regex begitu lebih sering salah tuduh daripada menangkap regresi.
 
 
 ### Catatan lingkungan (terakhir diperbarui 10 Okt malam, sesudah pass UI)

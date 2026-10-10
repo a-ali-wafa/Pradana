@@ -166,7 +166,7 @@
     </div>
 
     <div class="col-12 col-xl-5">
-        <div class="card border-0 shadow-sm" style="position: sticky; top: 1rem;">
+        <div class="card border-0 shadow-sm pradana-sticky-kop">
             <div class="card-header bg-white py-3">
                 <span class="fw-bold"><i class="fas fa-eye me-2 text-secondary"></i>Pratinjau Kop Surat</span>
             </div>

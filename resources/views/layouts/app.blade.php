@@ -65,6 +65,9 @@
             --accent: #14b8a6;
             --bg-color: #f3f6f9;
             --text-dark: #334155;
+            /* Tinggi .topbar terukur di Chrome (padding 12px + avatar 34px + border).
+               Dipakai oleh elemen sticky di dalam konten — lihat .pradana-sticky-kop. */
+            --tinggi-topbar: 68px;
         }
         body {
             background-color: var(--bg-color);
@@ -185,6 +188,13 @@
         }
         .topbar h5 { font-size: 1.05rem; font-weight: 700; letter-spacing: .2px; }
         .content-area { padding: 20px 22px; flex: 1; }
+
+        /* Kartu yang harus tetap terbaca selagi kolomnya digulir (Pratinjau Kop).
+           Jaraknya NOT 1rem: topbar sendiri sticky setinggi --tinggi-topbar dan
+           ikut stay, jadi kartu yang menempel di 16 px tertutup 52 px bagian
+           atasnya — termasuk judulnya sendiri. Ketahuan di Chrome 1490 px,
+           tidak kelihatan di panel browser sempit. */
+        .pradana-sticky-kop { position: sticky; top: calc(var(--tinggi-topbar) + 12px); }
 
         .avatar-initial {
             width: 34px;
