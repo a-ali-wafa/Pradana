@@ -7,6 +7,7 @@ use App\Models\SuratKeluar;
 use App\Models\SuratMasuk;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
 use Tests\TestCase;
 
 /**
@@ -73,6 +74,42 @@ class BatasTanggalLaporanTest extends TestCase
             'status_arsip' => 'aktif',
             'sifat' => 'biasa',
         ]);
+    }
+
+    /**
+     * Periode default `/laporan` = "bulan ini", dihitung dari `now()`. Pada
+     * 01 Januari 02:30 WIB — instan yang sama dengan 31 Desember 19:30 UTC —
+     * "bulan ini" menurut zona UTC masih Desember 2025, jadi petugas yang membuka
+     * laporan di awal bulan disuguhi angka bulan yang SALAH tanpa peringatan
+     * apa pun. Diuji dua arah, seperti tes Berita Acara di `PemusnahanArsipTest`.
+     */
+    public function test_periode_default_laporan_ikut_jam_dinding_kantor(): void
+    {
+        $zonaSemula = (string) date_default_timezone_get();
+
+        Carbon::setTestNow(
+            Carbon::parse('2025-12-31 19:30:00', 'UTC')
+        );
+
+        $baca = fn (): array => array_map(
+            fn ($t): string => $t->toDateString(),
+            (array) $this->actingAs($this->pegawai)
+                ->get(route('laporan.index'))
+                ->assertOk()
+                ->viewData('periode')
+        );
+
+        $this->assertSame(['2026-01-01', '2026-01-31'], $baca(),
+            'Zona kantor (Asia/Jakarta): 01 Januari 02:30 WIB harus dilaporkan sebagai Januari 2026.');
+
+        config(['app.timezone' => 'UTC']);
+        date_default_timezone_set('UTC');
+
+        $this->assertSame(['2025-12-01', '2025-12-31'], $baca(),
+            'Kontrol negatif: dengan zona UTC, instan yang SAMA menghasilkan bulan yang salah — kalau ini ikut benar, tes di atas tidak membuktikan apa pun.');
+
+        date_default_timezone_set($zonaSemula);
+        Carbon::setTestNow();
     }
 
     public function test_rekap_mencakup_hari_terakhir_di_periode(): void

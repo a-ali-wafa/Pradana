@@ -270,11 +270,14 @@ Laporan ke petugas aplikasi akan cepat selesai kalau menyebut: **kode**, **jam**
 composer install --no-dev --optimize-autoloader
 cp .env.example .env
 php artisan key:generate
-# isi .env: DB_*, APP_URL, SESSION_*, APP_DEBUG=false, APP_ENV=production
+# isi .env: DB_*, APP_URL, SESSION_*, APP_DEBUG=false, APP_ENV=production,
+#           APP_TIMEZONE=Asia/Jakarta (WIB; ganti ke Asia/Makassar / Asia/Jayapura
+#           kalau kantormu bukan WIB)
 php artisan migrate --seed
 php artisan arsip:akun-pertama admin@kantor.desa --nama="Kepala Desa"
 php artisan config:cache && php artisan route:cache && php artisan view:cache
 ```
+`APP_TIMEZONE` menentukan tanggal yang tercetak di dokumen. Nomor Berita Acara (`BA-###/romawi/tahun`) dan tanggal pelaksanaannya dihitung dari jam server, dan Indonesia tidak punya perubahan waktu — jadi kalau nilainya masih `UTC` bawaan Laravel, semua kejadian antara pukul 00:00 dan 07:00 waktu setempat tercatat sebagai hari sebelumnya. Cek setelah pasang: `php artisan tinker --execute="echo now();"` harus menampilkan jam dinding kantor, bukan jam tujuh lebih awal.
 `--seed` hanya menanam satu baris pengaturan instansi kosong — **sengaja**. Akun contoh & klasifikasi contoh ada di `DevSeeder` yang menolak jalan di server produksi.
 
 **Tidak perlu `php artisan storage:link`.** Logo instansi dilayani lewat route `/instansi/logo` yang membaca disk `public` langsung, jadi logo tetap tampil di shared hosting tempat symlink tidak bisa (atau belum) dibuat. Kalau suatu saat pindah ke setup yang menyediakan symlink, route ini tetap jalan — tidak ada yang perlu diubah.

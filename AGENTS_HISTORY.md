@@ -1151,9 +1151,66 @@ peringatan jujur bahwa folder `db-backup` ada di disk yang sama dengan database-
 tes), `docs/daftar-peningkatan.md` (butir #3.4 ditandai SELESAI + dua bug yang ditemukan), header +
 Bagian 3 + Bagian 6 AGENTS.md, dan catatan "yang tidak dibuktikan CI" diperbaiki dari 16 → 18.
 
-### Catatan lingkungan (terakhir diperbarui 10 Okt malam)
+### 10 Okt malam (susulan) — zona waktu aplikasi: `UTC` bawaan Laravel salah untuk dokumen legal
 
-Suite sekarang **245 tes dalam 39 kelas**; yang tercapai saat MariaDB **mati** hanyalah
-**227 passed + 18 skipped** — dan sejak 10 Okt skip itu benar-benar skip, bukan merah
+Ketemu bukan karena dicari, tapi karena nama berkas dump `arsip:backup-db` memakai `date()` dan
+keluar sebagai `prd-2026-10-10-103939.sql` pada jam dinding 17:39. `config('app.php')` ternyata masih
+`'timezone' => 'UTC'` bawaan framework, dan aplikasi ini menghitung SEMUA tanggal yang dibaca petugas
+dari `now()`. Yang salah di lapangan:
+
+- `PemusnahanArsipController` nomor Berita Acara = `BA-%03d/<romawi bulan now()>/<tahun now()>`;
+  persetujuan yang ditekan 01 Januari 02:30 WIB (= 31 Desember 19:30 UTC) bernomor **XII/2025**.
+- `tanggal_pelaksanaan` default = `now()->toDateString()` → Berita Acara menyatakan **31 Desember
+  2025** untuk peristiwa yang terjadi 1 Januari. Ini dokumen resmi; tanggalnya tidak boleh meleset.
+- `LaporanController` periode default `now()->startOfMonth()`/`endOfMonth()` → laporan yang dibuka
+  pagi-pagi sekali bulan Januari isinya Desember.
+- Dashboard "bulan ini" dan `FilterArsip` `now()->subYears(5)` ikut bergeser satu arah yang sama.
+
+Diverifikasi dulu, bukan diasumsikan aman: `grep` atas `app/` + `database/` menemukan **nol**
+`DB::raw('NOW()')` dan **nol** `->useCurrent()`, jadi tidak ada timestamp yang dihasilkan database —
+semua ditulis PHP dan disimpan naive (tidak ada konversi saat baca). Artinya mengganti zona membuat
+seluruh sistem konsisten, dan satu-satunya jejak lama adalah baris yang terlanjur ditulis saat zona
+masih UTC (terbaca 7 jam lebih awal) — di laptop pengembangan, dan aplikasi belum pernah dipakai di
+server kantor, jadi ini murah sekarang dan mahal setelah serah terima.
+
+Keputusan: `config/app.php` sekarang `env('APP_TIMEZONE', 'Asia/Jakarta')` (WIB; kantor WITA/WIT cukup
+ganti `.env`, dan `docs/manual-pemakaian.md` A.2 menulis langkah cek `php artisan tinker --execute
+="echo now();"`). Kenapa tidak hard-code: satu baris register keputusan tidak menyebut zona, dan
+menaruhnya di `.env` membuat pertanyaan "kantor ini di zona mana" jadi pertanyaan konfigurasi, bukan
+perubahan kode.
+
+Tes (dua arah, pola yang sama dipakai guardrail lain di project ini supaya tidak lulus kebetulan):
+`Carbon::parse('2025-12-31 19:30:00', 'UTC')` membekukan satu **instan absolut**, lalu
+- `PemusnahanArsipTest::test_berita_acara_memakai_jam_dinding_kantor_bukan_utc` menuntut
+  `BA-###/I/2026` + `2026-01-01` di zona kantor, lalu mengulang adegan yang sama dengan
+  `date_default_timezone_set('UTC')` dan menuntut `XII/2025` + `2025-12-31`. Kontrol kedua yang
+  membuat yang pertama berarti.
+- `BatasTanggalLaporanTest::test_periode_default_laporan_ikut_jam_dinding_kantor` membaca
+  `viewData('periode')` dan menuntut `[2026-01-01, 2026-01-31]`, lalu `[2025-12-01, 2025-12-31]` di UTC.
+
+Tiga hal teknis yang muncul saat membuatnya: (1) mengganti `config(['app.timezone' => ...])` saja
+TIDAK mengubah `now()` — yang dibaca Carbon adalah `date_default_timezone_get()`, dan Laravel hanya
+menyetelnya saat bootstrap, jadi runtime harus ikut disetel manual; karena itu tes juga menuntut
+`config('app.timezone') === date_default_timezone_get()` supaya keduanya tidak bisa lari sendiri;
+(2) `Carbon::setTestNow('2026-01-01 02:30')` (string lokal) justru TIDAK memperlihatkan perbedaan
+zona — yang dibutuhkan adalah instan absolut, jadi string-nya di-parse dengan eksplisit `'UTC'`;
+(3) `Query::sole()` mengabaikan `take(1)` milikku (dia memang mengambil 2 baris untuk mendeteksi
+ambiguitas), sehingga penelusuran pengajuan kedua dipakai lewat `whereHas(items.nomor_surat_snapshot)`
+— lebih tegas daripada "yang terbaru".
+
+Gerbang: **247 tes / 39 class (1.121 assertion) lolos, 0 skipped**, `pint --test` 187 file, Larastan
+bersih tanpa baseline berubah. Dua sisipan karakter Han (aksara Cina, bentuknya satu-dua huruf di
+tengah kalimat Indonesia) sempat masuk lagi ke AGENTS.md dan manual pada malam yang panjang ini, dan
+ditangkap `TeksSumberBersihTest` — guardrail teks itu bekerja persis seperti yang didokumentasikan,
+termasuk menangkap dokumentasi milik agent sendiri. Mereka sengaja TIDAK dikutip di sini: menuliskan
+hurufnya sebagai contoh membuat berkas ini melanggar aturan yang dicatatkannya, dan tesnya memang
+membaca berkas ini.
+
+
+
+### Catatan lingkungan (terakhir diperbarui 10 Okt malam, sesudah zona waktu)
+
+Suite sekarang **247 tes dalam 39 kelas**; yang tercapai saat MariaDB **mati** hanyalah
+**229 passed + 18 skipped** — dan sejak 10 Okt skip itu benar-benar skip, bukan merah
 (lihat bullet `7012062` di atas). Yang lama tercatat sebagai "206 passed, 0 skipped"
 hanya tercapai saat MariaDB hidup: `CariArsipMariaDbTest` (10) + `AgregatMariaDbTest` (2) + `UrutAktivitasMariaDbTest` (1) + `NomorSuratKeluarTest` (3) + `BackupDatabaseMariaDbTest` (1) + `UjiPulihBackupMariaDbTest` (1) memakai koneksi `mysql_test_a`/`mysql_test_b` (`DB_TEST_DATABASE`, default `pradana_test`) dan di-skip dengan pesan kalau XAMPP mati — skip itu bukan kegagalan, tapi berarti bukti portabilitasnya belum ada; dua tes cadangan tambahan lagi butuh biner `mysqldump`/`mysql` dan hak `CREATE DATABASE`, jadi keduanya juga skip di CI. `Pint` 187 file per 10 Okt malam (176 sesudah Fase 7; +6 tes P0; +5 aset/JS/agenda/teks; +3 kelas cadangan + command + config) — dulu tercatat 172 (169 setelah Fase 4 membuang tiga file PHP boilerplate; 172 karena dua file tes baru + satu migration); `Larastan` level 5 bersih dengan baseline menyusut **26 → 5** (return type generik di 31 method relasi + `@property-read $lampiran_count` + `self::` untuk method private + delegasi umur arsip ke model bertipe konkret + catch yang ternyata tidak pernah bisa terjadi dibuang). Dev server tidak dijalankan untuk fase-fase perapian ini — verifikasinya lewat HTTP di dalam suite (feature test) dan di MariaDB asli, bukan lewat browser.

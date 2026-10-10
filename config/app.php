@@ -68,13 +68,30 @@ return [
     | Application Timezone
     |--------------------------------------------------------------------------
     |
-    | Here you may specify the default timezone for your application, which
-    | will be used by the PHP date and date-time functions. We have gone
-    | ahead and set this to a sensible default for you out of the box.
+    | PRADANA dibaca jam dinding kantor, bukan jam UTC. Bawaan Laravel 'UTC'
+    | salah untuk aplikasi ini karena SEMUA tanggal yang dilihat petugas dihitung
+    | dari now(): periode "/laporan" (startOfMonth), agregat "bulan ini" di
+    | dashboard, umur arsip, `tanggal_pelaksanaan` Berita Acara, dan nomor
+    | Berita Acara BA-###/<romawi>/<tahun>. Dengan UTC, setiap kejadian antara
+    | 00:00 dan 07:00 WIB tercatat sebagai hari SEBELUMMYA — dan pada 1 Januari
+    | 02:30 WIB, Berita Acara yang baru dibuat justru bernomor XII/2025.
     |
+    | Default Asia/Jakarta (WIB) karena kantor yang digambarkan ada di desa/
+    | kelurahan Jawa Timur (desa contoh: Urek-Urek, Jombang). Kantor di WITA/WIT
+    | mengubah ini lewat .env, bukan lewat kode: APP_TIMEZONE=Asia/Makassar atau
+    | Asia/Jayapura. Nama zona PHP yang dipakai, jadi offset-nya ikut benar saat
+    | tidak ada perubahan waktu di Indonesia.
+    |
+    | Dampak ke data yang sudah ada: kolom DATETIME di sini disimpan "naive"
+    | (tidak ada konversi saat baca) dan TIDAK ada satu pun timestamp yang
+    | dihasilkan database — `grep` atas app/ + database/ memastikan tidak ada
+    | DB::raw('NOW()') maupun ->useCurrent(), jadi seluruh nilai ditulis PHP
+    | dengan zona ini. Baris yang terlanjur ditulis saat zona masih UTC akan
+    | terbaca 7 jam lebih awal; itu cuma mengenai data pengembangan, karena
+    | aplikasi belum pernah dipakai di server kantor.
     */
 
-    'timezone' => 'UTC',
+    'timezone' => env('APP_TIMEZONE', 'Asia/Jakarta'),
 
     /*
     |--------------------------------------------------------------------------

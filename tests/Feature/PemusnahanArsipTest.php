@@ -8,6 +8,7 @@ use App\Models\PemusnahanArsip;
 use App\Models\SuratMasuk;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
@@ -196,6 +197,84 @@ class PemusnahanArsipTest extends TestCase
 
         // Snapshot tetap terbaca setelah arsip aslinya tidak ada.
         $this->assertSame('001/01/I/2019', $pemusnahan->items()->sole()->nomor_surat_snapshot);
+    }
+
+    /**
+     * Nomor Berita Acara (`BA-###/romawi/tahun`), tanggal pelaksanaan, dan
+     * `diproses_pada` semuanya dihitung dari `now()` — jadi zona waktu aplikasi
+     * bukan hiasan. Skenario yang terjadi betulan setiap awal tahun: admin
+     * menekan "Setujui" pada 01 Januari 02:30 WIB. Instan yang sama adalah
+     * 31 Desember 19:30 UTC, jadi dengan zona UTC kantor dokumen legalnya
+     * bernomor XII/2025 dan bertanggal 31 Desember 2025 — menyatakan hari yang
+     * belum terjadi menurut jam dinding ruang kerja.
+     *
+     * Tes ini menguji DUA arah pada satu instan absolut yang sama: hasil yang
+     * benar di zona kantor, dan hasil yang salah di zona UTC. Bagian kedua yang
+     * membuatnya membuktikan sesuatu tentang zona, bukan tentang tanggal yang
+     * dibekukan (cara yang sama dipakai `BatasTanggalLaporanTest` untuk
+     * memastikan guardrail tidak lulus karena kebetulan).
+     */
+    public function test_berita_acara_memakai_jam_dinding_kantor_bukan_utc(): void
+    {
+        $zonaSemula = (string) date_default_timezone_get();
+        $instan = Carbon::parse('2025-12-31 19:30:00', 'UTC');
+
+        Carbon::setTestNow($instan);
+
+        $ini = config('app.timezone');
+        $this->assertSame('Asia/Jakarta', $ini, 'Zona aplikasi berubah diam-diam — tes ini kehilangan artinya.');
+        $this->assertSame($ini, $zonaSemula, 'config(app.timezone) tidak diterapkan ke runtime (bootstrap SetDateTimeZone?).');
+
+        // --- 01 Januari 02:30 WIB: dokumen harus berbunyi 1 Januari 2026.
+        $satu = $this->buatSurat('011/01/I/2019', 'inaktif', '2019-01-02');
+        $pemusnahanSatu = $this->ajukanSurat($satu);
+
+        $this->actingAs($this->admin)
+            ->post(route('pemusnahan-arsip.setujui', $pemusnahanSatu));
+
+        $pemusnahanSatu->refresh();
+
+        $this->assertMatchesRegularExpression('#^BA-\d{3}/I/2026$#', (string) $pemusnahanSatu->nomor_berita_acara,
+            'Nomor Berita Acara harus memakai bulan Januari (WIB), bukan Desember (UTC).');
+        $this->assertSame('2026-01-01', $pemusnahanSatu->tanggal_pelaksanaan->toDateString());
+
+        // --- Kontrol: instan yang sama, zona UTC → dokumen yang salah.
+        config(['app.timezone' => 'UTC']);
+        date_default_timezone_set('UTC');
+
+        $dua = $this->buatSurat('012/01/I/2019', 'inaktif', '2019-01-03');
+        $pemusnahanDua = $this->ajukanSurat($dua);
+
+        $this->actingAs($this->admin)
+            ->post(route('pemusnahan-arsip.setujui', $pemusnahanDua));
+
+        $pemusnahanDua->refresh();
+
+        $this->assertMatchesRegularExpression('#^BA-\d{3}/XII/2025$#', (string) $pemusnahanDua->nomor_berita_acara,
+            'Kontrol negatif gagal: kalau UTC juga menghasilkan I/2026, tes di atas tidak membuktikan apa pun.');
+        $this->assertSame('2025-12-31', $pemusnahanDua->tanggal_pelaksanaan->toDateString());
+
+        date_default_timezone_set($zonaSemula);
+        Carbon::setTestNow();
+    }
+
+    /**
+     * Pengajuan untuk surat tertentu — `ajukan()` milik kelas ini terkunci ke
+     * `$this->layak`, dan tes zona butuh dua arsip yang bisa dimusnahkan.
+     * Ditelusuri lewat snapshot nomor surat (bukan "yang terbaru"), supaya
+     * pengajuan pertama tidak tertukar dengan yang kedua.
+     */
+    private function ajukanSurat(SuratMasuk $surat): PemusnahanArsip
+    {
+        $this->actingAs($this->pegawai)
+            ->post(route('pemusnahan-arsip.store'), [
+                'arsip' => ['masuk:'.$surat->id],
+                'alasan' => 'Lewat retensi (uji zona waktu).',
+            ]);
+
+        return PemusnahanArsip::query()
+            ->whereHas('items', fn ($q) => $q->where('nomor_surat_snapshot', $surat->nomor_surat))
+            ->sole();
     }
 
     public function test_pemusnahan_tidak_mengganggu_surat_lain(): void

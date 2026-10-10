@@ -199,6 +199,16 @@ kecuali yang ditandai.
 9. **Dokumentasi keputusan UI**: kalau salah satu kenyamanan di atas diterima/ditolak petugas,
    catat di register `Obsidian Vault/Pradana/Daftar Keputusan PRADANA.md` (preseden: L-17
    di-badge-kan tanpa konfirmasi eksplisit, masih tercatat ⚠️ sampai sekarang).
+10. **Zona waktu aplikasi** — **SELESAI 10 Okt 2026** (ditemukan malam itu juga, saat nama berkas dump
+   `arsip:backup-db` keluar tujuh jam lebih awal): `config/app.php` masih `'timezone' => 'UTC'`
+   bawaan Laravel, padahal nomor Berita Acara (`BA-###/romawi/tahun`), `tanggal_pelaksanaan`, periode
+   default `/laporan`, dan agregat "bulan ini" di dashboard semuanya dihitung dari `now()`. Jadi
+   persetujuan yang ditekan pukul 01 Januari 02:30 WIB menghasilkan dokumen **XII/2025 bertanggal 31
+   Desember 2025** — salah hari di dokumen resmi, bukan sekadar tampilan. Sekarang
+   `env('APP_TIMEZONE', 'Asia/Jakarta')` (kantor WITA/WIT cukup ganti `.env`). Dua tes baru mengunci
+   dua arah pada satu instan absolut; perpindahan zona dinyatakan aman oleh `grep` (nol
+   `DB::raw('NOW()')` dan nol `->useCurrent()` — tidak ada timestamp yang dihasilkan database).
+   Yang tersisa untuk petugas: memastikan `APP_TIMEZONE` terisi di `.env` server kantor (A.2 manual).
 
 ## 5. Urutan yang kusarankan (kalau kamu mau aku lanjutkan)
 
