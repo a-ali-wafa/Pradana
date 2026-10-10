@@ -63,6 +63,8 @@ php artisan serve
 php artisan test
 ```
 
-Framework: Laravel 12 (PHP 8.2), MariaDB/MySQL, Bootstrap 5 via CDN, PDF lewat dompdf.
+Framework: Laravel 12 (PHP 8.2), MariaDB/MySQL, Bootstrap 5 (Bootstrap, Font Awesome,
+dan SweetAlert2 ikut ter-commit di `public/vendor/` — tidak mengambil apa pun dari
+internet saat dipakai), PDF lewat dompdf.
 Aturan penamaan domain sengaja bahasa Indonesia (`surat_masuk`, `pemusnahan_arsip`) —
 lihat `AGENTS.md` sebelum mengubah apa pun.

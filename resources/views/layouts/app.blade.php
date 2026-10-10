@@ -47,9 +47,16 @@
           permission) masih [WAJIB TANYA USER], sama seperti versi layout sebelumnya.
     --}}
 
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    {{-- Aset diambil dari aplikasi sendiri (public/vendor), BUKAN CDN asing.
+         Alasannya bukan kecepatan: sebelumnya seluruh tata letak dan — yang lebih
+         berbahaya — konfirmasi SweetAlert2 di tombol Hapus/Nyahkan bergantung pada
+         cdn.jsdelivr.net & cdnjs.cloudflare.com. Satu ISP kantor, satu DNS yang
+         bermasalah, tampilan tanpa gaya dan tombol destruktif yang diam total.
+         Versi ditulis di `?v=` supaya upgrade aset ikut memaksa browser staf
+         memuat ulang (filenya sendiri di-overwrite, bukan diganti nama). --}}
+    <link href="{{ asset('vendor/bootstrap/bootstrap.min.css') }}?v=5.3.3" rel="stylesheet">
+    <link rel="stylesheet" href="{{ asset('vendor/font-awesome/css/all.min.css') }}?v=6.4.0">
+    <script src="{{ asset('vendor/sweetalert2/sweetalert2.all.min.js') }}?v=11.26.25"></script>
 
     <style>
         :root {
@@ -340,7 +347,7 @@
         </div>
     @endauth
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="{{ asset('vendor/bootstrap/bootstrap.bundle.min.js') }}?v=5.3.3"></script>
     @auth
     <script>
     (function () {

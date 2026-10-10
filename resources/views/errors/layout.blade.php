@@ -23,8 +23,8 @@
          lapisan keduanya. --}}
     <meta name="robots" content="noindex, nofollow, noarchive">
     <title>@yield('title', 'Ada yang kurang beres - PRADANA')</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="{{ asset('vendor/bootstrap/bootstrap.min.css') }}?v=5.3.3" rel="stylesheet">
+    <link rel="stylesheet" href="{{ asset('vendor/font-awesome/css/all.min.css') }}?v=6.4.0">
     <style>
         body { background: #f3f6f9; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #334155; }
         .error-kartu { max-width: 640px; margin: 8vh auto 0; }

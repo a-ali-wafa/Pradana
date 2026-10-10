@@ -103,8 +103,13 @@ class HeaderKeamananTest extends TestCase
         $this->assertNotNull($csp);
         $this->assertStringContainsString("'unsafe-inline'", $csp, 'Blade memakai @push(scripts) dan onclick inline.');
         $this->assertStringContainsString('blob:', $csp, 'Pratinjau logo memakai URL.createObjectURL.');
-        $this->assertStringContainsString('cdn.jsdelivr.net', $csp);
-        $this->assertStringContainsString('cdnjs.cloudflare.com', $csp);
+        // 10 Okt 2026: Bootstrap/SweetAlert2/Font Awesome dilokalkan ke
+        // public/vendor, jadi dua host CDN itu tidak lagi punya alasan berada di
+        // dalam CSP. Arah assertnya sengaja dibalik: yang diizinkan sekarang
+        // HANYA 'self' — kalau ada orang menambah host asing lagi, tes ini yang
+        // bertanya lebih dulu (lihat AsetLokalTest untuk sisi view-nya).
+        $this->assertStringNotContainsString('cdn.jsdelivr.net', $csp);
+        $this->assertStringNotContainsString('cdnjs.cloudflare.com', $csp);
         $this->assertStringContainsString("form-action 'self'", $csp);
         $this->assertStringContainsString("frame-ancestors 'none'", $csp);
     }

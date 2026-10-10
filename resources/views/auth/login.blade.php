@@ -38,8 +38,10 @@
         tidak ada SMTP kantor untuk kirim tautan reset.
     --}}
 
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    {{-- Sama seperti layouts/app: aset dilokalkan, karena halaman login justru
+         yang pertama dibuka saat staf datang dan internet kantor sedang putus. --}}
+    <link href="{{ asset('vendor/bootstrap/bootstrap.min.css') }}?v=5.3.3" rel="stylesheet">
+    <link rel="stylesheet" href="{{ asset('vendor/font-awesome/css/all.min.css') }}?v=6.4.0">
 
     <style>
         :root {
@@ -263,6 +265,6 @@
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="{{ asset('vendor/bootstrap/bootstrap.bundle.min.js') }}?v=5.3.3"></script>
 </body>
 </html>

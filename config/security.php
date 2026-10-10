@@ -29,16 +29,25 @@ return [
      * satu kantor, nilai yang hilang tidak sebanding. Yang tetap ditahan CSP:
      * sumber daya dari host tak dikenal, form yang dikirim ke luar, dan frame.
      *
+     * 10 Okt 2026: `script-src`/`style-src`/`font-src` TIDAK lagi menyebut
+     * cdn.jsdelivr.net atau cdnjs.cloudflare.com. Bootstrap, SweetAlert2, dan
+     * Font Awesome sekarang hidup di `public/vendor/` (lihat AGENTS.md,
+     * "Susulan 10 Okt"), jadi dua host itu cuma membuka jalan bagi muatan dari
+     * luar yang tidak dipakai lagi — semakin sedikit asal yang diizinkan, semakin
+     * berarti header-nya. Kalau nanti ada aset CDN baru, itu keputusan sadar,
+     * bukan warisan.
+     *
      * `img-src ... blob:` dibutuhkan pratinjau logo di Pengaturan Instansi
-     * (URL.createObjectURL, 4 Okt 2026); `font-src` ke cdnjs dipakai icon
-     * Font Awesome; `connect-src 'self'` masih mengizinkan unggah AJAX lampiran
-     * karena endpoint-nya milik aplikasi sendiri.
+     * (URL.createObjectURL, 4 Okt 2026); `data:` di font-src dibiarkan karena
+     * sebagian browser memuat font base64 dari stylesheet vendor. `connect-src
+     * 'self'` masih mengizinkan unggah AJAX lampiran karena endpoint-nya milik
+     * aplikasi sendiri.
      */
     'csp' => 'default-src \'self\'; '
-        ."script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; "
-        ."style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; "
+        ."script-src 'self' 'unsafe-inline'; "
+        ."style-src 'self' 'unsafe-inline'; "
         ."img-src 'self' data: blob:; "
-        ."font-src 'self' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net data:; "
+        ."font-src 'self' data:; "
         ."connect-src 'self'; "
         ."object-src 'none'; "
         ."frame-ancestors 'none'; "
