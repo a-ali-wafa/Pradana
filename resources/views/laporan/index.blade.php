@@ -90,6 +90,27 @@
     </div>
 @endif
 
+{{-- Plafon Buku Agenda (config/laporan.php). Dinyatakan DI LAYAR lebih dulu supaya
+     orang kantor tidak menekan tombol lalu menunggu lama untuk sesuatu yang akan
+     ditolak. Rekap CSV tidak dibatasi: barisnya dialirkan dan kolomnya sudah
+     dipangkas, jadi ia tidak menabrak memory_limit dompdf. --}}
+@if($jumlah > $agendaBatas)
+    <div class="alert alert-danger small">
+        <i class="fas fa-ban me-1"></i>
+        Buku Agenda <strong>tidak akan dicetak</strong> untuk periode ini:
+        {{ $jumlah }} surat melewati batas {{ $agendaBatas }} baris.
+        Persempit periodenya — misalnya satu semester (Januari–Juni atau Juli–Desember) —
+        lalu unduh lagi. Rekap CSV tetap bisa diunduh.
+    </div>
+@elseif($jumlah > ($agendaBatas / 2))
+    <div class="alert alert-warning small">
+        <i class="fas fa-hourglass-half me-1"></i>
+        {{ $jumlah }} surat akan masuk Buku Agenda. Dokumen sepanjang ini butuh waktu
+        lama dan memakan memori server; kalau terasa lambat atau gagal, cetak per
+        semester saja (batasnya {{ $agendaBatas }} baris).
+    </div>
+@endif
+
 <div class="alert alert-light border small">
     <i class="fas fa-info-circle me-1"></i>
     Periode bawaan adalah bulan berjalan. Rekap CSV memakai pemisah <code>;</code>

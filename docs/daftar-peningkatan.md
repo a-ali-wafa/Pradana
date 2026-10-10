@@ -28,11 +28,15 @@ Yang tersisa, urut manfaat/usaha:
 1. **`baris()` laporan → `get([...])` kolom yang dibutuhkan** (P0, ±1 jam, dampak besar).
    Angka di atas. Sekalian: `chunk(500)` untuk CSV supaya memori tidak pernah memegang semua
    baris sekaligus. Tidak mengubah kolom keluaran.
-2. **Agenda PDF: batasi + perpendek** (P0, ±2–3 jam). Opsi realistis tanpa queue (L-02
-   melarang worker): (a) periode agenda dipaksa per semester dengan pengingat di UI;
-   (b) render per 250 baris ke file, lalu gabung — tetap satu proses tapi hemat memori;
-   (c) tombol "cetak agenda" menghasilkan **file** lewat perintah artisan terjadwal dan
-   halaman `/laporan` tinggal mengunduhnya (cocok untuk agenda tahunan).
+2. **Agenda PDF: batasi + perpendek** — **SELESAI 10 Okt, opsi (a) saja.** Periode yang
+   melewati `AGENDA_BATAS_BARIS` (bawaan 2.000, `config/laporan.php`) ditolak lewat
+   `jumlah()` SEBELUM satu baris pun dihidrasi, dengan pesan yang menyebut batas,
+   jumlah sebenarnya, dan jalan keluar (cetak per semester); `/laporan` sudah
+   memperingatkan di layar. Opsi (b) render-per-250-lalu-gabung dan (c) file hasil
+   perintah terjadwal **tidak** dikerjakan: keduanya menambah keadaan yang harus
+   dibersihkan (file sementara/antrian) tanpa angka yang membayarnya, dan L-02
+   melarang worker. Kalau kantor ternyata butuh agenda tahunan sungguhan, (c) yang
+   jadi jawabannya — itu keputusan user, bukan asumsi agent.
 3. **Vendor asset lokal** (P0, ±1 jam — lihat temuan #1). Unduh `bootstrap.min.css`,
    `bootstrap.bundle.min.js`, subset `font-awesome` (only the `fa-` icons used — or swap to
    inline SVG), `sweetalert2.min.js` ke `public/vendor/`, ganti 4 tag URL, **update CSP**
@@ -182,7 +186,7 @@ kecuali yang ditandai.
 | P0 **SELESAI 10 Okt** | **Aset lokal + guard Swal + fallback tanpa JS** (temuan #1) | commit `416aed5` (aset + CSP) & berikutnya (konfirmasi); `AsetLokalTest` + `KonfirmasiDestruktifTest` | tidak |
 | P0 **SELESAI 10 Okt (dengan satu pengecualian)** | **`baris()` laporan → kolom saja** + chunk CSV | commit `ffa0fd0`; 56 MB → 2 MB terukur. Chunk/streaming CSV **sengaja tidak** dikerjakan: `baris()` harus menggabungkan & mengurutkan dua tabel sebelum baris pertama dicetak, jadi seluruh baris tetap dibutuhkan — setelah pemangkasan kolom sisanya ±2 MB | tidak |
 | P0 **SELESAI 10 Okt** | **CI Actions** (#4.1) | commit `7fee81c`; `.github/workflows/ci.yml` — catatan: 13 tes engine-asli MariaDB di-skip di CI, jadi suite lokal dengan XAMPP menyala tetap wajib sebelum serah terima | baru jalan setelah `git push` |
-| P1 | **Agenda PDF hemat/terbatas periode** (temuan #3) | risiko timeout di hosting | tidak |
+| P1 **SELESAI 10 Okt** | **Agenda PDF: plafon `AGENDA_BATAS_BARIS` + peringatan di layar** (temuan #3) | commit di bawahnya; `AgendaBatasBarisTest` (5 tes). Opsi render-bertahap/file terjadwal sengaja tidak dipilih — lihat §1 butir 2 | kalau butuh agenda tahunan sungguhan: putuskan opsi (c) |
 | P1 | **`arsip:backup-db` + uji pulih** (#3.4) | tanpa ini, serah terima berisiko | tidak |
 | P1 | **Undo-after-delete, autosave form, filter chips, buat salinan surat keluar** | kenyamanan harian, semua lokal | tidak |
 | P2 | **`lokasi_fisik` searchable + filter per petugas di log** | kolom sudah ada, tinggal dibuka | tidak |

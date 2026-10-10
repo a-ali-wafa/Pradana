@@ -84,6 +84,7 @@ class LaporanController extends Controller
         return view('laporan.index', [
             'periode' => $periode,
             'jumlah' => $this->jumlah($request, $dari, $sampai),
+            'agendaBatas' => $this->batasAgenda(),
             'klasifikasiPrimer' => KlasifikasiPrimer::orderBy('kode')->get(),
             'filter' => $request->only(['jenis', 'klasifikasi_primer_id', 'status_arsip']),
         ]);
@@ -134,10 +135,27 @@ class LaporanController extends Controller
 
     /**
      * Buku Agenda Surat (PDF, A4 landscape) — dokumen cetak manual kantor.
+     *
+     * Ada batas jumlah baris karena dokumen ini dibuat DALAM satu permintaan HTTP
+     * (L-02: tidak ada queue, dan tidak akan ada). Terukur 9 Okt di MariaDB:
+     * 1.000 baris agenda = 8,36 detik + puncak 52 MB. `max_execution_time` dan
+     * `memory_limit` shared hosting kantor (K1=a) tidak bisa dinaikkan dari kode
+     * ini, jadi menolak lebih awal dengan pesan yang jelas jauh lebih baik daripada
+     * permintaan yang mati di tengah jalan dan meninggalkan PDF separuh jadi.
      */
     public function agenda(Request $request)
     {
         [$dari, $sampai] = $this->periode($request);
+
+        $batas = $this->batasAgenda();
+        $jumlah = $this->jumlah($request, $dari, $sampai);
+
+        if ($jumlah > $batas) {
+            // `jumlah()` memakai kerangka query yang sama dengan `baris()`, jadi
+            // angka di pesan ini tidak bisa berbeda dari isi dokumennya.
+            return back()->with('error', 'Buku Agenda dibatasi '.$batas.' baris, periode ini memuat '.$jumlah.' surat. '
+                .'Persempit periodenya — misalnya satu semester (Januari–Juni atau Juli–Desember) — lalu cetak lagi.');
+        }
 
         $instansi = PengaturanInstansi::first();
 
@@ -175,6 +193,18 @@ class LaporanController extends Controller
     private function jenis(Request $request): string
     {
         return in_array($request->query('jenis'), ['masuk', 'keluar'], true) ? $request->query('jenis') : 'semua';
+    }
+
+    /**
+     * Plafon baris Buku Agenda, dari `config/laporan.php`.
+     *
+     * Dibaca lewat `config()` dan bukan `env()` karena deploy memakai
+     * `config:cache` — setelah itu `env()` mengembalikan null dan plafonnya
+     * diam-diam jadi 0 (jebakan yang sama sudah dicatat untuk SECURITY_CSP).
+     */
+    private function batasAgenda(): int
+    {
+        return (int) config('laporan.agenda_batas_baris');
     }
 
     /**
