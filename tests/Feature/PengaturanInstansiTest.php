@@ -178,4 +178,47 @@ class PengaturanInstansiTest extends TestCase
         // buster); kalau tidak, browser tetap menampilkan logo lama sesudah diganti.
         $this->assertStringContainsString('/instansi/logo?v=', $pengaturan->fresh()->logoUrl());
     }
+
+    public function test_tanggal_pratinjau_kop_datang_dari_jam_dinding_kantor(): void
+    {
+        // Guardrail-nya membaca BERKAS view, bukan respons HTTP: di dalam respons,
+        // tanggal hasil `@json(now())` dan tanggal yang ditulis tangan sama-sama
+        // berupa string berkutip, jadi hanya sumbernya yang bisa dibedakan.
+        $sumber = (string) file_get_contents(resource_path('views/pengaturan-instansi/edit.blade.php'));
+
+        // Yang dilarang: satu tanggal ditulis apa adanya di dalam skrip pratinjau.
+        // Bentuk itu pernah ada dan halaman menunjuk tanggal surat yang salah setiap
+        // hari sesudahnya, tanpa ada satu pun tes yang melihatnya.
+        $this->assertDoesNotMatchRegularExpression(
+            '/[\'"][^\'"]*\b\d{1,2}\s+(Januari|Februari|Maret|April|Mei|Juni|Juli|Agustus'
+                .'|September|Oktober|November|Desember)\s+\d{4}/',
+            $sumber,
+            'Pratinjau kop tidak boleh menyimpan tanggal yang ditulis tangan.'
+        );
+
+        // Bentuk yang benar: Blade yang menghitung (zona kantor), JS cuma memakainya.
+        $this->assertStringContainsString('tanggalHariIni', $sumber);
+        $this->assertStringContainsString("now()->translatedFormat('d F Y')", $sumber);
+
+        // Dan hari itu memang yang tampil di layar.
+        $this->actingAs($this->admin)
+            ->get(route('pengaturan-instansi.edit'))
+            ->assertSee(now()->translatedFormat('d F Y'), false);
+    }
+
+    public function test_kalimat_bantuan_kop_hanya_muncul_saat_mouse_mengarah(): void
+    {
+        // Permintaan user 10 Okt: info pada data kop surat jadi pop-up, bukan
+        // paragraf. Kalimat panjangnya harus ada di tooltip dan TIDAK diulang
+        // sebagai teks yang selalu tampil.
+        $html = $this->actingAs($this->admin)
+            ->get(route('pengaturan-instansi.edit'))
+            ->getContent();
+
+        $this->assertStringNotContainsString('Pratinjau ikut berubah saat mengetik', $html);
+        $this->assertStringContainsString('Pratinjau berubah mengikuti isian di kiri', $html);
+        $this->assertStringContainsString('data-bs-toggle="tooltip"', $html);
+        // `title` tetap ada sebagai fallback saat JavaScript mati.
+        $this->assertStringContainsString('title="Kop ini dipakai untuk surat keluar', $html);
+    }
 }

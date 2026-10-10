@@ -1341,10 +1341,61 @@ visual akhir (jarak, tinggi kartu, tampilan tooltip) belum dilihat mata** — ka
 aneh saat kamu buka aplikasinya, itu yang perlu disesuaikan lebih dulu.
 
 
+### 10 Okt malam (susulan kelima) — pass UI dilihat dengan mata: tiga cacat yang tidak bisa ditangkap PHPUnit
+
+User memberi izin menjalankan `php artisan serve`. Login Browser Connector kali ini **berhasil**
+— artinya kegagalan tiga kali pada 9 Okt memang kegagalan otomasi, bukan aplikasi. Layar yang
+diambil: dashboard, `/surat-masuk` (biasa + `?cari=` + `?jenis=semua`), `/surat-keluar`,
+`/laporan`, `/aktivitas`, `/pengaturan-instansi/edit`. Metode: screenshot + pengukuran DOM
+(`getBoundingClientRect`, `getComputedStyle`), bukan "kelihatannya sudah benar".
+
+Yang terkonfirmasi oleh mata: brand (logo + nama instansi) di sidebar dan kepala dashboard;
+logo tersimpan sudah tampil di Pratinjau Kop SEBELUM berkas mana pun dipilih (tiga `<img>` logo
+terukur terlihat); pemilih jenis tinggal dua tombol dengan tautan kontekstual "Cari pengadaan di
+semua arsip"; di mode gabungan muncul badge "Semua arsip (masuk + keluar)" + "Kembali ke Surat
+Masuk saja" yang href-nya memang `/surat-masuk?cari=pengadaan`; tooltip terbuka saat hover;
+kepala `/aktivitas` satu baris dengan badge "3 catatan" + tombol CSV; menu Akun (avatar inisial,
+email, "AKUN SAYA", Ganti PIN, catatan peran) dengan Keluar tetap di luar; Console browser kosong
+di semua halaman — nol pelanggaran CSP sesudah aset pindah ke `public/vendor`.
+
+Sticky diukur, bukan disimpulkan: `.topbar` tetap `top: 0` pada `scrollY = 159`; `html`, `body`,
+dan `#app-wrapper` semuanya `overflow: visible`, jadi prasyarat yang ditulis di komentar CSS
+ternyata benar-benar terpenuhi di DOM hidup. Sidebar sendiri baru terukur setelah blok
+`@media (max-width:768px)` ditimpa paksa (lihat batasnya di bawah).
+
+Tiga cacat yang HANYA kelihatan dengan melihat:
+
+1. **Tanggal pratinjau kop ditulis tangan di JavaScript.** `perbarui()` mengakhiri baris
+   "tempat, tanggal" dengan literal tanggal satu hari di awal Oktober, jadi sejak hari berikutnya
+   layar itu menunjuk tanggal surat yang salah — persis item yang di Fase 6 dicatat sebagai
+   "kosmetik" dan ditunda. Sekarang tanggalnya dihitung Blade (`@json(now()->translatedFormat(
+   'd F Y'))`) sehingga ikut `config('app.timezone')` seperti PDF-nya; terukur "DESA UREK-UREK,
+   10 Oktober 2026".
+2. **Kalimat bantuan kop masih tampil di layar**, padahal ⓘ-nya sudah membawa teks yang sama —
+   jadi info yang diminta user jadi pop-up tetap memakan dua baris. Span duplikatnya dibuang.
+3. **Tooltip Bootstrap punya `max-width` bawaan 200 px**, sehingga petunjuk pencarian yang
+   panjang jadi 7 baris sempit yang menutupi seluruh kepala halaman. `.tooltip-inner{max-width:
+   320px;text-align:start}` → terukur 320 × 85 px, empat baris.
+
+Guardrail-nya (`PengaturanInstansiTest` +2) **membaca berkas view, bukan respons HTTP** — satu-satunya
+cara yang bisa membedakan tanggal hasil `@json()` dari tanggal tulisan tangan, karena di dalam
+respons keduanya sama-sama string berkutip. Ini kebalikan dari guardrail flash/HTML yang justru
+membaca sumber: di sini yang diuji adalah *asal* nilai, dan asal hanya ada di sumber. Teeth diverifikasi
+dua arah dengan `sed` (tanggal tulisan tangan + span duplikat ditanam kembali → 2 failed → berkas
+dikembalikan dari /tmp → hijau), dan sekali lagi guardrail ini menggigit dokumentasinya sendiri:
+komentar yang mengutip tanggal lama membuat tes gagal sampai komentar itu ditulis tanpa tanggal.
+
+Yang TETAP belum terlihat: tata letak ≥992 px. Panel browser di IDE hanya 638 px CSS (dpr 1,25),
+`window.resizeTo()` diblok (jendela bukan buatan skrip), `Ctrl+-` tidak sampai ke chrome browser,
+`window.open` dengan ukuran ditolak popup blocker, dan `user-browser-use` tidak punya tab
+terhubung. Jadi satu-satunya klaim yang masih berupa pembacaan CSS adalah sidebar sticky pada
+layar kantor — dan itu memang hanya berlaku di atas 768 px, di bawahnya layout sengaja berubah
+jadi hamburger.
+
 
 ### Catatan lingkungan (terakhir diperbarui 10 Okt malam, sesudah pass UI)
 
-Suite sekarang **257 tes dalam 40 kelas**; yang tercapai saat MariaDB **mati** hanyalah
-**239 passed + 18 skipped** — dan sejak 10 Okt skip itu benar-benar skip, bukan merah
+Suite sekarang **259 tes dalam 40 kelas**; yang tercapai saat MariaDB **mati** hanyalah
+**241 passed + 18 skipped** — dan sejak 10 Okt skip itu benar-benar skip, bukan merah
 (lihat bullet `7012062` di atas). Yang lama tercatat sebagai "206 passed, 0 skipped"
-hanya tercapai saat MariaDB hidup: `CariArsipMariaDbTest` (10) + `AgregatMariaDbTest` (2) + `UrutAktivitasMariaDbTest` (1) + `NomorSuratKeluarTest` (3) + `BackupDatabaseMariaDbTest` (1) + `UjiPulihBackupMariaDbTest` (1) memakai koneksi `mysql_test_a`/`mysql_test_b` (`DB_TEST_DATABASE`, default `pradana_test`) dan di-skip dengan pesan kalau XAMPP mati — skip itu bukan kegagalan, tapi berarti bukti portabilitasnya belum ada; dua tes cadangan tambahan lagi butuh biner `mysqldump`/`mysql` dan hak `CREATE DATABASE`, jadi keduanya juga skip di CI. `Pint` 187 file per 10 Okt malam (176 sesudah Fase 7; +6 tes P0; +5 aset/JS/agenda/teks; +3 kelas cadangan + command + config) — dulu tercatat 172 (169 setelah Fase 4 membuang tiga file PHP boilerplate; 172 karena dua file tes baru + satu migration); `Larastan` level 5 bersih dengan baseline menyusut **26 → 5** (return type generik di 31 method relasi + `@property-read $lampiran_count` + `self::` untuk method private + delegasi umur arsip ke model bertipe konkret + catch yang ternyata tidak pernah bisa terjadi dibuang). Dev server tidak dijalankan untuk fase-fase perapian ini — verifikasinya lewat HTTP di dalam suite (feature test) dan di MariaDB asli, bukan lewat browser.
+hanya tercapai saat MariaDB hidup: `CariArsipMariaDbTest` (10) + `AgregatMariaDbTest` (2) + `UrutAktivitasMariaDbTest` (1) + `NomorSuratKeluarTest` (3) + `BackupDatabaseMariaDbTest` (1) + `UjiPulihBackupMariaDbTest` (1) memakai koneksi `mysql_test_a`/`mysql_test_b` (`DB_TEST_DATABASE`, default `pradana_test`) dan di-skip dengan pesan kalau XAMPP mati — skip itu bukan kegagalan, tapi berarti bukti portabilitasnya belum ada; dua tes cadangan tambahan lagi butuh biner `mysqldump`/`mysql` dan hak `CREATE DATABASE`, jadi keduanya juga skip di CI. `Pint` 188 file per 10 Okt malam (176 sesudah Fase 7; +6 tes P0; +5 aset/JS/agenda/teks; +3 kelas cadangan + command + config; +2 tes pratinjau kop) — dulu tercatat 172 (169 setelah Fase 4 membuang tiga file PHP boilerplate; 172 karena dua file tes baru + satu migration); `Larastan` level 5 bersih dengan baseline menyusut **26 → 5** (return type generik di 31 method relasi + `@property-read $lampiran_count` + `self::` untuk method private + delegasi umur arsip ke model bertipe konkret + catch yang ternyata tidak pernah bisa terjadi dibuang). Dev server tidak dijalankan untuk fase-fase perapian ini — verifikasinya lewat HTTP di dalam suite (feature test) dan di MariaDB asli, bukan lewat browser.

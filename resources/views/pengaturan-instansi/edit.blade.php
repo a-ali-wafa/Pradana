@@ -198,9 +198,10 @@
                     <div style="border-bottom: 1px solid #000; margin-top: 2px;"></div>
                 </div>
 
-                <div class="small text-secondary mt-3 d-flex align-items-start gap-2">
+                {{-- Hanya ikonnya yang tampil: kalimatnya sudah ada di dalam tooltip
+                     (permintaan user 10 Okt — info kop surat cukup saat mouse mengarah). --}}
+                <div class="small text-secondary mt-3">
                     @include('partials.ikon-info', ['pesan' => 'Kop ini dipakai untuk surat keluar, Berita Acara Pemusnahan, dan Buku Agenda. Pratinjau berubah mengikuti isian di kiri, tapi PDF baru memakai versi yang sudah disimpan.'])
-                    <span>Pratinjau ikut berubah saat mengetik; PDF memakai versi yang sudah disimpan.</span>
                 </div>
 
                 <div class="alert alert-light border small mt-3 mb-0 d-flex align-items-start gap-2">
@@ -236,6 +237,13 @@
             email: document.querySelector('[name="email"]'),
         };
 
+        // Tanggal pada baris "tempat, tanggal surat" diambil dari Blade, bukan ditulis
+        // di sini: pratinjau harus menunjukkan hari yang sama dengan PDF (jam dinding
+        // kantor, lihat config/app.timezone). Bentuk lamanya menuliskan satu tanggal
+        // apa adanya di dalam skrip, jadi halaman itu menunjuk tanggal surat yang salah
+        // setiap hari sesudahnya — dan tidak ada tes yang melihatnya.
+        const tanggalHariIni = @json(now()->translatedFormat('d F Y'));
+
         function teks(el) {
             return el && el.value ? el.value.trim() : '';
         }
@@ -267,7 +275,7 @@
             // Meniru PengaturanInstansi::tempatSurat() di PHP.
             let tempat = teks(field.nama).replace(/^(pemerintah|sekretariat|kantor)\s+/i, '').trim();
             if (!tempat) tempat = teks(field.kecamatan);
-            document.getElementById('kopTanggal').textContent = (tempat || '(isi Nama Instansi dulu)') + ', 05 Oktober 2026';
+            document.getElementById('kopTanggal').textContent = (tempat || '(isi Nama Instansi dulu)') + ', ' + tanggalHariIni;
         }
 
         Object.values(field).forEach(function (el) {

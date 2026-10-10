@@ -212,6 +212,10 @@
         .pradana-info:hover, .pradana-info:focus-visible { color: var(--secondary); }
         .pradana-info:focus-visible { outline: 2px solid #bfdbfe; outline-offset: 2px; border-radius: 4px; }
         .tooltip { font-size: .8rem; }
+        /* Batas bawaan Bootstrap 200px membuat kalimat sepanjang "Tiap kata harus
+           cocok…" jadi 7 baris sempit. 320px tetap pendek di layar tapi terbaca
+           dalam 3-4 baris. */
+        .tooltip-inner { max-width: 320px; text-align: start; }
 
         /* Logo kantor di kepala dashboard (sebesar avatar, tidak lebih). */
         .hero-logo {
