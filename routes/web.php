@@ -181,6 +181,9 @@ Route::middleware('auth')->group(function () {
 
     // Log aktivitas — read-only, admin only (L-22 / P3)
     Route::get('aktivitas', [AktivitasController::class, 'index'])->name('aktivitas.index');
+    // Rekap CSV untuk audit: kerangka filter yang sama dengan layar di atas
+    // (lihat AktivitasController::terapkanFilter()), jadi angka layar = isi berkas.
+    Route::get('aktivitas/rekap', [AktivitasController::class, 'rekap'])->name('aktivitas.rekap');
 
     // Laporan & Buku Agenda (I1=b + I2=b) — semua role yang login
     Route::get('laporan', [LaporanController::class, 'index'])->name('laporan.index');

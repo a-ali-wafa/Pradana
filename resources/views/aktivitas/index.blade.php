@@ -5,6 +5,19 @@
 
 @section('content')
 
+@php
+    // Hanya isi yang benar-benar dipakai yang ikut queryString unduhan, supaya
+    // tautan tidak membawa `cari=&user_id=` kosong. Kerangka filternya dibaca dari
+    // `AktivitasController::terapkanFilter()` yang sama dengan layar — angka di CSV
+    // tidak bisa berbeda dari angka di atas.
+    $argumenUnduh = array_filter([
+        'cari' => $filter['cari'],
+        'user_id' => $filter['user_id'],
+        'dari' => $filter['dari'],
+        'sampai' => $filter['sampai'],
+    ], static fn ($v): bool => $v !== null && $v !== '');
+@endphp
+
 <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
         <h4 class="fw-bold mb-1"><i class="fas fa-history me-2 text-primary"></i>Log Aktivitas</h4>
@@ -12,6 +25,15 @@
             {{ $aktivitas->total() }} catatan. Read-only — jejak ini tidak bisa diubah dari layar;
             catatan lebih dari 2 tahun dibersihkan otomatis kecuali yang berkaitan pemusnahan arsip.
         </p>
+    </div>
+    <div class="text-end">
+        <a href="{{ route('aktivitas.rekap', $argumenUnduh) }}"
+           class="btn btn-outline-primary rounded-pill px-4">
+            <i class="fas fa-file-csv me-1"></i> Unduh CSV ({{ $aktivitas->total() }})
+        </a>
+        <span class="d-block text-secondary small mt-1">
+            Semua catatan pada filter ini, bukan hanya halaman yang terlihat.
+        </span>
     </div>
 </div>
 

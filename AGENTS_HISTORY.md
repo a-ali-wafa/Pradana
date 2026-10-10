@@ -1225,6 +1225,49 @@ dikerjakan (biaya salah kerja = satu sesi penuh untuk fitur yang sudah jalan), d
 punya tes bisa kehilangan barisnya tanpa ada yang sadar — kelas kegagalan yang sama dengan guardrail
 flash yang buta terhadap `->with(` multi-line (Fase 6, 9 Okt).
 
+### 10 Okt malam (susulan ketiga) — ekspor CSV log aktivitas + satu kalimat manual yang ketahuan salah sebelum terlanjur dibaca orang kantor
+
+Paket P2 terakhir yang tidak butuh keputusan user: `GET /aktivitas/rekap`. Bentuknya sengaja mengikuti
+`LaporanController`: satu method pembangun query (`AktivitasController::terapkanFilter()`) dipakai
+`index()` dan `rekap()`, sehingga tidak mungkin lagi ada dua daftar filter yang lari sendiri — kelas
+bug yang sudah pernah menyerang project ini (dua controller surat, dua partial cascade, tiga template
+kop).
+
+Keputusan teknis yang membedakan dari rekap surat, dan alasannya tertulis di kode: **di sini `chunk(500)`
+dipakai, di laporan sengaja tidak**. Laporan harus menggabungkan dua tabel dan mengurutkan
+`(tanggal_surat, jenis)` sebelum baris pertama boleh ditulis, jadi streaming tidak membantu; log adalah
+satu tabel dengan urutan tetap (`created_at DESC, id DESC`), dan ia satu-satunya tabel yang bertambah
+setiap aksi di semua modul. Eager load `user:id,nama_lengkap` dipindah ke dalam `terapkanFilter()`
+sehingga layar dan CSV memakai muatan relasi yang sama.
+
+`LogAktivitasRekapTest` (7 tes) mengunci: 35 catatan = 35 baris CSV meskipun layar berhalaman 30;
+`sampai=2026-10-05` tetap mencakup 23:30 di hari itu; `user_id` dan `cari` ikut ke berkas; staf kena
+403 di kedua route; tautan unduhan membawa filter aktif dan tidak membawa yang kosong; dan BOM +
+header diurai dengan `str_getcsv`. Guardrail-nya digigit: satu `where('created_at', '>=', ...)`
+diselipkan hanya di jalur `rekap()` → tes "angka layar = baris CSV" merah ("Failed asserting that
+actual size 1 matches expected 2") → sabotage dibuang → hijau.
+
+Bagian yang paling layak diingat sesi berikutnya: **saya menulis lebih dulu di
+`docs/manual-pemakaian.md` bahwa nama petugas yang akunnya sudah dihapus tidak akan muncul di log —
+lalu menulis tes untuk klaim itu, dan tesnya gagal.** Kenyataannya `Aktivitas::user()` memang
+`withTrashed()` (keputusan 9 Okt yang juga menjaga nama petugas di laporan), jadi namanya TETAP
+terbaca setelah akun dihapus — dan untuk audit itu justru yang benar. Manualnya dikoreksi, dan
+perilaku sekarang dikunci tes (`test_nama_petugas_yang_akunnya_dihapus_tetap_terbaca_di_layar_dan_csv`)
+supaya "perapian" berikutnya tidak membuang `withTrashed()` tanpa membaca alasannya. Pelajarannya
+identik dengan aturan guardrail teks yang sudah ada di project ini: **jangan mempercayai kalimat
+dokumentasi — termasuk yang baru ditulis sepuluh menit yang lalu — sebelum ada yang menjalankannya.**
+
+Satu temuan kecil PHP yang berulang: `fputcsv()` membungkus setiap field yang mengandung spasi dengan
+tanda kutip (perilaku standarnya, juga ada di rekap surat yang sudah dipakai kantor), sehingga assert
+header yang memakai `explode(';')` menghasilkan `"Waktu (jam kantor)"` dan baris berikutnya ikut
+terseret. Yang benar: pecah per baris dulu, lalu `str_getcsv($baris, ';')`.
+
+Gerbang: **255 tes / 40 class lolos, 0 skipped (1.174 assertion)**, `pint --test` 188 file, Larastan
+bersih (satu temuan nyata diperbaiki, bukan dibaseline: nullsafe `?->` di sisi kiri `??` redundan),
+`node bin/uji-pradana-arsip.js` OK. Dokumen: manual §13.4 ditulis ulang (cara memakai tombol, arti
+kolom, batasan yang jujur), `docs/daftar-peningkatan.md` butir §2#5 ditandai SELESAI, Bagian 3 + angka
+suite AGENTS.md mengikuti kenyataan.
+
 
 
 ### Catatan lingkungan (terakhir diperbarui 10 Okt malam, sesudah zona waktu)

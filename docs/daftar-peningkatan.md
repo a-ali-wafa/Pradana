@@ -158,8 +158,15 @@ kecuali yang ditandai.
    ini: verifikasi lama menuntut bentuk `CREATE DATABASE` gaya MySQL 8 sehingga menolak dump sungguhan
    hasil MariaDB, dan `getSchemaBuilder()->getTables()` tanpa argumen menghitung **seluruh tabel di
    server** (79 di laptop ini) sehingga cadangan yang sah dituduh tidak lengkap.
-5. **Ekspor log aktivitas** (P2) untuk keperluan audit: CSV dari `/aktivitas` dengan filter
-   yang sedang aktif.
+5. **Ekspor log aktivitas** — **SELESAI 10 Okt 2026** (P2) untuk keperluan audit: `GET /aktivitas/rekap`
+   (`AktivitasController::rekap()`) menulis CSV `;` + BOM UTF-8 dari **kerangka filter yang sama dengan
+   layar** (`terapkanFilter()` dipakai `index()` dan `rekap()`), dialirkan per 500 baris karena
+   `aktivitas` satu-satunya tabel yang tumbuh tanpa batas. Tombolnya di kanan atas halaman log dan
+   membawa filter yang sedang aktif + jumlah catatan, jadi "30 baris yang terlihat" tidak bisa dibaca
+   sebagai "30 catatan". `LogAktivitasRekapTest` (7 tes): 35 catatan = 35 baris CSV walau layar
+   berhalaman 30, `sampai` tetap berarti akhir hari, `user_id`/`cari` ikut, staf 403, dan satu tes
+   mengoreksi asumsi saya sendiri — nama petugas yang akunnya dihapus TETAP terbaca karena relasi
+   `user()` sengaja `withTrashed()` (teks manualnya sudah disesuaikan, dan tesnya yang mengunci).
 6. **Multi-template PDF kop desa** 🔒 (F3, butuh bahan darimu: contoh kop/template asli desa).
 7. **Auto-lock arsip setelah N hari** 🔒 (L-19/B10, kolom `terkunci_pada` belum ada; **nilai N
    belum kamu putuskan**).

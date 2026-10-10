@@ -7,7 +7,9 @@ use App\Models\User;
 use App\Support\CariArsip;
 use App\Support\RentangTanggal;
 use Illuminate\Contracts\View\View;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
  * Halaman log aktivitas untuk admin (L-22 / P3=a).
@@ -38,7 +40,93 @@ class AktivitasController extends Controller
 
     public function index(Request $request): View
     {
-        $query = Aktivitas::query()->with('user');
+        return view('aktivitas.index', [
+            'aktivitas' => $this->terapkanFilter($request)
+                ->latest('created_at')
+                ->latest('id')
+                ->paginate(self::BARIS_PER_HALAMAN)
+                ->withQueryString(),
+            'pilihanUser' => User::orderBy('nama_lengkap')->get(['id', 'nama_lengkap']),
+            'filter' => [
+                'cari' => $request->input('cari'),
+                'user_id' => $request->input('user_id'),
+                'dari' => $request->input('dari'),
+                'sampai' => $request->input('sampai'),
+            ],
+        ]);
+    }
+
+    /**
+     * Rekap CSV dari log, dengan FILTER YANG SAMA PERSIS dengan layar
+     * (`docs/daftar-peningkatan.md` §2 butir 5, keperluan audit).
+     *
+     * Satu `terapkanFilter()` untuk dua keluaran bukan gaya-gayaan: ini pola yang
+     * sudah dipakai `LaporanController` (`baris()`), dan alasan yang sama —
+     * kalau ekspor dan layar punya kerangka query masing-masing, suatu hari angka
+     * di CSV berbeda dari angka di layar dan tidak ada yang tahu yang mana yang
+     * benar. Untuk dokumen audit, perbedaan diam-diam seperti itu lebih buruk
+     * daripada tidak ada ekspor sama sekali.
+     *
+     * Dialirkan per 500 baris (`chunk`), bukan `get()`: tabel `aktivitas` adalah
+     * satu-satunya tabel yang tumbuh tanpa batas (setiap aksi di semua modul
+     * menulis satu baris) dan tidak ada plafon yang membuat "semua" selalu kecil.
+     * Chunking di sini benar-benar mungkin — tidak seperti laporan surat — karena
+     * log hanya satu tabel dengan urutan tetap, jadi tidak perlu menggabungkan dua
+     * sumber sebelum baris pertama boleh ditulis.
+     */
+    public function rekap(Request $request): StreamedResponse
+    {
+        $namaFile = 'log-aktivitas-pradana-'.date('Y-m-d').'.csv';
+
+        return response()->streamDownload(function () use ($request) {
+            $keluaran = fopen('php://output', 'w');
+
+            // BOM + pemisah `;` — sama seperti rekap surat: Excel Indonesia
+            // membuka UTF-8 tanpa BOM sebagai ANSI, dan `;` adalah pemisah default
+            // di locale kantor (`,` membuat semuanya masuk satu kolom).
+            fwrite($keluaran, "\xEF\xBB\xBF");
+
+            fputcsv($keluaran, ['Waktu (jam kantor)', 'Petugas', 'Aksi', 'Subjek'], ';');
+
+            $this->terapkanFilter($request)
+                ->select(['id', 'user_id', 'aksi', 'subjek_type', 'subjek_id', 'created_at'])
+                ->latest('created_at')
+                ->latest('id')
+                ->chunk(500, function ($baris) use ($keluaran) {
+                    foreach ($baris as $satu) {
+                        $subjek = $satu->subjek_type === null
+                            ? '-'
+                            : class_basename($satu->subjek_type).' #'.$satu->subjek_id;
+
+                        fputcsv($keluaran, [
+                            $satu->created_at?->format('Y-m-d H:i') ?? '-',
+                            // `->` + `??` (bukan `?->`): relasi `user` boleh null dan
+                            // `??` sudah menangani keduanya — Larastan menandai nullsafe
+                            // di sisi kiri `??` sebagai redundan, dan dia benar.
+                            $satu->user->nama_lengkap ?? '(user dihapus)',
+                            $satu->aksi,
+                            $subjek,
+                        ], ';');
+                    }
+                });
+
+            fclose($keluaran);
+        }, $namaFile, [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+        ]);
+    }
+
+    /**
+     * Kerangka query log + semua filter yang sedang aktif. Dipakai `index()` dan
+     * `rekap()` — jangan menyalin isinya ke tempat lain.
+     *
+     * @return Builder<Aktivitas>
+     */
+    private function terapkanFilter(Request $request): Builder
+    {
+        // Eager load untuk kedua keluaran: layar menampilkan `nama_lengkap` dan
+        // CSV juga. Kolom dibatasi — `user` cuma dipakai untuk satu nama.
+        $query = Aktivitas::query()->with('user:id,nama_lengkap');
 
         if ($request->filled('cari')) {
             // Lewat `CariArsip::terapkan()`: karakter `%` dan `_` di-escape dan
@@ -64,20 +152,7 @@ class AktivitasController extends Controller
             }
         }
 
-        return view('aktivitas.index', [
-            'aktivitas' => $query
-                ->latest('created_at')
-                ->latest('id')
-                ->paginate(self::BARIS_PER_HALAMAN)
-                ->withQueryString(),
-            'pilihanUser' => User::orderBy('nama_lengkap')->get(['id', 'nama_lengkap']),
-            'filter' => [
-                'cari' => $request->input('cari'),
-                'user_id' => $request->input('user_id'),
-                'dari' => $request->input('dari'),
-                'sampai' => $request->input('sampai'),
-            ],
-        ]);
+        return $query;
     }
 
     /**

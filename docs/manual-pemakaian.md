@@ -223,6 +223,8 @@ Baris tanggal surat ("Urek-Urek, 5 Oktober 2026") memakai nama instansi tanpa ka
 ### 13.4 Log aktivitas
 Menu **Log Aktivitas** (hanya admin): siapa melakukan apa dan kapan, disaring per orang, per kata, atau per rentang tanggal. Layar ini hanya membaca — tidak ada tombol hapus. Catatan lebih dari 2 tahun dibersihkan otomatis oleh sistem, **kecuali** jejak pemusnahan.
 
+Untuk keperluan audit, tekan **Unduh CSV** di kanan atas: berkasnya berisi **semua** catatan pada filter yang sedang dipakai (bukan hanya halaman yang terlihat di layar — jumlahnya tertera pada tombolnya), dengan pemisah `;` dan UTF-8 ber-BOM sehingga langsung terbuka rapi di Excel/LibreOffice kantor. Kolomnya Waktu (jam kantor, bukan jam server), Petugas, Aksi, dan Subjek. Filter yang belum ditekan "Terapkan" belum ikut — pastikan angka di tombol sama dengan angka di atas layar sebelum berkas dikirim ke auditor. Nama petugas tetap terbaca di layar maupun CSV **meskipun akunnya sudah dihapus** dari daftar user (penghapusan akun di aplikasi ini hanya menyembunyikan akunnya, barisnya tidak hilang). Jadi menghapus akun tidak membersihkan jejaknya — dan itu memang tujuannya untuk audit.
+
 ### 13.5 Ganti PIN sendiri
 Tekan tombol **Akun** di kanan atas → **Ganti PIN**. Popup berisi PIN lama, PIN baru, dan ulangi PIN baru. Popup tidak tertutup sendiri kalau isinya salah — perbaiki tulisan merah di kolomnya lalu simpan lagi.
 
