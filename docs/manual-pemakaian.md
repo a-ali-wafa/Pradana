@@ -284,7 +284,7 @@ Scheduler Laravel harus dipanggil tiap menit:
 ```
 * * * * * cd /path/ke/pradana && php artisan schedule:run >> /dev/null 2>&1
 ```
-Isi yang dijadwalkan: backup arsip ke Google Drive (harian), daftar surat lewat retensi (mingguan), `arsip:bersihkan-log` (bulanan). Tanpa cron, ketiganya tidak pernah jalan.
+Isi yang dijadwalkan: backup arsip ke Google Drive (harian 00:00), **cadangan database `arsip:backup-db` (harian 02:10)**, daftar surat lewat retensi (mingguan), `arsip:bersihkan-log` (bulanan). Tanpa cron, keempatnya tidak pernah jalan.
 
 ### A.4 Google Drive (opsional, hanya backup)
 Simpan kredensial Service Account di `storage/app/google/service-account.json` (**jangan pernah di-commit**), isi `GOOGLE_DRIVE_ROOT_FOLDER_ID` di `.env`, lalu bagikan folder itu (akses Editor) ke email Service Account. Uji: `php artisan arsip:sinkron-ke-drive --dry-run`. Aplikasi tetap jalan penuh tanpa Drive — file arsip ada di disk lokal.
@@ -294,20 +294,60 @@ Simpan kredensial Service Account di `storage/app/google/service-account.json` (
 php artisan arsip:reset-pin staff@kantor.desa        # user lupa PIN & admin tidak ada
 php artisan arsip:daftar-usang --tahun=5             # tinjauan retensi
 php artisan arsip:bersihkan-log --dry-run            # lihat dulu apa yang akan dibuang
+php artisan arsip:backup-db --dry-run                # rencana cadangan, tidak menulis apa pun
+php artisan arsip:backup-db                          # cadangan manual (mis. sebelum ubah besar)
 php artisan tinker                                   # pemeriksaan data
 ```
+`arsip:backup-db` menulis `prd-YYYY-MM-DD-HHMMSS.sql` ke `storage/app/private/db-backup` (di luar `public/`, jadi tidak bisa diambil lewat URL), lalu membuang cadangan yang lebih tua dari `BACKUP_SIMPAN_HARI` (bawaan 30 hari). **Yang dibuang hanya berkas berpola itu** — kalau petugas pernah menaruh dump manual di folder yang sama, berkasnya tidak akan pernah disentuh.
+
+Kalau perintah keluar dengan `Biner ... tidak ditemukan`, isi `MYSQLDUMP_PATH` di `.env` dengan path absolut dari penyedia hosting (di XAMPP laptop: `C:\xampp\mysql\bin\mysqldump.exe`). Kalau keluar `Access denied` untuk `--routines`/`--events` (sebagian hosting membatasi hak di luar database kantor), setel `BACKUP_PROSEDUR=false` dan `BACKUP_EVENT=false` — skema PRADANA tidak punya prosedur atau event, jadi cadangannya tetap lengkap.
 
 ### A.6 Backup & uji pulih (wajib sebelum serah terima)
-1. Backup database: `mysqldump -u USER -p PRADANA_DB > backup-db.sql` (mingguan).
-2. Backup folder `storage/app/private/arsip` (harian lewat sinkron Drive, atau manual).
-3. **Uji pulih** di computer lain: buat database kosong, import `.sql`, `migrate` kalau perlu, salin folder arsip, `php artisan serve`, lalu buka 1 surat + unduh 1 lampiran. Unduh tanpa uji = belum tentu backup.
-4. Simpan salinan backup di luar computer server (flashdisk/Drive) — kalau satu computer mati, keduanya tidak ikut mati.
+Dua hal yang dicadangkan, dan keduanya otomatis:
+
+| Apa | Perintah | Hasil |
+|---|---|---|
+| Isi database (surat, klasifikasi, log, Berita Acara) | `arsip:backup-db` (harian 02:10) | `storage/app/private/db-backup/prd-<tanggal>.sql`, rotasi 30 hari |
+| Berkas lampiran | `arsip:sinkron-ke-drive` (harian 00:00) | folder Drive (L-01: Drive itu cadangan, bukan tempat utama) |
+
+**Perintah cadangan tidak pernah mengaku berhasil begitu saja.** Setelah `mysqldump` selesai, is diperiksa: ukuran minimal, ada baris `CREATE DATABASE` untuk database yang benar, jumlah `CREATE TABLE` tidak kurang dari jumlah tabel sungguhan di server, dan footer `-- Dump completed` ada. Kalau salah satu gagal, berkasnya **dibuang** dan perintah keluar dengan status gagal — lebih baik tidak punya cadangan yang diketahui buruk daripada punya yang disangka baik.
+
+**Uji pulih — lakukan sungguhan, bukan mencentang.** Jalur ini dipakai otomatis oleh `php artisan test --filter=UjiPulihBackup` (butuh MariaDB hidup), dan bisa diulang manual di computer mana pun:
+
+```bash
+# 1. buat cadangan terbaru
+php artisan arsip:backup-db
+
+# 2. pulihkan ke database BARU bernama pradana_uji_pulih (jangan pernah ke database kantor)
+#    NAMADB = nama database kantor di .env (DB_DATABASE). Ganti nama skema di dalam
+#    berkas supaya import tidak menimpa sumbernya.
+sed 's/`NAMADB`/`pradana_uji_pulih`/g' storage/app/private/db-backup/prd-TERBARU.sql > /tmp/pulih.sql
+mysql -u USER -p < /tmp/pulih.sql
+
+# 3. bandingkan: jumlah tabel & jumlah baris per tabel harus sama dengan aslinya
+mysql -u USER -p -e "SELECT COUNT(*) FROM pradana_uji_pulih.surat_masuk"
+mysql -u USER -p -e "SELECT COUNT(*) FROM NAMADB.surat_masuk"
+
+# 4. jalankan aplikasi di atas database hasil pulih (ubah DB_DATABASE di .env sementara),
+#    buka 1 surat, unduh 1 lampiran, cetak 1 PDF. Lalu buang database ujinya:
+mysql -u USER -p -e "DROP DATABASE pradana_uji_pulih"
+```
+Isi tabel ini setiap kali uji pulih dijalankan — ia yang membuktikan kolom "sudah diuji" di serah terima bukan formalitas:
+
+| Tanggal uji | Berkas yang dipulihkan | Berhasil? | Yang mencoba |
+|---|---|---|---|
+| | | | |
+| | | | |
+| | | | | **Backup yang belum pernah dipulihkan belum terbukti backup.**
+
+Simpan salinan cadangan di luar computer server (flashdisk/Drive) — kalau satu computer mati, keduanya tidak ikut mati. Folder `db-backup` ada di disk yang sama dengan database-nya, jadi ia melindungi dari salah hapus dan korupsi, **bukan** dari hard disk yang mati total.
 
 ### A.7 Setelah memasang
 ```bash
-php artisan test          # 165 tes; 13 di antaranya butuh DB_TEST_DATABASE (MariaDB hidup):
-                          # 3 tes penomoran + 10 tes portabilitas pencarian. Kalau MariaDB mati,
-                          # ke-13 tes itu DI-SKIP dengan pesan — bukan lulus.
+php artisan test          # 245 tes; 18 di antaranya butuh MariaDB hidup (DB_TEST_DATABASE):
+                          # 3 penomoran surat + 10 portabilitas pencarian + 2 agregat dashboard
+                          # + 1 index aktivitas + 1 dump sungguhan + 1 uji pulih cadangan.
+                          # Kalau MariaDB mati, ke-18 tes itu DI-SKIP dengan pesan — bukan lulus.
 ```
 Untuk pengembangan lokal: `php artisan db:seed --class=DevSeeder` (hanya jalan saat `APP_ENV=local`), PIN akun contoh dibaca dari `DEV_PIN` di `.env`.
 

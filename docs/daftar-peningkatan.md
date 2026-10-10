@@ -131,7 +131,7 @@ kecuali yang ditandai.
    keputusan fungsional, jadi perlu kamu tanyakan ke petugas dulu, bukan aku tebak.
 3. **Status surat keluar**: dikirim / diterima / ada tanda terima + tanggal. Sekarang surat
    keluar berhenti di "sudah dicetak PDF".
-4. **Backup database terjadwal** (P1): `arsip:sinkron-ke-drive` hanya mengurus **lampiran**.
+4. **Backup database terjadwal** — **SELESAI 10 Okt 2026** (P1): `arsip:sinkron-ke-drive` hanya mengurus **lampiran**.
    Isi DB (13 tabel) belum ada jalur backup otomatis — sekarang hanya catatan mysqldump manual
    di Lampiran A. Perlu `arsip:backup-db` (mysqldump via `Process`/`exec`, simpan ke folder
    Drive atau disk lokal, rotasi 30 hari) + prosedur uji pulih (X5) yang bisa dijalankan sungguhan.
@@ -145,6 +145,17 @@ kecuali yang ditandai.
    persamaan uji yang diminta X5, hanya saja dilakukan setelah insiden, bukan sebelumnya.
    Catatan: `mysqldump` per-database (`pradana`) juga harus masuk rutinitas, karena salinan datadir
    hanya berguna selama mesin MariaDB versi yang sama masih ada untuk membukanya.
+   **Yang landed 10 Okt:** `arsip:backup-db` + `config/backup.php`, dijadwalkan harian 02:10, dump ke
+   `storage/app/private/db-backup` (di luar `public/`), rotasi 30 hari yang hanya menghapus berkas
+   berpola `prd-<tanggal>.sql`, kredensial lewat file `defaults-extra-file` 0600 (bukan `-p` di baris
+   perintah), dan **verifikasi hasil** (ukuran + `CREATE DATABASE` skema yang benar + jumlah
+   `CREATE TABLE` vs tabel sungguhan + footer) — kegagalan verifikasi = backup gagal, berkas dibuang.
+   Uji pulih (X5) sekarang ada versi jalannya: `UjiPulihBackupMariaDbTest` memulihkan dump ke skema
+   `*_pulih`, membandingkan daftar tabel **dan jumlah baris per tabel** dengan sumbernya, lalu
+   membuktikan dump yang dipotong TIDAK menghasilkan salinan setara. Dua bug nyata ditangkap jalur
+   ini: verifikasi lama menuntut bentuk `CREATE DATABASE` gaya MySQL 8 sehingga menolak dump sungguhan
+   hasil MariaDB, dan `getSchemaBuilder()->getTables()` tanpa argumen menghitung **seluruh tabel di
+   server** (79 di laptop ini) sehingga cadangan yang sah dituduh tidak lengkap.
 5. **Ekspor log aktivitas** (P2) untuk keperluan audit: CSV dari `/aktivitas` dengan filter
    yang sedang aktif.
 6. **Multi-template PDF kop desa** 🔒 (F3, butuh bahan darimu: contoh kop/template asli desa).
@@ -195,9 +206,9 @@ kecuali yang ditandai.
 |---|---|---|---|
 | P0 **SELESAI 10 Okt** | **Aset lokal + guard Swal + fallback tanpa JS** (temuan #1) | commit `416aed5` (aset + CSP) & berikutnya (konfirmasi); `AsetLokalTest` + `KonfirmasiDestruktifTest` | tidak |
 | P0 **SELESAI 10 Okt (dengan satu pengecualian)** | **`baris()` laporan → kolom saja** + chunk CSV | commit `ffa0fd0`; 56 MB → 2 MB terukur. Chunk/streaming CSV **sengaja tidak** dikerjakan: `baris()` harus menggabungkan & mengurutkan dua tabel sebelum baris pertama dicetak, jadi seluruh baris tetap dibutuhkan — setelah pemangkasan kolom sisanya ±2 MB | tidak |
-| P0 **SELESAI 10 Okt** | **CI Actions** (#4.1) | commit `7fee81c`; `.github/workflows/ci.yml` — catatan: 13 tes engine-asli MariaDB di-skip di CI, jadi suite lokal dengan XAMPP menyala tetap wajib sebelum serah terima | baru jalan setelah `git push` |
+| P0 **SELESAI 10 Okt** | **CI Actions** (#4.1) | commit `7fee81c`; `.github/workflows/ci.yml` — catatan: 18 tes engine-asli MariaDB di-skip di CI, jadi suite lokal dengan XAMPP menyala tetap wajib sebelum serah terima | baru jalan setelah `git push` |
 | P1 **SELESAI 10 Okt** | **Agenda PDF: plafon `AGENDA_BATAS_BARIS` + peringatan di layar** (temuan #3) | commit di bawahnya; `AgendaBatasBarisTest` (5 tes). Opsi render-bertahap/file terjadwal sengaja tidak dipilih — lihat §1 butir 2 | kalau butuh agenda tahunan sungguhan: putuskan opsi (c) |
-| P1 | **`arsip:backup-db` + uji pulih** (#3.4) | tanpa ini, serah terima berisiko | tidak |
+| P1 **SELESAI 10 Okt** | **`arsip:backup-db` + uji pulih** (#3.4) | `config/backup.php` + command + jadwal harian 02:10; dump sungguhan 26,6 KB dari `pradana` terbukti lolos pemeriksaan sendiri; `BackupDatabaseTest` (10) + `BackupDatabaseMariaDbTest` (1) + `UjiPulihBackupMariaDbTest` (1, memulihkan ke skema lain lalu membandingkan jumlah baris per tabel — dan menguji dump terpotong agar TIDAK setara). Prosedur manualnya ditulis ulang di Lampiran A.6 | tidak |
 | P1 | **Undo-after-delete, autosave form, filter chips, buat salinan surat keluar** | kenyamanan harian, semua lokal | tidak |
 | P2 | **`lokasi_fisik` searchable + filter per petugas di log** | kolom sudah ada, tinggal dibuka | tidak |
 | P2 | **Impor CSV surat lama** | hemat paling banyak waktu manusia | ⚠️ perlu contoh kolom dari petugas |

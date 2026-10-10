@@ -1066,9 +1066,94 @@ ini"). Urutan kejadian sebenarnya, termasuk yang gagal:
    Guardrail-nya diverifikasi dua arah: guard dibuka lewat `sed` → skrip gagal dengan exit code 1,
    dan sekarang CI menjalankan `node bin/uji-pradana-arsip.js` di setiap push.
 
-### Catatan lingkungan
+### 10 Okt malam — P1: `arsip:backup-db` + uji pulih (X5) yang benar-benar dijalankan
 
-Suite sekarang **233 tes dalam 36 kelas**; yang tercapai saat MariaDB **mati** hanyalah
-**217 passed + 16 skipped** — dan sejak 10 Okt skip itu benar-benar skip, bukan merah
+Bekerja langsung setelah insiden di atas, atas izin user "langsung benerin aja selama kamu yakin
+bakal bener tidak perlu ngambil jalan memutar". Yang dibuat: `config/backup.php`,
+`app/Console/Commands/BackupDatabaseCommand.php` (`arsip:backup-db [--connection=] [--retain=]
+[--dry-run] [--no-rotate]`), jadwal `dailyAt('02:10')->withoutOverlapping()`, dan tiga kelas tes
+baru (10 + 1 + 1). Dump pertama yang nyata di mesin ini: `prd-2026-10-10-103939.sql`, 26,6 KB, dari
+database dev kantor `pradana`, ditulis ke `storage/app/private/db-backup` (di luar `public/`).
+
+Empat keputusan desain yang tidak bisa ditebak dari kode:
+
+1. **Kredensial tidak pernah masuk baris perintah.** Di Windows maupun Linux argumen proses yang
+   sedang berjalan bisa dibaca siapa pun (`tasklist /v`, `ps aux`, detail Task Manager). Password
+   ditulis ke file `[client]` sementara — `--defaults-extra-file`, `0600`, dihapus di `finally` —
+   dan hanya PATH file itu yang jadi argumen. Ada tes yang membaca ARRAY ARGUMEN sungguhan
+   (`perintahDump()` dipisah jadi method public justru untuk ini) dan menuntut
+   `--defaults-extra-file` ada di indeks 1, tidak ada `-p`/`--password`, dan (kalau koneksi punya
+   password) string password itu tidak muncul di baris gabungan.
+2. **`--defaults-extra-file` harus opsi PERTAMA** — di posisi lain mysqldump memperlakukannya
+   sebagai argumen biasa, dan kegagalan yang muncul adalah "Access denied" yang terlihat seperti
+   salah password, bukan salah urutan.
+3. **`--single-transaction --quick`** supaya InnoDB tidak dikunci selama dump (kantor boleh tetap
+   input surat) dan baris di-stream. `--lock-tables`/`--master-data` tidak dipakai: tidak ada
+   replikasi.
+4. **`--routines`/`--events` dibuat bisa dimatikan** (`BACKUP_PROSEDUR`/`BACKUP_EVENT`), bukan
+   hard-coded. Alasannya spesifik ke target K1=a: di MariaDB 10.4 `--routines` butuh hak baca ke
+   tabel sistem dan `--events` butuh privilege EVENT, dan pengguna database tunggal di shared
+   hosting sering tidak punya keduanya — mysqldump-nya keluar dengan error, bukan dengan cadangan.
+   `grep` atas `database/` + `app/` (10 Okt) membuktikan skema PRADANA punya NOL prosedur dan NOL
+   event, jadi flag itu hari ini hanya menambah cara gagal. `--triggers` (default mysqldump, tidak
+   butuh privilege tambahan) tetap diminta eksplisit.
+
+**Verifikasi hasil, bukan percaya exit code 0.** `periksaDump()` membaca berkas baris demi baris
+(dibagi per 64 KB, `CREATE TABLE` dihitung, bukan sekadar dicari) dan menuntut: ukuran ≥ 2 KB,
+baris `CREATE DATABASE` untuk database yang BENAR, jumlah `CREATE TABLE` tidak kurang dari jumlah
+tabel sungguhan di information_schema, dan footer `-- Dump completed` di 2 KB terakhir. Salah satu
+gagal → perintah keluar `FAILURE` dan berkasnya dibuang. Alasannya dicatat di kode: "cadangan" yang
+disangka sah lebih berbahaya daripada tidak ada cadangan, karena orang berhenti memeriksa.
+
+**Dua bug nyata, keduanya hanya kelihatan dengan menjalankan perintahnya terhadap MariaDB
+sungguhan — keduanya lolos dari sepuluh tes sintetis yang hijau:**
+
+- Pemeriksaan lama mencocokkan teks `CREATE DATABASE IF NOT EXISTS` gaya MySQL 8. MariaDB 10.4
+  membungkus "IF NOT EXISTS" di dalam komentar versi, jadi SETIAP cadangan sah dari server kantor
+  akan dilaporkan gagal — dan (lebih buruk lagi) tes sintetisku sendiri memakai bentuk MySQL
+  sehingga semuanya terlihat benar. Sekarang polanya menerima dua bentuk dan menuntut nama database
+  yang cocok; keduanya dikunci tes.
+- `SchemaBuilder::getTables()` **tanpa argumen** tidak dibatasi ke database koneksi: di laptop ini
+  ia mengembalikan 79 tabel (termasuk `mysql_corrupted`, `phpmyadmin`, `mysql`) sementara
+  `pradana_test` cuma 15 — dump yang lengkap dituduh "tidak lengkap", dan di hosting yang melayani
+  lebih dari satu database ini akan menggagalkan SETIAP backup malam. `jumlahTabel()` sekarang
+  selalu menyebut nama database secara eksplisit, dan tes dump nyata mengunci angkanya (≥ 14).
+
+**X5 jadi punya jalur yang dijalankan.** `UjiPulihBackupMariaDbTest` mengulang prosedur DR yang
+ditulis di Lampiran A.6: buat dump → ganti nama skema menjadi `pradana_test_pulih` (tidak pernah
+menimpa sumber) → import lewat `mysql --defaults-extra-file` → bandingkan DAFTAR tabel dan JUMLAH
+BARIS PER TABEL dengan sumbernya → pastikan surat `MJD-PULIH1` terbaca di skema hasil pulih → lalu
+kontrol negatif: dump yang sama dipotong di 60%, dan salinan dari potongan itu HARUS punya lebih
+sedikit tabel daripada yang utuh. Tanpa kontrol negatif, tes "berhasil" itu bisa saja hanya
+membuktikan skema yang sudah terlanjur ada di server. Bersih-bersih (`DROP DATABASE` dua skema
+latihan + hapus berkas + hapus cnf) dijaga `$engineSiap` yang sama seperti kelas harness lain, dan
+dibuktikan: tidak ada skema `*_pulih`/`*_cacat` yang tertinggal setelah run.
+
+**Teeth guardrail diverifikasi dua arah** (aturan project): sabotase `DELETE FROM
+pradana_test_pulih.surat_masuk` disisipkan sebelum perbandingan → tes merah dengan pesan
+"Jumlah baris `surat_masuk` tidak sama setelah pemulihan"; sabotase dibuang → hijau. Sabotase
+pertama (menghapus baris `users`) malah gagal membuktikan apa pun karena ditolak FK
+`surat_masuk_user_id_foreign` — efek sampingnya yang kebetulan justru mengonfirmasi bahwa hasil
+pulih membawa constraint, bukan cuma tabel kosong.
+
+Dua jebakan penulisan yang tercatat karena benar-benar terjadi: mengutip bentuk `... IF NOT
+EXISTS*/` di dalam docblock PHP **menutup docblock itu sendiri** (PHP melihat sisanya sebagai kode →
+fatal sintaks), sehingga bentuk aslinya harus dijelaskan dengan kata-kata; dan sebuah edit dokumen
+yang old_string-nya kepanjangan sempat menghapus kalimat pembuka bullet "Perapian kode" di
+AGENTS.md — terbaca dari `sed -n` sesudahnya, langsung diperbaiki.
+
+Gerbang setelah paket ini: **245 tes / 39 class lolos, 0 skipped (1.111 assertion, 79 s)**,
+`pint --test` 187 file (satu gaya diperbaiki di command baru), Larastan level 5 bersih dan
+`phpstan-baseline.neon` **tidak berubah** (tetap 5), `node bin/uji-pradana-arsip.js` OK. Dokumen yang
+diikuti: Lampiran A.3 (cron jadi empat tugas), A.5 (perintah + dua flag escape-hatch hosting), A.6
+(ditulis ulang: apa yang dicadangkan, apa yang diperiksa, prosedur uji pulih, tabel log uji, dan
+peringatan jujur bahwa folder `db-backup` ada di disk yang sama dengan database-nya), A.7 (jumlah
+tes), `docs/daftar-peningkatan.md` (butir #3.4 ditandai SELESAI + dua bug yang ditemukan), header +
+Bagian 3 + Bagian 6 AGENTS.md, dan catatan "yang tidak dibuktikan CI" diperbaiki dari 16 → 18.
+
+### Catatan lingkungan (terakhir diperbarui 10 Okt malam)
+
+Suite sekarang **245 tes dalam 39 kelas**; yang tercapai saat MariaDB **mati** hanyalah
+**227 passed + 18 skipped** — dan sejak 10 Okt skip itu benar-benar skip, bukan merah
 (lihat bullet `7012062` di atas). Yang lama tercatat sebagai "206 passed, 0 skipped"
-hanya tercapai saat MariaDB hidup: `CariArsipMariaDbTest` (10) + `AgregatMariaDbTest` (2) + `UrutAktivitasMariaDbTest` (1) + `NomorSuratKeluarTest` (3) memakai koneksi `mysql_test_a`/`mysql_test_b` (`DB_TEST_DATABASE`, default `pradana_test`) dan di-skip dengan pesan kalau XAMPP mati — skip itu bukan kegagalan, tapi berarti bukti portabilitasnya belum ada. `Pint` 182 file per 10 Okt (176 sesudah Fase 7; enam file tes P0 ditambahkan) — dulu tercatat 172 (169 setelah Fase 4 membuang tiga file PHP boilerplate; 172 sekarang karena dua file tes baru + satu migration); `Larastan` level 5 bersih dengan baseline menyusut **26 → 5** (return type generik di 31 method relasi + `@property-read $lampiran_count` + `self::` untuk method private + delegasi umur arsip ke model bertipe konkret + catch yang ternyata tidak pernah bisa terjadi dibuang). Dev server tidak dijalankan untuk fase-fase perapian ini — verifikasinya lewat HTTP di dalam suite (feature test) dan di MariaDB asli, bukan lewat browser.
+hanya tercapai saat MariaDB hidup: `CariArsipMariaDbTest` (10) + `AgregatMariaDbTest` (2) + `UrutAktivitasMariaDbTest` (1) + `NomorSuratKeluarTest` (3) + `BackupDatabaseMariaDbTest` (1) + `UjiPulihBackupMariaDbTest` (1) memakai koneksi `mysql_test_a`/`mysql_test_b` (`DB_TEST_DATABASE`, default `pradana_test`) dan di-skip dengan pesan kalau XAMPP mati — skip itu bukan kegagalan, tapi berarti bukti portabilitasnya belum ada; dua tes cadangan tambahan lagi butuh biner `mysqldump`/`mysql` dan hak `CREATE DATABASE`, jadi keduanya juga skip di CI. `Pint` 187 file per 10 Okt malam (176 sesudah Fase 7; +6 tes P0; +5 aset/JS/agenda/teks; +3 kelas cadangan + command + config) — dulu tercatat 172 (169 setelah Fase 4 membuang tiga file PHP boilerplate; 172 karena dua file tes baru + satu migration); `Larastan` level 5 bersih dengan baseline menyusut **26 → 5** (return type generik di 31 method relasi + `@property-read $lampiran_count` + `self::` untuk method private + delegasi umur arsip ke model bertipe konkret + catch yang ternyata tidak pernah bisa terjadi dibuang). Dev server tidak dijalankan untuk fase-fase perapian ini — verifikasinya lewat HTTP di dalam suite (feature test) dan di MariaDB asli, bukan lewat browser.

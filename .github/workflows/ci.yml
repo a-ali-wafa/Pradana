@@ -7,13 +7,18 @@ name: CI
 # tidak menangkap kelas bug itu, dan "hijau" tanpa CI berarti hijau di SATU mesin.
 #
 # Yang TIDAK dilakukan workflow ini, dan harus diketahui sebelum mempercayainya:
-# 1. Tes engine-asli MariaDB (CariArsipMariaDbTest, AgregatMariaDbTest,
-#    UrutAktivitasMariaDbTest = 13 tes) di-SKIP di CI, karena `mariaHidup()` tidak
-#    menemukan server. Suite sengaja tidak dipasang MySQL service: bentuk SQL yang
-#    diuji di sana (`LIKE ? ESCAPE '!'`, `CASE` di ORDER BY, binding dua kaki UNION,
-#    kolom DATE yang memotong jam) justru hanya ada di engine produksi — kalau nanti
-#    perlu ditutup di CI, itu satu service container + `DB_TEST_DATABASE`, bukan
-#    alasan untuk percaya angka "skipped" di baris hijau ini.
+# 1. Tes engine-asli MariaDB di-SKIP di CI, karena `mariaHidup()` tidak menemukan
+#    server: `CariArsipMariaDbTest` (10), `AgregatMariaDbTest` (2),
+#    `UrutAktivitasMariaDbTest` (1), `BackupDatabaseMariaDbTest` (1),
+#    `UjiPulihBackupMariaDbTest` (1) lewat `Tests\MariaDbHarness`, plus
+#    `NomorSuratKeluarTest` (3) yang memakai dua koneksi sendiri = 18 tes. Suite
+#    sengaja tidak dipasang MySQL service: bentuk SQL yang diuji di sana
+#    (`LIKE ? ESCAPE '!'`, `CASE` di ORDER BY, binding dua kaki UNION, kolom DATE
+#    yang memotong jam, mysqldump sungguhan) justru hanya ada di engine produksi —
+#    kalau nanti perlu ditutup di CI, itu satu service container +
+#    `DB_TEST_DATABASE`, bukan alasan untuk percaya angka "skipped" di baris hijau
+#    ini. DUA di antaranya (dump + uji pulih) tidak bisa diganti service MySQL
+#    biasa: keduanya butuh `mysql`/`mysqldump` di PATH dan hak CREATE DATABASE.
 # 2. Tidak ada langkah `npm`/build: `package.json` dibuang 9 Okt (Fase 4) dan aset
 #    frontend sudah ikut ter-commit di `public/vendor` (10 Okt), jadi tidak ada
 #    tahap build yang bisa "lupa dijalankan".
