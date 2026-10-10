@@ -12,7 +12,7 @@ Ditandai 🔒 kalau menyentuh keputusan user [LOCKED], ⚠️ kalau butuh bahan/
 | 1 | **Semua CSS/JS + SweetAlert2 dari CDN asing; nol guard.** 7 salinan `pradanaConfirmHapus()` memanggil `Swal.fire()` tanpa cek `typeof Swal` (`grep "typeof Swal\|window.Swal" resources/views/` = 0) | dibaca di kode: `layouts/app.blade.php:50-52,343` + `login.blade.php:41-42,266` | Internet kantor mati → UI tanpa gaya **dan tombol Hapus / Nyahkan / Pindahkan ke sampah jadi diam total** (JavaScript error, tidak ada fallback). Ini kegagalan paling mudah terjadi di desa |
 | 2 | **Ekspor laporan memakai seluruh baris sebagai model PHP** (`LaporanController::barisMasuk/barisKeluar` → `->get()`) | terukur @16.005 surat: **1.674 ms + 56 MB** untuk load, padahal `get(['id','nomor_surat',...])` hanya **383 ms + 2 MB** (4× cepat, 27× hemat) | Shared hosting biasanya `memory_limit` 128–256 MB; rekap 5–10 tahun bisa 500 → blank page / 500. Periode panjang = risiko nyata |
 | 3 | **Buku Agenda PDF lambat dan boros** | terukur: dompdf 1.000 baris = **8,36 s + 52 MB** (33 KB hasil) | Setahun agenda kantor (±2.000–3.000 surat) = 20–30 s → menabrak `max_execution_time` 30 s hosting → user klik "cetak agenda" lalu timeout |
-| 4 | **`lokasi_fisik` direkam di form & halaman show, tapi tidak bisa dicari/disaring** | dibaca di kode: muncul di `create/edit/show` kedua surat + 4 Request, tidak ada satu pun filter | Petugas tahu surat itu ada di "Rak B-07", tapi tidak bisa menjawab "surat apa saja di rak itu?" — padahal itu kegunaan utama kolomnya |
+| 4 | **`lokasi_fisik` direkam di form & halaman show, tapi tidak bisa dicari/disaring** — **SEBAGIAN BENAR, diperbaiki 10 Okt:** bagian "tidak bisa dicari" sudah TIDAK berlaku sejak refactor `CariArsip` 9 Okt (kolomnya ada di `KOLOM_CARI` kedua model), cuma belum ada satu pun tes yang membuktikannya — sekarang ada (`CariArsipTest::test_lokasi_fisik_ikut_digali`, diverifikasi dua arah dengan menghapus kolomnya: tes merah dengan pesan sendiri). Yang masih benar: tidak ada FILTER khusus lokasi dan tidak ada kolom "Rak/Box" di daftar | dibaca di kode: muncul di `create/edit/show` kedua surat + 4 Request, tidak ada satu pun filter | Petugas tahu surat itu ada di "Rak B-07", tapi tidak bisa menjawab "surat apa saja di rak itu?" — padahal itu kegunaan utama kolomnya |
 | 5 | **Tidak ada CI sama sekali** | `ls .github/workflows` = tidak ada | Gerbang (213 tes + pint + Larastan) cuma jalan kalau agent/kamu ingat menjalankannya. Di GitHub aksi gratis untuk repo publik/privat kecil |
 
 ## 1. Performa
@@ -96,7 +96,9 @@ kecuali yang ditandai.
    tujuan. Satu tombol → form edit dengan nomor kosong + counter baru. Hemat waktu paling
    besar dibanding fitur lain di daftar ini.
 8. **Filter `lokasi_fisik`** (P1, lihat temuan #4) + kolom "Rak/Box" di daftar; opsional
-   daftar "isi per lokasi".
+   daftar "isi per lokasi". Catatan 10 Okt: bagian *mencari* lokasi sudah jalan dan sudah
+   dikunci tes — `cari=Lemari 07` menemukan suratnya; yang belum dibuat adalah menyaring
+   DAFTAR ("semua surat di Rak B-07") dan menampilkannya sebagai kolom di tabel.
 9. **Preferensi daftar diingat per petugas** (kolom kecil di `users` atau cookie): kolom yang
    ditampilkan, urutan, halaman per 20/50/100 (⚠️ H2/L-14 mengunci "seragam 20" — kalau mau
    picker, itu keputusan baru, bukan bagian perapian).
@@ -220,7 +222,7 @@ kecuali yang ditandai.
 | P1 **SELESAI 10 Okt** | **Agenda PDF: plafon `AGENDA_BATAS_BARIS` + peringatan di layar** (temuan #3) | commit di bawahnya; `AgendaBatasBarisTest` (5 tes). Opsi render-bertahap/file terjadwal sengaja tidak dipilih — lihat §1 butir 2 | kalau butuh agenda tahunan sungguhan: putuskan opsi (c) |
 | P1 **SELESAI 10 Okt** | **`arsip:backup-db` + uji pulih** (#3.4) | `config/backup.php` + command + jadwal harian 02:10; dump sungguhan 26,6 KB dari `pradana` terbukti lolos pemeriksaan sendiri; `BackupDatabaseTest` (10) + `BackupDatabaseMariaDbTest` (1) + `UjiPulihBackupMariaDbTest` (1, memulihkan ke skema lain lalu membandingkan jumlah baris per tabel — dan menguji dump terpotong agar TIDAK setara). Prosedur manualnya ditulis ulang di Lampiran A.6 | tidak |
 | P1 | **Undo-after-delete, autosave form, filter chips, buat salinan surat keluar** | kenyamanan harian, semua lokal | tidak |
-| P2 | **`lokasi_fisik` searchable + filter per petugas di log** | kolom sudah ada, tinggal dibuka | tidak |
+| P2 | **Filter lokasi + kolom "Rak/Box" di daftar, dan filter per petugas di log** (`lokasi_fisik` sudah BISA dicari — terbukti oleh tes 10 Okt; yang belum: menyaring daftar berdasarkan lokasi dan menampilkannya sebagai kolom) | kolom sudah ada, tinggal dibuka | tidak |
 | P2 | **Impor CSV surat lama** | hemat paling banyak waktu manusia | ⚠️ perlu contoh kolom dari petugas |
 | P3 | **FULLTEXT, keyset pagination, OCR, thumbnail** | belum ada bukti perlu / tidak bisa di target | ya (kecuali OCR: tolak saja) |
 | 🔒 | **Multi-template PDF, N auto-lock, klasifikasi resmi, HTTPS/domain** | bahan/angka/keputusan kantor | ya |

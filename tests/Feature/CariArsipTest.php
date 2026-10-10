@@ -185,6 +185,37 @@ class CariArsipTest extends TestCase
         );
     }
 
+    /**
+     * "Lemari B, Box 07" satu-satunya petunjuk yang diingat petugas ketika arsip
+     * sudah masuk gudang. Kolomnya direkam di form DAN sudah ikut digali sejak
+     * refactor `CariArsip` 9 Okt — tapi tidak ada satu pun tes yang membuktikannya,
+     * sehingga `docs/daftar-peningkatan.md` masih menuliskannya sebagai "tidak bisa
+     * dicari". Tes ini mengubah klaim jadi guarded: kalau seseorang nanti memangkas
+     * daftar kolom, ia yang merah, bukan petugas yang kehilangan jalur pencarian.
+     */
+    public function test_lokasi_fisik_ikut_digali(): void
+    {
+        $ini = $this->masuk(['nomor_surat' => 'RAK-1', 'perihal' => 'Laporan bulanan']);
+        $ini->update(['lokasi_fisik' => 'Lemari B, Box 07']);
+
+        $lain = $this->masuk(['nomor_surat' => 'RAK-2', 'perihal' => 'Laporan bulanan']);
+        $lain->update(['lokasi_fisik' => 'Lemari A, Box 01']);
+
+        $keluar = $this->keluar(['nomor_surat' => 'RAK-3', 'perihal' => 'Laporan bulanan']);
+        $keluar->update(['lokasi_fisik' => 'Rak gudang C-03']);
+
+        $this->assertSame(
+            ['RAK-1'],
+            $this->nomorDiLayar(route('surat-masuk.index', ['cari' => 'lemari 07'])),
+            'Lokasi fisik surat masuk tidak tergali.'
+        );
+        $this->assertSame(
+            ['RAK-3'],
+            $this->nomorDiLayar(route('surat-keluar.index', ['cari' => 'gudang c-03'])),
+            'Lokasi fisik surat keluar tidak tergali.'
+        );
+    }
+
     public function test_nama_berkas_lampiran_ikut_digali(): void
     {
         $surat = $this->masuk(['nomor_surat' => 'BERKAS-1', 'perihal' => 'Tagihan']);

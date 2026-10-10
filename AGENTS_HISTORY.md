@@ -1206,6 +1206,25 @@ termasuk menangkap dokumentasi milik agent sendiri. Mereka sengaja TIDAK dikutip
 hurufnya sebagai contoh membuat berkas ini melanggar aturan yang dicatatkannya, dan tesnya memang
 membaca berkas ini.
 
+### 10 Okt malam (susulan kedua) — dokumen ternyata lebih basi daripada kode: `lokasi_fisik`
+
+`docs/daftar-peningkatan.md` butir #4 (ditulis 9 Okt) masih mengklaim "`lokasi_fisik` tidak bisa
+dicari". Dicek ke kode dulu, sebelum dikerjakan: kolom itu **sudah** ikut digali sejak refactor
+`App\Support\CariArsip` hari sebelumnya — ada di `KOLOM_CARI` `SuratMasuk` dan `SuratKeluar`. Yang
+tidak ada adalah tes, jadi tidak ada yang bisa membuktikan kolom itu masih di daftar sampai seseorang
+tidak sengaja memangkasnya.
+
+Ditambah `CariArsipTest::test_lokasi_fisik_ikut_digali` (dua assertion: surat masuk lewat
+`cari=lemari 07`, surat keluar lewat `cari=gudang c-03`), lalu digigit sesuai aturan project —
+`lokasi_fisik` dikeluarkan dari `KOLOM_CARI` → tes merah dengan pesannya sendiri "Lokasi fisik surat
+masuk tidak tergali." → kolom dikembalikan → hijau. Dokumen dikoreksi: yang benar-benar belum ada
+adalah FILTER per lokasi di daftar dan kolom "Rak/Box" di tabel, bukan pencariannya.
+
+Dua hal yang layak diingat sesi berikutnya: klaim "belum ada" di dokumen perlu dicek ke kode sebelum
+dikerjakan (biaya salah kerja = satu sesi penuh untuk fitur yang sudah jalan), dan fitur yang tidak
+punya tes bisa kehilangan barisnya tanpa ada yang sadar — kelas kegagalan yang sama dengan guardrail
+flash yang buta terhadap `->with(` multi-line (Fase 6, 9 Okt).
+
 
 
 ### Catatan lingkungan (terakhir diperbarui 10 Okt malam, sesudah zona waktu)
