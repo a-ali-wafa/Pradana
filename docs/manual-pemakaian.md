@@ -116,7 +116,9 @@ Sejak 9 Okt 2026, mengetik **beberapa kata sekaligus** juga berfungsi: setiap ka
 Dua hal lain yang perlu diketahui:
 
 - **Yang paling mirip tampil paling atas.** Kalau kata kunci berupa nomor (misalnya `471`), surat yang nomornya cocok didahulukan, walau ada surat lebih baru yang cuma menyebut angka itu di dalam isi.
-- **Tab "Semua arsip"** ada di atas daftar: Surat Masuk | Surat Keluar | Semua arsip. Pakai tab ini kalau lupa apakah suratnya masuk atau keluar — kedua jenis digabung dalam satu urutan, dan kata kunci ikut terbawa saat pindah tab. Ini bukan halaman pencarian baru, hanya mode di dalam halaman yang sedang dibuka.
+- **Mencari di kedua jenis surat sekaligus**: di atas daftar hanya ada dua tombol — **Surat Masuk | Surat Keluar**. Setelah kotak cari terisi, muncul tautan kecil *"Cari kata itu di semua arsip"* di sebelahnya; pakai itu saat lupa apakah suratnya masuk atau keluar. Kedua jenis lalu tampil dalam satu urutan, ada penanda **"Semua arsip (masuk + keluar)"**, dan ada tautan untuk kembali ke daftar biasa. Ini bukan halaman pencarian baru, hanya mode di dalam halaman yang sedang dibuka.
+
+Penjelasan panjang (kolom apa saja yang digali, arti filter) tidak lagi ditulis sebagai paragraf di layar: arahkan mouse ke ikon **ⓘ** di samping label — atau tekan Tab sampai ikon itu terfokus — untuk melihatnya. Tanpa JavaScript pun teksnya tetap muncul sebagai tooltip bawaan browser.
 
 Samping kotak ada saringan yang bekerja bersama kata kunci: **tahun, sifat, status arsip, klasifikasi primer**. Hasil ditampilkan **20 per halaman**; kosongkan kotak untuk melihat semua. Kata yang ditemukan ditandai berblok kuning di daftar, jadi kelihatan kenapa surat itu muncul.
 

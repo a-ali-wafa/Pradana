@@ -1,9 +1,47 @@
 @extends('layouts.app')
 
 @section('title', 'Dashboard - PRADANA')
-@section('page-title', 'Dashboard Statistik')
+@section('page-title', 'Dashboard')
 
 @section('content')
+@php
+    /*
+     * Identitas kantor di kepala dashboard (10 Okt 2026): logo + nama instansi dari
+     * Pengaturan Instansi, bukan lambang generik. Satu sumber yang sama dengan kop
+     * PDF dan sidebar, diambil dari cache (PengaturanInstansi::untukTampilan())
+     * supaya layar ini tidak bertambah query hanya untuk sebuah gambar.
+     *
+     * Tanggal hari ini ikut ditulis karena dashboard dipakai untuk menandai
+     * "sampai kapan angka ini berlaku" — dan sejak zona aplikasi diubah ke WIB,
+     * tanggalnya adalah tanggal menurut jam dinding kantor.
+     */
+    $merek = App\Models\PengaturanInstansi::untukTampilan();
+@endphp
+
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-body d-flex align-items-center gap-3 py-3">
+        <span class="hero-logo">
+            @if (! empty($merek['logo']))
+                <img src="{{ $merek['logo'] }}" alt="Logo instansi">
+            @else
+                <i class="fas fa-building"></i>
+            @endif
+        </span>
+        <div class="flex-grow-1 overflow-hidden">
+            <div class="fw-bold fs-5 text-truncate" title="{{ $merek['nama'] ?? '' }}">
+                {{ $merek['nama'] ?: 'PRADANA — Arsip Surat Desa' }}
+            </div>
+            <div class="small text-secondary text-truncate">
+                PRADANA · Arsip surat masuk &amp; keluar · {{ now()->translatedFormat('l, d F Y') }}
+            </div>
+        </div>
+        <div class="d-none d-md-flex align-items-center gap-2 small text-secondary">
+            <span class="badge rounded-pill text-bg-light border">{{ number_format($stats['total_surat_masuk']) }} masuk</span>
+            <span class="badge rounded-pill text-bg-light border">{{ number_format($stats['total_surat_keluar']) }} keluar</span>
+        </div>
+    </div>
+</div>
+
 <div class="container-fluid px-0">
     {{-- Baris Kartu Statistik Utama --}}
     <div class="row g-3 mb-4">

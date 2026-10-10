@@ -58,8 +58,8 @@
     </div>
 </div>
 
-{{-- Tab Surat Masuk | Surat Keluar | Semua arsip. Tidak ada route baru: tab
-     ketiga cuma menambah ?jenis=semua pada halaman ini. --}}
+{{-- Pemilih Surat Masuk | Surat Keluar. Tidak ada route baru: mode gabungan cuma
+     menambah ?jenis=semua pada halaman ini. --}}
 @if(! $melihatSampah)
     @include('partials.tab-arsip', ['aktif' => $gabung ? 'semua' : 'masuk', 'routeAsal' => 'surat-masuk.index'])
 @endif
@@ -78,19 +78,17 @@
 <div class="card mb-4">
     <div class="card-body">
         <form method="GET" action="{{ route('surat-masuk.index') }}" class="row g-2 align-items-end">
-            {{-- Filter tidak boleh diam-diam mengeluarkan user dari tab "Semua arsip". --}}
+            {{-- Filter tidak boleh diam-diam mengeluarkan user dari mode gabungan. --}}
             @if($gabung)
                 <input type="hidden" name="jenis" value="semua">
             @endif
             <div class="col-md-3">
-                <label class="form-label small fw-bold text-secondary mb-1">Cari Nomor / Perihal / Pengirim / Isi</label>
+                <label class="form-label small fw-bold text-secondary mb-1">
+                    Cari Nomor / Perihal / Pengirim / Isi
+                    @include('partials.ikon-info', ['pesan' => 'Tiap kata harus cocok (boleh di kolom berbeda), tidak harus berurutan. Yang digali: nomor surat, perihal, pengirim & instansi, ringkasan, teks hasil baca isi lampiran, dan nama berkas lampiran.'])
+                </label>
                 <input type="text" name="cari" class="form-control"
                        placeholder="Ketik kata kunci..." value="{{ request('cari') }}">
-                <div class="form-text">
-                    Tiap kata harus cocok (boleh di kolom berbeda), tidak harus berurutan.
-                    Yang digali: nomor, perihal, pengirim/instansi, <strong>ringkasan</strong>,
-                    <strong>teks hasil baca isi lampiran</strong>, dan nama berkas lampiran (L-15).
-                </div>
             </div>
             <div class="col-md-2">
                 <label class="form-label small fw-bold text-secondary mb-1">Sifat</label>

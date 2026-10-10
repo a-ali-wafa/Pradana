@@ -55,7 +55,8 @@
     </div>
 </div>
 
-{{-- Tab Surat Masuk | Surat Keluar | Semua arsip — tanpa route baru. --}}
+{{-- Pemilih Surat Masuk | Surat Keluar — tanpa route baru; mode gabungan hidup
+     di dalam halaman ini lewat `?jenis=semua`. --}}
 @if(! $melihatSampah)
     @include('partials.tab-arsip', ['aktif' => $gabung ? 'semua' : 'keluar', 'routeAsal' => 'surat-keluar.index'])
 @endif
@@ -65,19 +66,17 @@
 <div class="card mb-4">
     <div class="card-body">
         <form method="GET" action="{{ route('surat-keluar.index') }}" class="row g-2 align-items-end">
-            {{-- Filter tidak boleh diam-diam mengeluarkan user dari tab "Semua arsip". --}}
+            {{-- Filter tidak boleh diam-diam mengeluarkan user dari mode gabungan. --}}
             @if($gabung)
                 <input type="hidden" name="jenis" value="semua">
             @endif
             <div class="col-md-3">
-                <label class="form-label small fw-bold text-secondary mb-1">Cari Nomor / Perihal / Penerima / Isi</label>
+                <label class="form-label small fw-bold text-secondary mb-1">
+                    Cari Nomor / Perihal / Penerima / Isi
+                    @include('partials.ikon-info', ['pesan' => 'Tiap kata harus cocok (boleh di kolom berbeda), tidak harus berurutan. Yang digali: nomor surat, perihal, penerima & instansi, ringkasan, isi surat & tembusan di draf konten, dan nama berkas lampiran.'])
+                </label>
                 <input type="text" name="cari" class="form-control"
                        placeholder="Ketik kata kunci..." value="{{ request('cari') }}">
-                <div class="form-text">
-                    Tiap kata harus cocok (boleh di kolom berbeda), tidak harus berurutan.
-                    Yang digali: nomor, perihal, penerima/instansi, <strong>ringkasan</strong>,
-                    <strong>isi surat &amp; tembusan di draf konten</strong>, dan nama berkas lampiran (L-15).
-                </div>
             </div>
             <div class="col-md-2">
                 <label class="form-label small fw-bold text-secondary mb-1">Tahun</label>

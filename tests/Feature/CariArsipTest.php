@@ -514,13 +514,73 @@ class CariArsipTest extends TestCase
         $this->actingAs($this->pegawai)->get('/arsip')->assertNotFound();
     }
 
-    public function test_tab_semua_arsip_terlihat_di_halaman(): void
+    /**
+     * Mode gabungan tetap ADA (L-15) tapi tidak lagi jadi tombol ketiga di kepala
+     * halaman (permintaan user 10 Okt 2026): dia muncul sebagai tautan di samping
+     * pemilih jenis surat, hanya saat ada kata kunci — karena justru di situ orang
+     * tidak ingat suratnya masuk atau keluar. Yang diuji di sini: bantuan itu ada
+     * saat dibutuhkan, hilang saat tidak, dan ada jalan keluar yang menyebut
+     * daftar yang benar-benar akan ditampilkan.
+     */
+    public function test_mode_gabungan_ditemukan_lewat_tautan_bukan_tab_ketiga(): void
     {
-        $this->actingAs($this->pegawai)
+        // Tanpa kata kunci: tidak ada ajakan gabungan sama sekali (layar tetap bersih).
+        $polos = $this->actingAs($this->pegawai)
+            ->get(route('surat-masuk.index'))
+            ->assertOk()
+            ->getContent();
+        $this->assertStringNotContainsString('di semua arsip', $polos);
+        $this->assertStringNotContainsString('jenis=semua', $polos);
+
+        // Dengan kata kunci: tautannya muncul dan membawa filter yang sedang dipakai.
+        $denganKata = $this->actingAs($this->pegawai)
+            ->get(route('surat-masuk.index', ['cari' => 'koperasi']))
+            ->assertOk()
+            ->getContent();
+        $this->assertStringContainsString('di semua arsip', $denganKata);
+        $this->assertStringContainsString('jenis=semua', $denganKata);
+        $this->assertStringContainsString('cari=koperasi', $denganKata,
+            'Tautan gabungan tidak boleh menghapus kata kunci yang sedang diketik.');
+    }
+
+    public function test_mode_gabungan_menampilkan_status_dan_jalan_keluar_yang_benar(): void
+    {
+        $masuk = $this->actingAs($this->pegawai)
             ->get(route('surat-masuk.index', ['jenis' => 'semua']))
             ->assertOk()
-            ->assertSee('Semua Arsip')
-            ->assertSee('Daftar gabungan');
+            ->assertSee('Semua arsip (masuk + keluar)')
+            ->getContent();
+
+        // Jalan keluar harus menyebut daftar yang akan ditampilkan. Bug lama: label
+        // diambil dari `$aktif` yang di cabang ini selalu 'semua', jadi selalu salah.
+        $this->assertStringContainsString('Kembali ke Surat Masuk saja', $masuk);
+
+        $keluar = $this->actingAs($this->pegawai)
+            ->get(route('surat-keluar.index', ['jenis' => 'semua']))
+            ->assertOk()
+            ->getContent();
+        $this->assertStringContainsString('Kembali ke Surat Keluar saja', $keluar);
+    }
+
+    public function test_info_panjang_dari_daftar_dipindah_ke_tooltip(): void
+    {
+        // Permintaan user: penjelasan tidak boleh memakan tempat di layar. Teks
+        // "Tiap kata harus cocok ..." dan "Daftar gabungan: ..." tidak lagi ditulis
+        // sebagai paragraf — isinya kini hidup di atribut `title` ikon info, yang
+        // sengaja TETAP ada supaya penjelasan tidak hilang saat JavaScript mati.
+        $html = $this->actingAs($this->pegawai)
+            ->get(route('surat-masuk.index'))
+            ->assertOk()
+            ->getContent();
+
+        $this->assertStringNotContainsString('Daftar gabungan: surat masuk dan keluar', $html);
+        $this->assertStringNotContainsString('<div class="form-text">', $html);
+        $this->assertStringContainsString('data-bs-toggle="tooltip"', $html);
+        $this->assertMatchesRegularExpression(
+            '/title="Tiap kata harus cocok[^"]*"/',
+            $html,
+            'Penjelasan pencarian harus tetap terbaca tanpa JavaScript (title, bukan data-bs-title kosong).'
+        );
     }
 
     // ------------------------------------------------------------------

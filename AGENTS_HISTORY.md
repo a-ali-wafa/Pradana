@@ -1270,9 +1270,81 @@ suite AGENTS.md mengikuti kenyataan.
 
 
 
-### Catatan lingkungan (terakhir diperbarui 10 Okt malam, sesudah zona waktu)
+### 10 Okt malam (susulan keempat) — pass UI: layar padat, sidebar stay, brand kantor, teks bantuan jadi tooltip
 
-Suite sekarang **247 tes dalam 39 kelas**; yang tercapai saat MariaDB **mati** hanyalah
-**229 passed + 18 skipped** — dan sejak 10 Okt skip itu benar-benar skip, bukan merah
+Permintaan user, tujuh hal sekaligus, semuanya kosmetik-tapi-fungsional. Yang dikerjakan:
+
+1. **Sidebar & topbar `position: sticky`** (`top: 0; height: 100vh; overflow-y: auto`), bukan
+   `position: fixed` — fixed menuntut margin paksaan di kolom konten dan itulah yang dulu bikin
+   layout patah di layar kecil. Tiga syarat yang bikin sticky bekerja, semuanya tercatat di kode:
+   tidak ada leluhur ber-`overflow`, `top` wajib disebut, dan footer tidak boleh ikut ke dalam
+   kolom sidebar (sticky cuma hidup selama leluhur terdekatnya menyediakan ruang). Referensi
+   pola: makeautomation (CSS sticky sidebar) + Smashing Magazine (sticky header + full-height).
+2. **Brand kantor** (logo + nama instansi dari Pengaturan Instansi) masuk ke sidebar dan kepala
+   dashboard. Diambil dari `PengaturanInstansi::untukTampilan()` — **cache-aside**, dibuang oleh
+   `PengaturanInstansiObserver::updated()`. Tanpa cache, setiap klik staf membayar satu SELECT cuma
+   untuk sebuah gambar; dengan cache tapi tanpa invalidasi, admin yang baru memasang logo melihat
+   lambang lama berjam-jam (persis keluhan "logo tidak muncul" edisi 5 Okt, versi baru).
+3. **Menu Akun dirapikan** mengikuti pola menu akun produk nyata (avatar inisial, identitas di
+   kepala dropdown, item digrup pembatas): trigger kini memakai inisial nama, bukan ikon generik.
+   "Keluar" SENGAJA tetap tombol form nyata di luar dropdown — bukan cuma soal discoverability
+   (referensi: keluar adalah aksi yang harus langsung ketemu), tapi karena dropdown butuh
+   JavaScript untuk terbuka, dan jalur keluar/pemulihan akun tidak boleh ikut mati bersama skrip.
+4. **Teks bantuan panjang pindah ke ikon ⓘ + tooltip Bootstrap** (`partials/ikon-info.blade.php`):
+   paragraf "Daftar gabungan: …", "Tiap kata harus cocok …", "Periode bawaan adalah bulan
+   berjalan …" (laporan), blok-blok `form-text` di Pengaturan Instansi, dan catatan bawah-judul
+   Log Aktivitas. Bentuknya `title` + `data-bs-toggle="tooltip"` + `tabindex="0"`:
+   `title` = fallback nyata saat JS mati (penjelasan tidak pernah hilang total, sama prinsipnya
+   dengan tombol Hapus yang tetap form POST), `tabindex` = bisa dibuka lewat keyboard, init di
+   satu tempat (`pradana-arsip.js`) supaya tidak ada `<script>` inline per halaman lagi.
+5. **Tab ketiga "Semua arsip" dihapus** dari pemilih jenis; jadi tautan kontekstual *"Cari
+   <kata> di semua arsip"* yang hanya muncul saat ada kata kunci, plus badge status
+   "Semua arsip (masuk + keluar)" dan jalan keluar di halaman mana pun user masuk. Mode gabungannya
+   sendiri tidak disentuh (L-15, tetap tanpa route baru). Ini interpretasi permintaan "hapus opsinya,
+   pindahkan ke mana gitu" — kalau maksudnya hilang total, tinggal bilang.
+6. **Logo tersimpan ikut tampil di Pratinjau Kop** sejak halaman dibuka (dulu hanya setelah memilih
+   berkas baru), dan saat pilihan file dibersihkan preview kembali ke logo tersimpan, bukan jadi kosong.
+7. **/aktivitas dipadatkan**: satu baris kepala + badge jumlah, filter `form-control-sm`, waktu satu
+   baris (tooltip berisi tanggal+jam penuh), link reset filter, `table-sm`, footer pagination ringkas.
+
+Tiga hal yang tidak bisa ditebak dari kode dan memakan waktu:
+
+- **Guardrail jumlah query merah tanpa ada query bertambah.** `test_form_pemusnahan_tidak_tumbuh…`
+  membandingkan dua request dalam SATU proses; brand cache-aside membayar SELECT pertama di request
+  pertama, jadi angkanya 5 lalu 4 dan assertion "harus sama" gagal. Perbaikan yang benar bukan
+  menaikkan ambang: `hitung()` sekarang memanaskan cache sebelum membuka query log, karena yang
+  diukur guardrail ini memang keadaan tunak. (Amplop ambang +2 tetap utuh, semua angka lama valid.)
+- **Menulis `html: false` di helper membuat `KonfirmasiDestruktifTest` menggigit** — guardrail itu
+  membaca teks mentah termasuk komentar (keputusan yang sengaja dipertahankan sejak insiden
+  "Swal.fire" 10 Okt). Opsi HTML akhirnya dibiarkan datang dari atribut `data-bs-*` di Blade, dan
+  komentar tidak menyebut nama kunci itu lagi.
+- **Bug label yang ketemu karena perpindahan:** jalan keluar mode gabungan dulu memakai `$aktif`,
+  yang di cabang `semua` selalu `'semua'` → labelnya selalu menyebut daftar yang salah. Sekarang
+  dari `$routeAsal`, dan `CariArsipTest` mengunci kedua halaman (masuk DAN keluar) supaya tidak
+  kembali.
+
+Tes: `CariArsipTest` +3 / −1 (tautan kontekstual hanya muncul saat ada kata kunci dan membawa `cari`;
+status + label jalan keluar di kedua halaman; paragraf lama hilang tapi `title` tetap ada),
+`bin/uji-pradana-arsip.js` 18 → 22 pemeriksaan (tooltip: tanpa `bootstrap` tidak melempar & `title`
+utuh; dengan `bootstrap`, trigger = `hover focus`). Teeth keduanya diverifikasi dengan merusak
+guard-nya pada salinan helper di /tmp (helper asli tidak disentuh): 2 pemeriksaan jadi GAGAL.
+Stub bootstrap ditulis sebagai KELAS dengan method statis, bukan objek biasa — kalau stubnya longgar,
+guard `typeof window.bootstrap.Tooltip !== 'function'` teruji pada bentuk yang tidak ada di browser.
+
+Gerbang: **257 tes / 40 class, 0 skipped (1.189 assertion)**, `pint --test` 188 file, Larastan bersih,
+`node bin/uji-pradana-arsip.js` OK. Dokumen: `docs/manual-pemakaian.md` §7 ditulis ulang (mode
+gabungan + ikon ⓘ), baris Frontend + Bagian 3 AGENTS.md mengikuti.
+
+Yang TIDAK diverifikasi: rendering sungguhan di browser (butuh dev server; izin user belum diminta
+untuk pass ini). Semua bukti di atas adalah HTML hasil request HTTP + harness Node, jadi **susunan
+visual akhir (jarak, tinggi kartu, tampilan tooltip) belum dilihat mata** — kalau ada yang terasa
+aneh saat kamu buka aplikasinya, itu yang perlu disesuaikan lebih dulu.
+
+
+
+### Catatan lingkungan (terakhir diperbarui 10 Okt malam, sesudah pass UI)
+
+Suite sekarang **257 tes dalam 40 kelas**; yang tercapai saat MariaDB **mati** hanyalah
+**239 passed + 18 skipped** — dan sejak 10 Okt skip itu benar-benar skip, bukan merah
 (lihat bullet `7012062` di atas). Yang lama tercatat sebagai "206 passed, 0 skipped"
 hanya tercapai saat MariaDB hidup: `CariArsipMariaDbTest` (10) + `AgregatMariaDbTest` (2) + `UrutAktivitasMariaDbTest` (1) + `NomorSuratKeluarTest` (3) + `BackupDatabaseMariaDbTest` (1) + `UjiPulihBackupMariaDbTest` (1) memakai koneksi `mysql_test_a`/`mysql_test_b` (`DB_TEST_DATABASE`, default `pradana_test`) dan di-skip dengan pesan kalau XAMPP mati — skip itu bukan kegagalan, tapi berarti bukti portabilitasnya belum ada; dua tes cadangan tambahan lagi butuh biner `mysqldump`/`mysql` dan hak `CREATE DATABASE`, jadi keduanya juga skip di CI. `Pint` 187 file per 10 Okt malam (176 sesudah Fase 7; +6 tes P0; +5 aset/JS/agenda/teks; +3 kelas cadangan + command + config) — dulu tercatat 172 (169 setelah Fase 4 membuang tiga file PHP boilerplate; 172 karena dua file tes baru + satu migration); `Larastan` level 5 bersih dengan baseline menyusut **26 → 5** (return type generik di 31 method relasi + `@property-read $lampiran_count` + `self::` untuk method private + delegasi umur arsip ke model bertipe konkret + catch yang ternyata tidak pernah bisa terjadi dibuang). Dev server tidak dijalankan untuk fase-fase perapian ini — verifikasinya lewat HTTP di dalam suite (feature test) dan di MariaDB asli, bukan lewat browser.

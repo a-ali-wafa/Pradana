@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
 
 /**
@@ -21,6 +22,9 @@ use Illuminate\Support\Facades\Storage;
 class PengaturanInstansi extends Model
 {
     protected $table = 'pengaturan_instansi';
+
+    /** Kunci cache untuk brand layout; dibuang setiap baris instansi berubah. */
+    public const KUNCI_MEREK = 'prd:merek-instansi';
 
     protected $fillable = [
         'nama_instansi',
@@ -106,6 +110,34 @@ class PengaturanInstansi extends Model
         }
 
         return route('instansi.logo', ['v' => substr(md5($this->logo_path), 0, 8)]);
+    }
+
+    /**
+     * Nama + logo untuk brand di layout (sidebar & dashboard).
+     *
+     * `layouts.app` dirender di SETIAP halaman, jadi kalau method ini memanggil
+     * database tanpa cache, setiap klik staf menambah satu query cuma untuk gambar
+     * yang jarang berubah. `Cache::remember` (driver file, S10) membuat biayanya
+     * satu pembacaan disk, bukan satu SELECT; kunci dibuang di
+     * `PengaturanInstansiObserver::updated()` sehingga logo baru langsung muncul
+     * tanpa menunggu kedaluwarsa.
+     *
+     * Tidak ada `env()` di sini dan tidak ada di view: nilai ini lewat model, jadi
+     * `config:cache` tidak mengubah perilakunya (jebakan yang sudah dicatat untuk
+     * SECURITY_CSP, DEV_PIN, AGENDA_BATAS_BARIS, dan BACKUP_*).
+     *
+     * @return array{nama: ?string, logo: ?string}
+     */
+    public static function untukTampilan(): array
+    {
+        return Cache::remember(self::KUNCI_MEREK, 900, function (): array {
+            $instansi = static::first();
+
+            return [
+                'nama' => $instansi?->nama_instansi,
+                'logo' => $instansi?->logoUrl(),
+            ];
+        });
     }
 
     /**

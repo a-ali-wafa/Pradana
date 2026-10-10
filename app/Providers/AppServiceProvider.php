@@ -73,6 +73,11 @@ class AppServiceProvider extends ServiceProvider
         View::composer('layouts.app', function (\Illuminate\View\View $view) {
             $user = Auth::user();
 
+            // Brand instansi (logo + nama) dipakai sidebar di SETIAP halaman.
+            // Dibaca lewat cache, bukan SELECT langsung — lihat
+            // PengaturanInstansi::untukTampilan() untuk alasannya.
+            $view->with(['merek' => PengaturanInstansi::untukTampilan()]);
+
             if (! $user || ! $user->isAdmin()) {
                 $view->with(['antrianHapusLampiran' => 0, 'antrianPemusnahan' => 0]);
 

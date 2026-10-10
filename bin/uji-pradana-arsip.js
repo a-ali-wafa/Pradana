@@ -197,6 +197,46 @@ const tunggu = () => new Promise((r) => setTimeout(r, 5));
     cek('klik tombol: fokus ke isian', blok.focusCalled === 1);
   }
 
+  // 7. Tooltip penjelasan: TANPA bootstrap skrip tidak boleh melempar, dan
+  //    atribut `title` dibiarkan utuh — itu fallback browser saat JavaScript
+  //    mati/sebagian, jadi penjelasan tidak pernah hilang total.
+  {
+    jalankan();
+    const ikon = elemen({ 'data-bs-toggle': 'tooltip', title: 'Tiap kata harus cocok', 'data-bs-html': 'false' });
+    state.all['[data-bs-toggle="tooltip"]'] = [ikon];
+
+    let meledak = false;
+    try {
+      state.ready.forEach((fn) => fn());
+    } catch (e) {
+      meledak = true;
+    }
+
+    cek('tooltip: tanpa bootstrap tidak melempar', ! meledak);
+    cek('tooltip: title fallback tetap utuh', ikon.getAttribute('title') === 'Tiap kata harus cocok');
+  }
+
+  // 8. Tooltip penjelasan: dengan bootstrap, tiap ikon dipakai satu instance dan
+  //    trigger-nya hover + focus (fokus keyboard = penjelasan tetap bisa dibuka).
+  {
+    const { window } = jalankan();
+    const dipanggil = [];
+    // Stub ini meniru bentuk API Bootstrap 5 yang sebenarnya: `bootstrap.Tooltip`
+    // adalah KELAS (function) dengan method statis `getOrCreateInstance`. Kalau
+    // stub dibuat terlalu longgar (objek biasa), guard di helper akan teruji pada
+    // bentuk yang tidak pernah ada di browser.
+    function TooltipStub() {}
+    TooltipStub.getOrCreateInstance = (el, opsi) => { dipanggil.push({el: el, opsi: opsi}); };
+    window.bootstrap = {Tooltip: TooltipStub};
+    const a = elemen({'data-bs-toggle': 'tooltip', title: 'A'});
+    const b = elemen({'data-bs-toggle': 'tooltip', title: 'B'});
+    state.all['[data-bs-toggle="tooltip"]'] = [a, b];
+    state.ready.forEach((fn) => fn());
+
+    cek('tooltip: kedua ikon dinyalakan', dipanggil.length === 2);
+    cek('tooltip: bisa dibuka lewat keyboard', dipanggil[0] && dipanggil[0].opsi.trigger === 'hover focus');
+  }
+
   console.log(hasil.join('\n'));
 
   const gagal = hasil.filter((h) => h.startsWith('GAGAL'));

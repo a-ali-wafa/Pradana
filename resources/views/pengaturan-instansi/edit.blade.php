@@ -42,27 +42,30 @@
                     <h6 class="text-uppercase fw-bold small text-secondary mb-3">Identitas instansi</h6>
                     <div class="row g-3">
                         <div class="col-md-6">
-                            <label class="form-label small fw-bold text-secondary">Nama Instansi <span class="text-danger">*</span></label>
+                            <label class="form-label small fw-bold text-secondary">Nama Instansi <span class="text-danger">*</span>
+                                @include('partials.ikon-info', ['pesan' => 'Baris paling besar pada kop surat; tulis dengan huruf kapital.'])
+                            </label>
                             <input type="text" name="nama_instansi" class="form-control bg-light border-0 pradana-field"
                                    value="{{ old('nama_instansi', $pengaturanInstansi->nama_instansi) }}"
                                    placeholder="Cth: PEMERINTAH DESA UREK-UREK" readonly required>
-                            <div class="form-text">Baris paling besar pada kop; tulis dengan huruf kapital.</div>
                             @error('nama_instansi') <div class="text-danger small mt-1">{{ $message }}</div> @enderror
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label small fw-bold text-secondary">Jenis Instansi <span class="text-danger">*</span></label>
+                            <label class="form-label small fw-bold text-secondary">Jenis Instansi <span class="text-danger">*</span>
+                                @include('partials.ikon-info', ['pesan' => 'Dipakai untuk jabatan penandatangan di dokumen, misalnya "Kepala Desa".'])
+                            </label>
                             <input type="text" name="jenis_instansi" class="form-control bg-light border-0 pradana-field"
                                    value="{{ old('jenis_instansi', $pengaturanInstansi->jenis_instansi) }}"
                                    placeholder="Cth: Pemerintah Desa" readonly required>
-                            <div class="form-text">Dipakai untuk jabatan penandatangan di dokumen ("Kepala Desa").</div>
                             @error('jenis_instansi') <div class="text-danger small mt-1">{{ $message }}</div> @enderror
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label small fw-bold text-secondary">Kabupaten</label>
+                            <label class="form-label small fw-bold text-secondary">Kabupaten
+                                @include('partials.ikon-info', ['pesan' => 'Kosongkan kalau kop kantor hanya satu baris.'])
+                            </label>
                             <input type="text" name="nama_kabupaten" class="form-control bg-light border-0 pradana-field"
                                    value="{{ old('nama_kabupaten', $pengaturanInstansi->nama_kabupaten) }}"
                                    placeholder="Cth: Banyumas" readonly>
-                            <div class="form-text">Kosongkan kalau kop kantor hanya satu baris.</div>
                             @error('nama_kabupaten') <div class="text-danger small mt-1">{{ $message }}</div> @enderror
                         </div>
                         <div class="col-md-6">
@@ -100,9 +103,9 @@
                             @error('email') <div class="text-danger small mt-1">{{ $message }}</div> @enderror
                         </div>
                     </div>
-                    <div class="form-text mt-2">
-                        Telepon dan email boleh kosong. Kantor yang belum punya tetap bisa mencetak kop;
-                        barisnya cukup tidak ikut tercetak.
+                    <div class="small text-secondary mt-2 d-flex align-items-center gap-1">
+                        Telepon &amp; email boleh kosong
+                        @include('partials.ikon-info', ['pesan' => 'Kantor yang belum punya telepon atau email tetap bisa mencetak kop; barisnya cukup tidak ikut tercetak.'])
                     </div>
 
                     <hr class="my-4">
@@ -126,9 +129,9 @@
                             <div id="logoUploadWrap" class="d-none">
                                 <label class="form-label small fw-bold text-secondary">
                                     {{ $pengaturanInstansi->logo_path ? 'Ganti Logo (biarkan kosong kalau tidak ingin ganti)' : 'Upload Logo' }}
+                                    @include('partials.ikon-info', ['pesan' => 'Format jpg/jpeg/png, maksimal 2MB. Logo dengan latar transparan terlihat lebih rapi di kop surat.'])
                                 </label>
                                 <input type="file" name="logo" id="logoBaru" class="form-control" accept=".jpg,.jpeg,.png">
-                                <div class="form-text">Format jpg/jpeg/png, maks 2MB. Latar transparan lebih rapi.</div>
 
                                 {{-- Pratinjau langsung dari berkas yang dipilih (URL objek, belum
                                      dikirim ke server), jadi gambar muncul seketika. --}}
@@ -173,8 +176,13 @@
                 <div class="border rounded p-3 bg-white">
                     <table style="width: 100%; border-collapse: collapse;">
                         <tr>
-                            <td id="kopLogoSel" style="width: 74px; vertical-align: middle; padding-right: 8px; display: none;">
-                                <img id="kopLogo" alt="" style="max-width: 64px; max-height: 64px;">
+                            {{-- Logo yang SUDAH tersimpan ikut tampil sejak halaman dibuka,
+                                 bukan hanya saat berkas baru dipilih (permintaan 10 Okt).
+                                 Sebelum ini keluhan "logo tidak muncul di kop" baru kelihatan
+                                 sesudah petugas mengunggah ulang logonya sendiri. --}}
+                            <td id="kopLogoSel" style="width: 74px; vertical-align: middle; padding-right: 8px;{{ $pengaturanInstansi->logoUrl() ? '' : ' display: none;' }}">
+                                <img id="kopLogo" alt="" style="max-width: 64px; max-height: 64px;"
+                                     src="{{ $pengaturanInstansi->logoUrl() ?: '' }}">
                             </td>
                             <td style="text-align: center; vertical-align: middle;">
                                 <div id="kopKabupaten" class="pradana-kop-tingkat"></div>
@@ -183,27 +191,24 @@
                                 <div id="kopAlamat" class="small text-muted mt-1"></div>
                                 <div id="kopKontak" class="small text-muted"></div>
                             </td>
-                            <td id="kopLogoPenyeimbang" style="width: 74px; display: none;">&nbsp;</td>
+                            <td id="kopLogoPenyeimbang" style="width: 74px;{{ $pengaturanInstansi->logoUrl() ? '' : ' display: none;' }}">&nbsp;</td>
                         </tr>
                     </table>
                     <div style="border-bottom: 3px solid #000; margin-top: 6px;"></div>
                     <div style="border-bottom: 1px solid #000; margin-top: 2px;"></div>
                 </div>
 
-                <div class="small text-secondary mt-3">
-                    <i class="fas fa-info-circle me-1 text-primary"></i>
-                    Kop ini dipakai untuk <strong>surat keluar</strong>, <strong>Berita Acara
-                    Pemusnahan</strong>, dan <strong>Buku Agenda</strong>. Pratinjau berubah
-                    mengikuti isian di kiri, tapi PDF baru memakai versi yang sudah disimpan.
+                <div class="small text-secondary mt-3 d-flex align-items-start gap-2">
+                    @include('partials.ikon-info', ['pesan' => 'Kop ini dipakai untuk surat keluar, Berita Acara Pemusnahan, dan Buku Agenda. Pratinjau berubah mengikuti isian di kiri, tapi PDF baru memakai versi yang sudah disimpan.'])
+                    <span>Pratinjau ikut berubah saat mengetik; PDF memakai versi yang sudah disimpan.</span>
                 </div>
 
-                <div class="alert alert-light border small mt-3 mb-0">
-                    <span class="fw-bold d-block mb-1">Baris tempat &amp; tanggal surat</span>
-                    <span id="kopTanggal">-</span>
-                    <div class="text-muted mt-1">
-                        Nama tempat diambil dari Nama Instansi; kata "Pemerintah", "Sekretariat",
-                        dan "Kantor" di depan dibuang otomatis.
-                    </div>
+                <div class="alert alert-light border small mt-3 mb-0 d-flex align-items-start gap-2">
+                    @include('partials.ikon-info', ['pesan' => 'Nama tempat pada baris tanggal surat diambil dari Nama Instansi; kata "Pemerintah", "Sekretariat", dan "Kantor" di depan dibuang otomatis.'])
+                    <span>
+                        <span class="fw-bold d-block mb-1">Baris tempat &amp; tanggal surat</span>
+                        <span id="kopTanggal">-</span>
+                    </span>
                 </div>
             </div>
         </div>
@@ -274,6 +279,27 @@
         let urlPratinjau = null;
         const inputLogo = document.getElementById('logoBaru');
 
+        // Logo yang sudah tersimpan dipakai sebagai dasar pratinjau kop: halaman ini
+        // dibuka tanpa memilih berkas pun harus tetap menunjukkan kop sungguhan
+        // (permintaan user 10 Okt 2026). Diisi dari Blade, jadi tidak ada tebakan path.
+        const logoTersimpan = @json($pengaturanInstansi->logoUrl());
+
+        function tampilkanLogoKop(url) {
+            const sel = document.getElementById('kopLogoSel');
+            const penyeimbang = document.getElementById('kopLogoPenyeimbang');
+            const gambar = document.getElementById('kopLogo');
+
+            if (url) {
+                gambar.src = url;
+                sel.style.display = '';
+                penyeimbang.style.display = '';
+            } else {
+                gambar.removeAttribute('src');
+                sel.style.display = 'none';
+                penyeimbang.style.display = 'none';
+            }
+        }
+
         if (inputLogo) {
             inputLogo.addEventListener('change', function () {
                 const kotak = document.getElementById('logoPratinjau');
@@ -286,8 +312,8 @@
 
                 if (!berkas) {
                     kotak.classList.add('d-none');
-                    document.getElementById('kopLogoSel').style.display = 'none';
-                    document.getElementById('kopLogoPenyeimbang').style.display = 'none';
+                    // Bukan "hilangkan logo" — kembali ke logo yang sekarang tersimpan.
+                    tampilkanLogoKop(logoTersimpan);
 
                     return;
                 }
@@ -300,9 +326,7 @@
 
                 // Logo ikut masuk ke pratinjau kop: keluhan "logo tidak keluar" harus
                 // kelihatan di layar, bukan baru ketahuan di PDF.
-                document.getElementById('kopLogo').src = urlPratinjau;
-                document.getElementById('kopLogoSel').style.display = '';
-                document.getElementById('kopLogoPenyeimbang').style.display = '';
+                tampilkanLogoKop(urlPratinjau);
             });
         }
 

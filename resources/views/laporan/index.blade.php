@@ -111,10 +111,4 @@
     </div>
 @endif
 
-<div class="alert alert-light border small">
-    <i class="fas fa-info-circle me-1"></i>
-    Periode bawaan adalah bulan berjalan. Rekap CSV memakai pemisah <code>;</code>
-    supaya angka dan tanggal tidak tertukar saat dibuka Excel versi Indonesia.
-</div>
-
 @endsection

@@ -1,6 +1,9 @@
 /**
- * pradana-arsip.js — satu tempat untuk konfirmasi aksi destruktif + blok yang
- * baru boleh tertutup kalau JavaScript hidup.
+ * pradana-arsip.js — satu tempat untuk konfirmasi aksi destruktif, blok yang
+ * baru boleh tertutup kalau JavaScript hidup, dan penyalaan tooltip penjelasan.
+ *
+ * Semua yang di sini berlaku sama: JavaScript hanya MENAMBAH sesuatu ke halaman,
+ * tidak pernah menjadi satu-satunya jalan untuk memakainya.
  *
  * Kenapa file ini ada (P0 di docs/daftar-peningkatan.md, 10 Okt 2026):
  * sebelumnya setiap halaman menyalin `function pradanaConfirmHapus(url, pesan)`
@@ -181,9 +184,49 @@
         }
     });
 
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', tutupBlokYangBisaDibuka);
-    } else {
+    /**
+     * Nyalakan tooltip Bootstrap untuk ikon penjelasan (`partials/ikon-info.blade.php`).
+     *
+     * Ini BUKAN satu-satunya jalur informasi. Ikonnya sudah membawa `title`, jadi
+     * tanpa JavaScript pun browser menampilkan pesannya saat disorot — tugas skrip
+     * ini cuma menaikkan bentuknya (tooltip yang bisa difokus keyboard, tidak
+     * terlambat muncul seperti title bawaan). Karena itu:
+     *  - kalau `bootstrap` tidak ada (aset gagal dimuat), kami diam — `title` tetap jalan;
+     *  - `trigger: ['hover', 'focus']` supaya penjelasan juga terbuka lewat Tab,
+     *    bukan hanya lewat mouse.
+     * Tidak ada HTML yang disisipkan di sini: konten dibaca dari atribut dan
+     * Bootstrap memindahkannya ke `data-bs-original-title` (teks polos).
+     */
+    function nyalakanTooltip() {
+        if (typeof window.bootstrap === 'undefined' || typeof window.bootstrap.Tooltip !== 'function') {
+            return;
+        }
+
+        var elemen = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+
+        for (var i = 0; i < elemen.length; i++) {
+            // Opsi dibaca Bootstrap dari atribut `data-bs-*` di elemennya
+            // (partials/ikon-info.blade.php menulis data-bs-html bernilai false), jadi
+            // di sini hanya trigger. Sengaja TIDAK menulis kunci HTML di objek opsi:
+            // guardrail KonfirmasiDestruktifTest melarang helper menyuntik HTML dari
+            // atribut, dan menyebut nama kunci itu di sini — walau untuk mematikannya —
+            // terbaca sebagai pelanggaran oleh guardrail yang sama (komentar JS tidak
+            // dibuang saat memindai; itu keputusan yang sengaja dipertahankan).
+            window.bootstrap.Tooltip.getOrCreateInstance(elemen[i], {
+                trigger: 'hover focus',
+                animation: false
+            });
+        }
+    }
+
+    function siap() {
         tutupBlokYangBisaDibuka();
+        nyalakanTooltip();
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', siap);
+    } else {
+        siap();
     }
 })();

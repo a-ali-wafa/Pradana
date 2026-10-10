@@ -71,22 +71,76 @@
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             color: var(--text-dark);
         }
-        #app-wrapper { display: flex; min-height: 100vh; }
+        #app-wrapper { display: flex; min-height: 100vh; align-items: stretch; }
 
+        /*
+         * Sidebar TIDAK ikut terbawa saat halaman panjang digulir.
+         *
+         * Polanya `position: sticky` + tinggi seukuran layar + gulir internal, bukan
+         * `position: fixed` (fixed membutuhkan margin paksaan di kolom konten dan itu
+         * yang bikin layout lama patah di layar kecil). Syaratnya dua, dan keduanya
+         * ada di file ini: tidak ada leluhur dengan `overflow` selain sidebar sendiri,
+         * dan footer tidak ditaruh di dalam kolom sidebar (footer hidup di kolom
+         * konten, see .pradana-footer). Kalau nanti ada yang membungkus ulang layout
+         * ini dengan <div class="overflow-hidden">, sticky akan berhenti bekerja tanpa
+         * pesan error apa pun — itu jebakan yang dicatat di dokumentasi CSS-nya.
+         */
         .sidebar {
             width: 260px;
             flex-shrink: 0;
             background: var(--primary);
             color: var(--text-dark);
-            min-height: 100vh;
+            height: 100vh;
+            position: sticky;
+            top: 0;
+            overflow-y: auto;
+            overscroll-behavior: contain;
             border-right: 1px solid #e2e8f0;
             box-shadow: 2px 0 10px rgba(0, 0, 0, 0.03);
         }
         .sidebar-header {
-            padding: 20px;
-            text-align: center;
+            padding: 16px 18px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            text-align: start;
             border-bottom: 1px solid #e2e8f0;
             color: var(--secondary);
+            position: sticky;
+            top: 0;
+            background: var(--primary);
+            z-index: 2;
+        }
+        .sidebar-brand-logo {
+            width: 42px;
+            height: 42px;
+            flex-shrink: 0;
+            border-radius: 10px;
+            background: #eff6ff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+        .sidebar-brand-logo img { max-width: 34px; max-height: 34px; object-fit: contain; }
+        .sidebar-brand-nama {
+            font-size: 1.02rem;
+            font-weight: 700;
+            letter-spacing: .3px;
+            line-height: 1.15;
+            color: var(--secondary);
+            white-space: nowrap;
+        }
+        .sidebar-brand-instansi {
+            font-size: .72rem;
+            line-height: 1.25;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: .02em;
+            display: block;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
         }
         .sidebar .nav-link {
             color: #64748b;
@@ -117,14 +171,63 @@
         .main-content { flex: 1; display: flex; flex-direction: column; min-width: 0; }
         .topbar {
             background: white;
-            padding: 15px 20px;
+            padding: 12px 20px;
             box-shadow: 0 2px 5px rgba(0, 0, 0, 0.02);
             display: flex;
             justify-content: space-between;
             align-items: center;
             border-bottom: 1px solid #e2e8f0;
+            /* Header halaman ikut stay — nama modul yang sedang dibuka tetap
+               terbaca saat daftar panjang digulir. */
+            position: sticky;
+            top: 0;
+            z-index: 1030;
         }
-        .content-area { padding: 25px; flex: 1; }
+        .topbar h5 { font-size: 1.05rem; font-weight: 700; letter-spacing: .2px; }
+        .content-area { padding: 20px 22px; flex: 1; }
+
+        .avatar-initial {
+            width: 34px;
+            height: 34px;
+            border-radius: 50%;
+            background: #eff6ff;
+            color: var(--secondary);
+            font-weight: 700;
+            font-size: .82rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        /* Ikon penjelasan (partials/ikon-info.blade.php) — kecil, tidak makan baris. */
+        .pradana-info {
+            display: inline-flex;
+            align-items: center;
+            color: #94a3b8;
+            cursor: help;
+            font-size: .85rem;
+            line-height: 1;
+        }
+        .pradana-info:hover, .pradana-info:focus-visible { color: var(--secondary); }
+        .pradana-info:focus-visible { outline: 2px solid #bfdbfe; outline-offset: 2px; border-radius: 4px; }
+        .tooltip { font-size: .8rem; }
+
+        /* Logo kantor di kepala dashboard (sebesar avatar, tidak lebih). */
+        .hero-logo {
+            width: 46px;
+            height: 46px;
+            flex-shrink: 0;
+            border-radius: 12px;
+            background: #eff6ff;
+            color: var(--secondary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            font-size: 1.15rem;
+        }
+        .hero-logo img { max-width: 38px; max-height: 38px; object-fit: contain; }
 
         .card { border: none; border-radius: 12px; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.03); margin-bottom: 20px; background: white; }
         .card-header { background: white; border-bottom: 1px solid #f1f5f9; font-weight: bold; border-radius: 12px 12px 0 0 !important; color: var(--text-dark); }
@@ -145,8 +248,19 @@
         {{-- Sidebar --}}
         <nav class="sidebar" id="sidebar">
             <div class="sidebar-header">
-                <i class="fas fa-archive fa-2x mb-2"></i>
-                <h5 class="mb-0 fw-bold">PRADANA</h5>
+                <span class="sidebar-brand-logo">
+                    @if (! empty($merek['logo']))
+                        <img src="{{ $merek['logo'] }}" alt="Logo instansi">
+                    @else
+                        <i class="fas fa-archive fa-lg"></i>
+                    @endif
+                </span>
+                <span class="overflow-hidden">
+                    <span class="sidebar-brand-nama d-block">PRADANA</span>
+                    <span class="sidebar-brand-instansi" title="{{ $merek['nama'] ?? '' }}">
+                        {{ $merek['nama'] ?? 'Arsip Surat Digital' }}
+                    </span>
+                </span>
             </div>
 
             <div class="nav flex-column mt-2">
@@ -216,32 +330,62 @@
 
                 <div class="d-flex align-items-center gap-3">
                     @auth
-                        {{-- "Akun" = satu tempat untuk hal-hal milik user yang login. Ganti PIN
-                            dibuka dari sini sebagai popup, bukan sebagai halaman sendiri (4 Okt 2026). --}}
+                        @php
+                            /*
+                             * "Akun" = satu tempat untuk hal-hal milik user yang login. Ganti PIN
+                             * dibuka dari sini sebagai popup, bukan sebagai halaman sendiri (4 Okt 2026).
+                             *
+                             * Dirapikan 10 Okt mengikuti pola menu akun yang dipakai produk nyata
+                             * (avatar + identitas di kepala menu, item digrup pakai pembatas, aksi
+                             * keluar dibiarkan TERBUKA di luar menu karena keluar adalah jalur yang
+                             * paling sering dicari): trigger menampilkan inisial nama, bukan ikon
+                             * generik, supaya staf mengenali dirinya sendiri di layar.
+                             *
+                             * Teks inisial dihitung di sini, BUKAN di JavaScript: tanpa JS pun
+                             * identitas user harus tetap terbaca (PRADANA harus jalan terus kalau
+                             * skrip gagal dimuat — lihat public/js/pradana-arsip.js).
+                             */
+                            $kataNama = preg_split('/\s+/', trim((string) Auth::user()->nama_lengkap)) ?: ['?'];
+                            $inisial = mb_strtoupper(mb_substr($kataNama[0], 0, 1))
+                                . (isset($kataNama[1]) ? mb_strtoupper(mb_substr($kataNama[1], 0, 1)) : '');
+                        @endphp
                         <div class="dropdown">
                             <button type="button"
-                                    class="btn btn-light btn-sm rounded-pill px-3 d-flex align-items-center gap-2 border"
-                                    data-bs-toggle="dropdown" aria-expanded="false">
-                                <i class="fas fa-user-circle fa-lg text-secondary"></i>
-                                <span class="text-start d-none d-sm-block">
-                                    <span class="fw-bold d-block" style="color: var(--text-dark); line-height: 1.15">{{ Auth::user()->nama_lengkap }}</span>
+                                    class="btn btn-light btn-sm rounded-pill px-2 d-flex align-items-center gap-2 border"
+                                    data-bs-toggle="dropdown" aria-expanded="false"
+                                    aria-haspopup="true" title="Pengaturan akun">
+                                <span class="avatar-initial" aria-hidden="true">{{ $inisial }}</span>
+                                <span class="text-start d-none d-lg-block" style="line-height: 1.1">
+                                    <span class="fw-bold d-block text-truncate" style="color: var(--text-dark); max-width: 150px">{{ Auth::user()->nama_lengkap }}</span>
                                     <span class="small text-secondary d-block" style="line-height: 1.15">{{ Auth::user()->labelRole() }}</span>
                                 </span>
-                                <i class="fas fa-caret-down text-secondary"></i>
+                                <i class="fas fa-caret-down text-secondary" aria-hidden="true"></i>
                             </button>
-                            <ul class="dropdown-menu dropdown-menu-end shadow-sm">
-                                <li class="px-3 py-2">
-                                    <div class="small fw-bold text-dark">{{ Auth::user()->nama_lengkap }}</div>
-                                    <div class="small text-secondary">{{ Auth::user()->email }}</div>
+                            <ul class="dropdown-menu dropdown-menu-end shadow border-0 rounded-3 p-0 overflow-hidden">
+                                <li class="px-3 py-2 d-flex align-items-center gap-2 bg-light">
+                                    <span class="avatar-initial" aria-hidden="true">{{ $inisial }}</span>
+                                    <span class="overflow-hidden">
+                                        <span class="small fw-bold d-block text-truncate">{{ Auth::user()->nama_lengkap }}</span>
+                                        <span class="small text-secondary d-block text-truncate">{{ Auth::user()->email }}</span>
+                                    </span>
                                 </li>
                                 <li><hr class="dropdown-divider"></li>
-                                <li>
-                                    <button type="button" class="dropdown-item" data-bs-toggle="modal" data-bs-target="#modalGantiPin">
+                                <li class="px-2 py-1">
+                                    <span class="d-block px-2 pt-1 pb-1 small text-secondary text-uppercase fw-bold" style="letter-spacing:.04em;">Akun saya</span>
+                                    <button type="button" class="dropdown-item rounded-2 py-2" data-bs-toggle="modal" data-bs-target="#modalGantiPin">
                                         <i class="fas fa-key me-2 text-secondary"></i> Ganti PIN
                                     </button>
+                                    <div class="px-2 small text-secondary">
+                                        {{ Auth::user()->labelRole() }} · masuk dengan email + PIN 8 digit
+                                    </div>
                                 </li>
                             </ul>
                         </div>
+                        {{-- Keluar sengaja TIDAK disembunyikan di dalam menu dropdown:
+                             referensi desain yang sama-sama dibaca (Eleken, lollypop)
+                             menempatkan aksi keluar sebagai bagian tersendiri yang selalu
+                             terlihat, dan bentuk dropdown membutuhkan JavaScript untuk
+                             membukanya — tombol nyata ini tetap bekerja tanpa JS. --}}
                         <form method="POST" action="{{ route('logout') }}">
                             @csrf
                             <button type="submit" class="btn btn-outline-danger btn-sm rounded-pill px-3">

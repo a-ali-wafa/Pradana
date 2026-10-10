@@ -6,6 +6,7 @@ use App\Models\DrafKontenSuratKeluar;
 use App\Models\KlasifikasiPrimer;
 use App\Models\Lampiran;
 use App\Models\PengajuanHapusLampiran;
+use App\Models\PengaturanInstansi;
 use App\Models\SuratKeluar;
 use App\Models\SuratMasuk;
 use App\Models\User;
@@ -153,6 +154,16 @@ class JumlahQueryLayarTest extends TestCase
     {
         // Bilik dulu: data sudah tertanam di setUp, yang kita hitung hanya
         // statement yang benar-benar diproduksi satu layar ini.
+        //
+        // Brand instansi (logo + nama di sidebar, dibaca layout di SETIAP halaman)
+        // sengaja dipanaskan SEBELUM log dibuka. Dia cache-aside: permintaaan pertama
+        // dalam satu proses membayar satu SELECT `pengaturan_instansi`, permintaan
+        // berikutnya nol. Tanpa baris ini, tes pembanding "40 kandidat vs 80 kandidat"
+        // jadi merah hanya karena urutan — yang 40 itu permintaan pertama di proses
+        // ini (5 query), yang 80 sudah hangat (4 query). Yang diukur guardrail ini
+        // memang keadaan tunak (steady state), bukan biaya dingin satu kali.
+        PengaturanInstansi::untukTampilan();
+
         DB::flushQueryLog();
 
         $this->actingAs($this->admin)->get($url)->assertOk();
