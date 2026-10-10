@@ -30,6 +30,37 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
  */
 class LaporanController extends Controller
 {
+    /**
+     * Kolom yang BENAR-BENAR dibaca rekap CSV dan Buku Agenda (Fase P0, 10 Okt 2026).
+     *
+     * Kenapa daftar eksplisit dan bukan `->get()` apa-adanya: `surat_masuk`
+     * menyimpan teks hasil baca lampiran — `isi_hasil_baca` LONGTEXT bisa 20.000
+     * karakter per surat, plus `ringkasan` TEXT. Tidak satu pun kolom itu
+     * tercetak di keluaran laporan, tapi `->get()` tetap mengangkatnya ke memori
+     * dan meng-hidrasi jadi atribut model.
+     *
+     * Diukur 9 Okt 2026 di MariaDB tanding berisi 16.005 surat:
+     *   `->get()`          1.674 ms, puncak 56 MB
+     *   `->get([kolom])`     383 ms, puncak  2 MB
+     * Rekap setahun penuh kantor adalah jalur yang paling mungkin memakai angka
+     * itu, dan target deploy-nya shared hosting (K1=a) dengan `memory_limit`
+     * yang tidak bisa kita naikkan sendiri.
+     *
+     * `user_id` + `klasifikasi_primer_id` wajib ada di sini meski tidak dicetak
+     * langsung: keduanya kunci eager load `petugas` dan `primer`. `id` kunci
+     * withCount + pemecah seri urutan.
+     */
+    private const KOLOM_ARSIP = [
+        'id',
+        'nomor_surat',
+        'perihal',
+        'sifat',
+        'status_arsip',
+        'tanggal_surat',
+        'klasifikasi_primer_id',
+        'user_id',
+    ];
+
     public function __construct()
     {
         $this->middleware('auth');
@@ -236,7 +267,8 @@ class LaporanController extends Controller
     private function barisMasuk(Request $request, Carbon $dari, Carbon $sampai): array
     {
         return $this->tanyakan(SuratMasuk::class, $request, $dari, $sampai)
-            ->with(['primer', 'petugas'])
+            ->select([...self::KOLOM_ARSIP, 'pengirim', 'tanggal_diterima'])
+            ->with(['primer:id,kode,nama', 'petugas:id,nama_lengkap'])
             ->withCount('lampiran')
             ->get()
             ->map(fn (SuratMasuk $s) => $this->isiUmum($s, 'masuk') + [
@@ -253,7 +285,8 @@ class LaporanController extends Controller
     private function barisKeluar(Request $request, Carbon $dari, Carbon $sampai): array
     {
         return $this->tanyakan(SuratKeluar::class, $request, $dari, $sampai)
-            ->with(['primer', 'petugas'])
+            ->select([...self::KOLOM_ARSIP, 'penerima'])
+            ->with(['primer:id,kode,nama', 'petugas:id,nama_lengkap'])
             ->withCount('lampiran')
             ->get()
             ->map(fn (SuratKeluar $s) => $this->isiUmum($s, 'keluar') + [
