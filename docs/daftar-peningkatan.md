@@ -179,9 +179,9 @@ kecuali yang ditandai.
 
 | Prioritas | Paket | Kenapa | Menunggu kamu? |
 |---|---|---|---|
-| P0 (setelah ini) | **Asset lokal + guard Swal + fallback tanpa JS** (temuan #1) | paling mudah rusak, dampak menyeluruh, tidak menyentuh keputusan | tidak |
-| P0 | **`baris()` laporan → kolom saja + chunk CSV** (temuan #2) | 56 MB → 2 MB terukur, perubahan kecil | tidak |
-| P0 | **CI Actions** (#4.1) | melindungi semua yang sudah dikerjakan | tidak |
+| P0 **SELESAI 10 Okt** | **Aset lokal + guard Swal + fallback tanpa JS** (temuan #1) | commit `416aed5` (aset + CSP) & berikutnya (konfirmasi); `AsetLokalTest` + `KonfirmasiDestruktifTest` | tidak |
+| P0 **SELESAI 10 Okt (dengan satu pengecualian)** | **`baris()` laporan → kolom saja** + chunk CSV | commit `ffa0fd0`; 56 MB → 2 MB terukur. Chunk/streaming CSV **sengaja tidak** dikerjakan: `baris()` harus menggabungkan & mengurutkan dua tabel sebelum baris pertama dicetak, jadi seluruh baris tetap dibutuhkan — setelah pemangkasan kolom sisanya ±2 MB | tidak |
+| P0 **SELESAI 10 Okt** | **CI Actions** (#4.1) | commit `7fee81c`; `.github/workflows/ci.yml` — catatan: 13 tes engine-asli MariaDB di-skip di CI, jadi suite lokal dengan XAMPP menyala tetap wajib sebelum serah terima | baru jalan setelah `git push` |
 | P1 | **Agenda PDF hemat/terbatas periode** (temuan #3) | risiko timeout di hosting | tidak |
 | P1 | **`arsip:backup-db` + uji pulih** (#3.4) | tanpa ini, serah terima berisiko | tidak |
 | P1 | **Undo-after-delete, autosave form, filter chips, buat salinan surat keluar** | kenyamanan harian, semua lokal | tidak |

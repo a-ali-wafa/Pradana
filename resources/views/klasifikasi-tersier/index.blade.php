@@ -68,13 +68,17 @@
                                        class="btn btn-sm btn-outline-primary" title="Edit">
                                         <i class="fas fa-pen"></i>
                                     </a>
-                                    <button type="button" class="btn btn-sm btn-outline-danger" title="Hapus"
-                                        onclick="pradanaConfirmHapus(
-                                            '{{ route('klasifikasi-tersier.destroy', $item) }}',
-                                            'Hapus klasifikasi tersier &ldquo;{{ addslashes($item->kode) }} – {{ addslashes($item->nama) }}&rdquo;?<br>Tidak bisa dihapus jika masih dipakai surat.'
-                                        )">
-                                        <i class="fas fa-trash"></i>
-                                    </button>
+                                    <form method="POST" action="{{ route('klasifikasi-tersier.destroy', $item) }}"
+                                          class="d-inline"
+                                          data-konfirmasi="Hapus klasifikasi tersier &raquo;{{ $item->kode }} – {{ $item->nama }}&raquo;?"
+                                          data-konfirmasi-judul="Konfirmasi Hapus"
+                                          data-konfirmasi-catatan="Tidak bisa dihapus jika masih dipakai surat."
+                                          data-konfirmasi-ya="Ya, Hapus">
+                                        @csrf @method('DELETE')
+                                        <button type="submit" class="btn btn-sm btn-outline-danger" title="Hapus">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </form>
                                 </div>
                             </td>
                             @endif @endauth
@@ -92,28 +96,4 @@
 
 @endsection
 
-@push('scripts')
-<form id="formHapusKlasifikasi" method="POST" style="display:none;">
-    @csrf @method('DELETE')
-</form>
-<script>
-function pradanaConfirmHapus(url, pesan) {
-    Swal.fire({
-        title: 'Konfirmasi Hapus',
-        html: pesan,
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonColor: '#dc2626',
-        cancelButtonColor: '#64748b',
-        confirmButtonText: 'Ya, Hapus',
-        cancelButtonText: 'Batal',
-    }).then((r) => {
-        if (r.isConfirmed) {
-            const f = document.getElementById('formHapusKlasifikasi');
-            f.action = url;
-            f.submit();
-        }
-    });
-}
-</script>
-@endpush
+

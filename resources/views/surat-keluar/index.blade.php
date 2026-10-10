@@ -249,13 +249,18 @@
                                             </button>
                                         </form>
                                         @if(Auth::user()->isAdmin())
-                                        <button type="button" class="btn btn-sm btn-outline-danger" title="Pindahkan ke tempat sampah"
-                                            onclick="pradanaConfirmHapus(
-                                                '{{ route('surat-keluar.destroy', $surat) }}',
-                                                'Pindahkan surat keluar &ldquo;{{ addslashes($surat->nomor_surat) }}&rdquo; ke tempat sampah? Lampirannya tetap tersimpan dan bisa dipulihkan admin.'
-                                            )">
-                                            <i class="fas fa-trash"></i>
-                                        </button>
+                                        <form method="POST" action="{{ route('surat-keluar.destroy', $surat) }}"
+                                              class="d-inline"
+                                              data-konfirmasi="Pindahkan surat keluar &raquo;{{ $surat->nomor_surat }}&raquo; ke tempat sampah?"
+                                              data-konfirmasi-judul="Pindahkan ke Tempat Sampah?"
+                                              data-konfirmasi-catatan="Lampirannya tetap tersimpan dan bisa dipulihkan admin."
+                                              data-konfirmasi-ya="Ya, Nyahkan">
+                                            @csrf @method('DELETE')
+                                            <button type="submit" class="btn btn-sm btn-outline-danger"
+                                                    title="Pindahkan ke tempat sampah">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </form>
                                         @endif
                                     @endif
                                 </div>
@@ -281,28 +286,4 @@
 
 @endsection
 
-@push('scripts')
-<form id="formHapusSuratKeluar" method="POST" style="display:none;">
-    @csrf @method('DELETE')
-</form>
-<script>
-function pradanaConfirmHapus(url, pesan) {
-    Swal.fire({
-        title: 'Pindahkan ke Tempat Sampah?',
-        html: pesan,
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonColor: '#dc2626',
-        cancelButtonColor: '#64748b',
-        confirmButtonText: '<i class="fas fa-trash me-1"></i>Ya, Nyahkan',
-        cancelButtonText: 'Batal',
-    }).then((result) => {
-        if (result.isConfirmed) {
-            const form = document.getElementById('formHapusSuratKeluar');
-            form.action = url;
-            form.submit();
-        }
-    });
-}
-</script>
-@endpush
+

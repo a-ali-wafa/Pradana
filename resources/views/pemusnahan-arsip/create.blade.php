@@ -33,7 +33,11 @@
                         </p>
                     </div>
                 @else
-                    <form method="POST" action="{{ route('pemusnahan-arsip.store') }}" id="form-pemusnahan">
+                    <form method="POST" action="{{ route('pemusnahan-arsip.store') }}" id="form-pemusnahan"
+                          data-konfirmasi="Belum ada arsip yang dipilih."
+                          data-konfirmasi-judul="Ajukan pemusnahan?"
+                          data-konfirmasi-catatan="Setelah disetujui admin, surat dan lampirannya tidak bisa dipulihkan."
+                          data-konfirmasi-ya="Ya, Ajukan">
                         @csrf
 
                         <div class="d-flex justify-content-between align-items-center mb-2">
@@ -128,6 +132,19 @@
             cekSemua.checked = n > 0 && n === daftar.length;
             cekSemua.indeterminate = n > 0 && n < daftar.length;
         }
+
+        // Helper bersama (public/js/pradana-arsip.js) yang bertanya; halaman ini
+        // hanya menulis angkanya ke atribut. Dulu tempat ini punya listener submit
+        // sendiri dengan dua dialog konfirmasi — itu membuat jumlah arsip yang akan
+        // dimusnahkan hanya diketahui JavaScript, dan tanpa JS tombolnya tetap
+        // mengirim form kosong (server yang menolak, itu benar). Sekarang pesannya
+        // ada di HTML dan JS cuma memperbarui angkanya.
+        form.setAttribute(
+            'data-konfirmasi',
+            n === 0
+                ? 'Belum ada arsip yang dipilih — centang minimal satu baris.'
+                : n + ' arsip akan diajukan ke admin untuk dimusnahkan.'
+        );
     }
 
     daftar.forEach((c) => c.addEventListener('change', perbaruiJumlah));
@@ -137,29 +154,6 @@
             perbaruiJumlah();
         });
     }
-
-    form.addEventListener('submit', function (event) {
-        const n = daftar.filter((c) => c.checked).length;
-        if (n === 0) {
-            event.preventDefault();
-            Swal.fire({ icon: 'warning', title: 'Belum ada yang dipilih', text: 'Centang minimal satu arsip.' });
-            return;
-        }
-
-        event.preventDefault();
-        Swal.fire({
-            title: 'Ajukan pemusnahan?',
-            html: '<strong>' + n + '</strong> arsip akan diajukan ke admin. Setelah disetujui, '
-                + 'surat dan lampirannya <strong>tidak bisa dipulihkan</strong>.',
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: '#dc2626',
-            confirmButtonText: 'Ya, Ajukan',
-            cancelButtonText: 'Batal',
-        }).then(function (hasil) {
-            if (hasil.isConfirmed) form.submit();
-        });
-    });
 
     perbaruiJumlah();
 })();

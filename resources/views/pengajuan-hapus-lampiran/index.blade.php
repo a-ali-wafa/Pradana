@@ -151,24 +151,31 @@
                                 </div>
                             @endif
                         @else
-                        {{-- Tombol Setujui --}}
+                        {{-- Konfirmasi tidak lagi ditulis per halaman. Nama berkas
+                             masuk ke `data-konfirmasi` sebagai TEKS (helper bersama
+                             menampilkannya lewat `text` SweetAlert2), bukan ke `html:`
+                             seperti bentuk lama — padahal nama berkas adalah input
+                             pengguna, jadi sisipan HTML di situ adalah jalur XSS. --}}
                         <form method="POST"
                               action="{{ route('pengajuan-hapus-lampiran.setujui', $item) }}"
-                              onsubmit="return pradanaConfirmSetujui(this, '{{ addslashes($lampiran?->nama_file ?? $item->nama_file_snapshot) }}')">
+                              data-konfirmasi="File &raquo;{{ $lampiran?->nama_file ?? $item->nama_file_snapshot }}&raquo; akan dihapus dari penyimpanan arsip dan tidak bisa dipulihkan."
+                              data-konfirmasi-judul="Setujui Penghapusan?"
+                              data-konfirmasi-ya="Ya, Hapus Permanen">
                             @csrf
                             <button type="submit" class="btn btn-danger w-100 rounded-pill">
                                 <i class="fas fa-check me-1"></i> Setujui & Hapus Lampiran
                             </button>
                         </form>
 
-                        {{-- Form Tolak (inline toggle) --}}
+                        {{-- Form Tolak: bloknya dibuka oleh helper bersama, dan tanpa
+                             JavaScript form ini tetap terlihat sehingga staf bisa menolak. --}}
                         <button type="button"
                                 class="btn btn-outline-secondary w-100 rounded-pill"
-                                onclick="pradanaToggleTolak('form-tolak-{{ $item->id }}')">
+                                data-pengubah="#form-tolak-{{ $item->id }}" aria-expanded="false">
                             <i class="fas fa-times me-1"></i> Tolak
                         </button>
 
-                        <div id="form-tolak-{{ $item->id }}" style="display:none;">
+                        <div id="form-tolak-{{ $item->id }}" data-pradana-tertutup>
                             <form method="POST"
                                   action="{{ route('pengajuan-hapus-lampiran.tolak', $item) }}"
                                   class="mt-1">
@@ -196,27 +203,3 @@
 
 @endsection
 
-@push('scripts')
-<script>
-function pradanaConfirmSetujui(form, namaFile) {
-    Swal.fire({
-        title: 'Setujui Penghapusan?',
-        html: `File <strong>${namaFile}</strong> akan dihapus dari penyimpanan arsip dan tidak bisa dipulihkan.`,
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonColor: '#dc2626',
-        cancelButtonColor: '#64748b',
-        confirmButtonText: '<i class="fas fa-trash me-1"></i>Ya, Hapus Permanen',
-        cancelButtonText: 'Batal',
-    }).then((r) => {
-        if (r.isConfirmed) form.submit();
-    });
-    return false; // cegah submit default sebelum konfirmasi
-}
-
-function pradanaToggleTolak(id) {
-    const el = document.getElementById(id);
-    el.style.display = el.style.display === 'none' ? 'block' : 'none';
-}
-</script>
-@endpush

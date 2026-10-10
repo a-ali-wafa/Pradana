@@ -69,21 +69,30 @@
                                 {{-- L-12: reset PIN oleh admin (staf lupa PIN).
                                     L-10: hapus = soft delete, admin tidak boleh hapus dirinya sendiri. --}}
                                 <button type="button" class="btn btn-sm btn-outline-warning" title="Reset PIN"
-                                    onclick="pradanaToggleForm('form-reset-pin-{{ $user->id }}', this)">
+                                        data-pengubah="#form-reset-pin-{{ $user->id }}" aria-expanded="false">
                                     <i class="fas fa-key"></i>
                                 </button>
 
                                 @if($user->id !== Auth::id())
-                                <button type="button" class="btn btn-sm btn-outline-danger" title="Hapus akun"
-                                    onclick="pradanaConfirmHapus(
-                                        '{{ route('users.destroy', $user) }}',
-                                        'Hapus akun &ldquo;{{ addslashes($user->nama_lengkap) }}&rdquo;? Surat yang pernah ia input tetap tersimpan (tidak ada sistem kepemilikan), dan akun bisa dipulihkan admin.'
-                                    )">
-                                    <i class="fas fa-trash"></i>
-                                </button>
+                                <form method="POST" action="{{ route('users.destroy', $user) }}"
+                                      class="d-inline"
+                                      data-konfirmasi="Hapus akun &raquo;{{ $user->nama_lengkap }}&raquo;?"
+                                      data-konfirmasi-judul="Konfirmasi Hapus Akun"
+                                      data-konfirmasi-catatan="Surat yang pernah ia input tetap tersimpan (tidak ada sistem kepemilikan), dan akun bisa dipulihkan admin."
+                                      data-konfirmasi-ya="Ya, Hapus">
+                                    @csrf @method('DELETE')
+                                    <button type="submit" class="btn btn-sm btn-outline-danger" title="Hapus akun">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </form>
                                 @endif
 
-                                <div id="form-reset-pin-{{ $user->id }}" style="display:none;" class="mt-2 text-start">
+                                {{-- `data-pradana-tertutup` bukan `style="display:none"`:
+                                    bloknya baru disembunyikan OLEH public/js/pradana-arsip.js.
+                                    Dengan bentuk lama, form reset PIN tidak bisa dibuka sama
+                                    sekali saat JavaScript mati — padahal itu jalur pemulihan
+                                    kalau staf lupa PIN (L-12). --}}
+                                <div id="form-reset-pin-{{ $user->id }}" data-pradana-tertutup class="mt-2 text-start">
                                     <form method="POST" action="{{ route('users.pin.update', $user) }}" class="row g-1 align-items-end">
                                         @csrf @method('PATCH')
                                         <div class="col">
@@ -118,35 +127,4 @@
 
 @endsection
 
-@push('scripts')
-<form id="formHapusUser" method="POST" style="display:none;">
-    @csrf @method('DELETE')
-</form>
-<script>
-function pradanaToggleForm(id, tombol) {
-    const el = document.getElementById(id);
-    const akanTerbuka = el.style.display === 'none';
-    el.style.display = akanTerbuka ? 'block' : 'none';
-    if (akanTerbuka) el.querySelector('input[name=pin]').focus();
-}
 
-function pradanaConfirmHapus(url, pesan) {
-    Swal.fire({
-        title: 'Konfirmasi Hapus',
-        html: pesan,
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonColor: '#dc2626',
-        cancelButtonColor: '#64748b',
-        confirmButtonText: 'Ya, Hapus',
-        cancelButtonText: 'Batal',
-    }).then((r) => {
-        if (r.isConfirmed) {
-            const f = document.getElementById('formHapusUser');
-            f.action = url;
-            f.submit();
-        }
-    });
-}
-</script>
-@endpush

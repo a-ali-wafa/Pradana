@@ -249,7 +249,10 @@
                             @if($surat_masuk->lewatRetensi())
                                 @if($lamp->pengajuanHapus->where('status', 'menunggu')->isEmpty())
                                     <form method="POST" action="{{ route('lampiran.pengajuan-hapus.store', $lamp) }}"
-                                          onsubmit="return confirm('Ajukan penghapusan lampiran ini?')">
+                                          data-konfirmasi="Ajukan penghapusan lampiran &raquo;{{ $lamp->nama_file }}&raquo;?"
+                                          data-konfirmasi-judul="Ajukan Hapus Lampiran"
+                                          data-konfirmasi-catatan="Pengajuan baru terlaksana kalau admin menyetujuinya."
+                                          data-konfirmasi-ya="Ya, Ajukan">
                                         @csrf
                                         <button type="submit" class="btn btn-sm btn-outline-danger rounded-pill px-3" title="Ajukan Hapus">
                                             <i class="fas fa-trash-alt me-1"></i>Ajukan Hapus

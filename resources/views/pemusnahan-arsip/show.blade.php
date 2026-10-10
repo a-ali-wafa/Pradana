@@ -142,7 +142,10 @@
 
                 @if($belumDiproses && $isAdmin)
                     <form method="POST" action="{{ route('pemusnahan-arsip.setujui', $pemusnahan) }}"
-                          onsubmit="return setujuiPemusnahan(this)" class="mb-2">
+                          class="mb-2"
+                          data-konfirmasi="Semua surat pada daftar ini beserta seluruh lampirannya akan dihapus permanen dan tidak bisa dipulihkan. Berita Acara akan diterbitkan sebagai bukti."
+                          data-konfirmasi-judul="Musnahkan arsip ini?"
+                          data-konfirmasi-ya="Ya, Musnahkan">
                         @csrf
                         <button type="submit" class="btn btn-danger w-100 rounded-pill">
                             <i class="fas fa-fire me-1"></i> Setujui &amp; Musnahkan
@@ -150,11 +153,11 @@
                     </form>
 
                     <button type="button" class="btn btn-outline-secondary w-100 rounded-pill"
-                            onclick="document.getElementById('form-tolak').style.display='block'; this.style.display='none';">
+                            data-pengubah="#form-tolak" aria-expanded="false">
                         <i class="fas fa-ban me-1"></i> Tolak
                     </button>
 
-                    <div id="form-tolak" style="display:none;" class="mt-2">
+                    <div id="form-tolak" data-pradana-tertutup class="mt-2">
                         <form method="POST" action="{{ route('pemusnahan-arsip.tolak', $pemusnahan) }}">
                             @csrf
                             <textarea name="catatan_admin" class="form-control form-control-sm mb-2" rows="3"
@@ -176,24 +179,3 @@
 
 @endsection
 
-@push('scripts')
-<script>
-function setujuiPemusnahan(form) {
-    Swal.fire({
-        title: 'Musnahkan arsip ini?',
-        html: 'Semua surat pada daftar ini beserta <strong>seluruh lampirannya</strong> '
-            + 'akan <strong>dihapus permanen</strong> dan tidak bisa dipulihkan.<br><br>'
-            + 'Berita Acara akan diterbitkan sebagai bukti.',
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonColor: '#dc2626',
-        cancelButtonColor: '#64748b',
-        confirmButtonText: 'Ya, Musnahkan',
-        cancelButtonText: 'Batal',
-    }).then(function (hasil) {
-        if (hasil.isConfirmed) form.submit();
-    });
-    return false;
-}
-</script>
-@endpush

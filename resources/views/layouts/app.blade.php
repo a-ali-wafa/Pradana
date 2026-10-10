@@ -348,6 +348,10 @@
     @endauth
 
     <script src="{{ asset('vendor/bootstrap/bootstrap.bundle.min.js') }}?v=5.3.3"></script>
+    {{-- Helper bersama untuk konfirmasi aksi destruktif + blok buka/tutup.
+         Dimuat di layout (bukan per halaman) supaya tidak ada lagi view yang
+         menyalin `pradanaConfirmHapus()` — lihat berkasnya untuk alasannya. --}}
+    <script src="{{ asset('js/pradana-arsip.js') }}?v=1"></script>
     @auth
     <script>
     (function () {

@@ -30,37 +30,19 @@
 </form>
 
 @if($isAdmin)
-    <button type="button" class="btn btn-outline-danger rounded-pill px-3"
-        onclick="pradanaConfirmHapus(
-            '{{ route("surat-{$jenis}.destroy", $surat) }}',
-            'Pindahkan surat &ldquo;{{ addslashes($surat->nomor_surat) }}&rdquo; ke tempat sampah?'
-        )">
-        <i class="fas fa-trash me-1"></i> Hapus
-    </button>
+    {{-- Form Hapus ditulis sebagai form sungguhan (10 Okt): sebelumnya tombolnya
+        `type="button"` + `onclick="pradanaConfirmHapus(...)"` yang merakit form di
+        JavaScript, jadi tanpa JS tombolnya tidak melakukan APA-APA. Sekarang JS
+        hanya menambahkan konfirmasi lewat public/js/pradana-arsip.js. --}}
+    <form method="POST" action="{{ route("surat-{$jenis}.destroy", $surat) }}"
+          data-konfirmasi="Pindahkan surat &raquo;{{ $surat->nomor_surat }}&raquo; ke tempat sampah?"
+          data-konfirmasi-judul="Pindahkan ke Tempat Sampah?"
+          data-konfirmasi-catatan="Seluruh lampiran tetap tersimpan dan surat ini bisa dipulihkan oleh admin. Pemusnahan permanen hanya lewat menu Pemusnahan Arsip."
+          data-konfirmasi-ya="Ya, Pindahkan">
+        @csrf @method('DELETE')
+        <button type="submit" class="btn btn-outline-danger rounded-pill px-3"
+                title="Pindahkan ke tempat sampah (baris & berkas tidak ada yang hilang)">
+            <i class="fas fa-trash me-1"></i> Hapus
+        </button>
+    </form>
 @endif
-
-@push('scripts')
-<script>
-function pradanaConfirmHapus(url, pesan) {
-    Swal.fire({
-        title: 'Pindahkan ke Tempat Sampah?',
-        html: pesan + '<br><small class="text-secondary">Seluruh lampiran tetap tersimpan dan surat ini bisa dipulihkan oleh admin. Pemusnahan permanen hanya lewat menu Pemusnahan Arsip.</small>',
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonColor: '#dc2626',
-        confirmButtonText: 'Ya, Pindahkan',
-        cancelButtonText: 'Batal',
-    }).then(function (hasil) {
-        if (! hasil.isConfirmed) return;
-
-        const form = document.createElement('form');
-        form.method = 'POST';
-        form.action = url;
-        form.innerHTML = '@csrf @method("DELETE")';
-        document.body.appendChild(form);
-        form.submit();
-    });
-    return false;
-}
-</script>
-@endpush
