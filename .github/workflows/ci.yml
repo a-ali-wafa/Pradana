@@ -1,0 +1,84 @@
+name: CI
+
+# Kenapa file ini ada (P0 di docs/daftar-peningkatan.md, 10 Okt 2026): semua gerbang
+# kualitas project ini — `php artisan test`, `pint --test`, `phpstan analyse` — selama
+# ini hanya jalan kalau ada yang ingat menjalankannya di laptop. Itu terbukti jadi
+# masalah: bug kunci flash "Nyahkan" (Fase 6) lolos justru karena suite-nya sendiri
+# tidak menangkap kelas bug itu, dan "hijau" tanpa CI berarti hijau di SATU mesin.
+#
+# Yang TIDAK dilakukan workflow ini, dan harus diketahui sebelum mempercayainya:
+# 1. Tes engine-asli MariaDB (CariArsipMariaDbTest, AgregatMariaDbTest,
+#    UrutAktivitasMariaDbTest = 13 tes) di-SKIP di CI, karena `mariaHidup()` tidak
+#    menemukan server. Suite sengaja tidak dipasang MySQL service: bentuk SQL yang
+#    diuji di sana (`LIKE ? ESCAPE '!'`, `CASE` di ORDER BY, binding dua kaki UNION,
+#    kolom DATE yang memotong jam) justru hanya ada di engine produksi — kalau nanti
+#    perlu ditutup di CI, itu satu service container + `DB_TEST_DATABASE`, bukan
+#    alasan untuk percaya angka "skipped" di baris hijau ini.
+# 2. Tidak ada langkah `npm`/build: `package.json` dibuang 9 Okt (Fase 4) dan aset
+#    frontend sudah ikut ter-commit di `public/vendor` (10 Okt), jadi tidak ada
+#    tahap build yang bisa "lupa dijalankan".
+# 3. Tidak deploy. Ini cuma gerbang; target deploy masih shared hosting (K1=a) dan
+#    itu keputusan user yang belum jatuh (S14).
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# Pekerjaan ini hanya membaca repo; tidak perlu token tulis.
+permissions:
+  contents: read
+
+jobs:
+  gerbang:
+    name: tes + gaya kode + analisis statis (PHP 8.2)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # 8.2 karena itu versi yang dikunci di AGENTS.md Bagian 2 (XAMPP kantor).
+      # Ekstensi di bawah = yang benar-benar dipakai jalur yang diuji:
+      #   pdo_sqlite/sqlite3 : suite jalan di SQLite in-memory (phpunit.xml)
+      #   zip                : PembacaIsiLampiran membongkar DOCX/XLSX sebagai ZIP
+      #   dom,xml            : dompdf + parser HTML-nya
+      #   mbstring,intl      : Carbon translatedFormat("5 Oktober 2026") & Terbilang
+      #   gd                 : dompdf saat ada gambar/logo di kop
+      #   curl,fileinfo      : unggah lampiran + MIME
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          coverage: none
+          ini-values: memory_limit=-1
+          extensions: bcmath, curl, dom, fileinfo, gd, intl, json, mbstring, pdo_sqlite, sqlite3, xml, zip
+
+      # composer.json + composer.lock sudah dikunci (pass dependency Fase 7), jadi
+      # install tidak perlu resolusi; action ini meng-cache vendor + COMPOSER_HOME.
+      - name: composer install
+        uses: ramsey/composer-install@v3
+        with:
+          dependency-level: standard
+
+      # `php artisan test` butuh APP_KEY (kuki sesi terenkripsi). .env tidak di-commit
+      # — dan memang tidak boleh, berisi DB_* dan DEV_PIN — jadi dibuat dari contoh.
+      - name: siapkan environment tes
+        run: |
+          cp .env.example .env
+          php artisan key:generate --force
+          php artisan config:clear
+
+      # Urutan sengaja: tes dulu, baru pint & phpstan. Tes menjawab "aplikasinya masih
+      # jalan", dua sisanya menjawab "bentuknya masih rapi". Ketiganya harus hijau
+      # sebelum merge, dan `--test` (bukan tanpa flag) supaya CI TIDAK mengedit kode.
+      # Catatan ukuran biaya di laptop (10 Okt): tes ±120 dtk, pint ±1 dtk (178 berkas),
+      # phpstan ±1 mnt — jadi `timeout-minutes: 15` longgar, bukan ditebak.
+      - name: php artisan test
+        run: php artisan test
+
+      - name: pint (gaya kode, tidak mengubah berkas)
+        run: vendor/bin/pint --test
+
+      - name: phpstan / larastan level 5
+        run: vendor/bin/phpstan analyse --no-progress --memory-limit=1G
