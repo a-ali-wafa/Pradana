@@ -43,6 +43,19 @@ abstract class MariaDbHarness extends TestCase
 
     protected int $userId;
 
+    /**
+     * SENGAJA ada flag, dan bukan sekadar "coba bersihkan lalu tangkap error":
+     * `markTestSkipped()` melempar, jadi `setUp()` berhenti SEBELUM koneksi
+     * dipindah ke `mysql_test_a` — tetapi PHPUnit tetap memanggil `tearDown()`.
+     * Tanpa flag ini, jalur "XAMPP mati" justru bersih-bersih di connection
+     * default (SQLite in-memory yang belum dimigrasi) dan meledak dengan
+     * `no such table: surat_masuk`. Persis itulah yang terjadi 10 Okt 2026: 13
+     * tes yang HARUS-nya skip jadi FAILED, dan suite merah karena alasan yang
+     * tidak ada hubungannya dengan kode. Skip yang tidak diuji saat server mati
+     * sama butanya dengan tes yang tidak diuji saat kodenya salah.
+     */
+    protected bool $engineSiap = false;
+
     public static function setUpBeforeClass(): void
     {
         // Facade `DB::` BELUM bisa dipakai di sini: setUpBeforeClass jalan sebelum
@@ -79,6 +92,10 @@ abstract class MariaDbHarness extends TestCase
 
         config(['database.default' => 'mysql_test_a']);
 
+        // Mulai baris ini koneksi yang dipakai tes BUKAN default aplikasi lagi,
+        // jadi bersih-bersih di tearDown() boleh (dan harus) jalan.
+        $this->engineSiap = true;
+
         $this->bersihkan();
 
         $this->primerId = KlasifikasiPrimer::query()->create([
@@ -100,9 +117,11 @@ abstract class MariaDbHarness extends TestCase
 
     protected function tearDown(): void
     {
-        $this->bersihkan();
+        if ($this->engineSiap) {
+            $this->bersihkan();
 
-        config(['database.default' => 'mysql']);
+            config(['database.default' => 'mysql']);
+        }
 
         parent::tearDown();
     }

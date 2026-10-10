@@ -58,16 +58,20 @@ class AgregatMariaDbTest extends MariaDbHarness
 
     protected function tearDown(): void
     {
-        // Baris antrian tidak punya penanda nomor surat, jadi dibuang lewat id
-        // yang dicatat saat dibuat. Tanpa ini, badge di run berikutnya ikut
-        // membengkak dan tes jadi bergantung pada urutan jalannya suite.
-        if ($this->pengajuanDibuat !== []) {
-            DB::table('pengajuan_hapus_lampiran')->whereIn('id', $this->pengajuanDibuat)->delete();
-        }
+        // Guard dari MariaDbHarness: saat XAMPP mati, setUp() skip sebelum
+        // koneksi dipindah, dan query di bawah ini akan menghantam SQLite.
+        if ($this->engineSiap) {
+            // Baris antrian tidak punya penanda nomor surat, jadi dibuang lewat id
+            // yang dicatat saat dibuat. Tanpa ini, badge di run berikutnya ikut
+            // membengkak dan tes jadi bergantung pada urutan jalannya suite.
+            if ($this->pengajuanDibuat !== []) {
+                DB::table('pengajuan_hapus_lampiran')->whereIn('id', $this->pengajuanDibuat)->delete();
+            }
 
-        if ($this->pemusnahanDibuat !== []) {
-            DB::table('pemusnahan_arsip_item')->whereIn('pemusnahan_arsip_id', $this->pemusnahanDibuat)->delete();
-            DB::table('pemusnahan_arsip')->whereIn('id', $this->pemusnahanDibuat)->delete();
+            if ($this->pemusnahanDibuat !== []) {
+                DB::table('pemusnahan_arsip_item')->whereIn('pemusnahan_arsip_id', $this->pemusnahanDibuat)->delete();
+                DB::table('pemusnahan_arsip')->whereIn('id', $this->pemusnahanDibuat)->delete();
+            }
         }
 
         parent::tearDown();

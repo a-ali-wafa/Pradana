@@ -32,7 +32,11 @@ class UrutAktivitasMariaDbTest extends MariaDbHarness
 
     protected function tearDown(): void
     {
-        DB::table('aktivitas')->where('aksi', 'like', '%'.static::PENANDA.'%')->delete();
+        // Guard dari MariaDbHarness — tanpa ini, "MariaDB mati" menjadi FAILED
+        // `no such table: aktivitas` di SQLite alih-alih skip yang dimaksud.
+        if ($this->engineSiap) {
+            DB::table('aktivitas')->where('aksi', 'like', '%'.static::PENANDA.'%')->delete();
+        }
 
         parent::tearDown();
     }
