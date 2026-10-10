@@ -192,7 +192,7 @@ Menu **Laporan & Agenda**. Satu filter dipakai untuk semua keluaran: **periode (
 Di layar tertulis **"N surat cocok dengan filter ini"** — bacanya dulu sebelum mengunduh. Kalau N = 0, akan muncul peringatan bahwa periodenya memang kosong (itu bukan aplikasi rusak).
 
 - **Unduh Rekap CSV** — tabel rekap untuk dibuka di Excel / LibreOffice. Pemisah berkas ini memakai `;` dan tampil benar di Excel versi Indonesia.
-- **Cetak Buku Agenda (PDF)** — Buku Agenda Surat A4 memanjang, format seperti buku agenda manual kantor: bagian A surat masuk, bagian B surat keluar, blok tanda tangan di bawah. Buka di tab baru lalu cetak.
+- **Cetak Buku Agenda (PDF)** — Buku Agenda Surat A4 memanjang, format seperti buku agenda manual kantor: bagian A surat masuk, bagian B surat keluar, blok tanda tangan di bawah. Buka di tab baru lalu cetak. **Ada batas jumlah baris** (bawaan 2.000 surat per dokumen): kalau periode terlalu lebar, layar sudah memperingatkan sebelum tombol ditekan dan cetakannya ditolak dengan pesan "persempit periodenya". Itu bukan gangguan — Buku Agenda dibuat dalam satu kali tunggu, dan dokumen sepanjang itu akan mati di tengah jalan di server kantor. Jalan keluarnya sederhana: **cetak per semester** (Januari–Juni, lalu Juli–Desember). Rekap CSV tidak dibatasi, jadi untuk setahun penuh pakai CSV.
 
 ---
 
@@ -235,7 +235,7 @@ Tekan tombol **Akun** di kanan atas → **Ganti PIN**. Popup berisi PIN lama, PI
 - Kalau satu surat sudah benar dan tidak ada perubahan, jangan diedit lagi hanya untuk "merapikan": setiap perubahan tercatat di log dan bisa menimbulkan pertanyaan saat audit.
 - Jangan menaruh salinan arsip **hanya** di email atau flashdisk pribadi — satu salinan resminya harus ada di computer kantor.
 - Aplikasi ini **tidak boleh muncul di Google**. Semua halaman sudah ditandai "jangan di-index" dan ada daftar larangan untuk mesin pencari. Konsekuensinya: jangan bagikan tautan halaman surat ke luar kantor (tautan tetap butuh login, tapi indeks tidak akan pernah jadi saluran resmi), dan jangan minta "halaman cek surat tanpa login" kecuali memang diputuskan sebagai fitur baru.
-- Sekali setahun (biasanya Januari): admin membuka Laporan, periode tahun lalu, unduh rekap + Buku Agenda, simpan sebagai arsip tahun.
+- Sekali setahun (biasanya Januari): admin membuka Laporan, periode tahun lalu, unduh rekap + Buku Agenda, simpan sebagai arsip tahun. **Untuk Buku Agenda, cetak dua kali per semester** — satu dokumen tahunan melewati batas jumlah baris dan akan ditolak (lihat bagian 12); rekap CSV tahunan tetap aman diunduh.
 
 ---
 
@@ -262,6 +262,8 @@ Laporan ke petugas aplikasi akan cepat selesai kalau menyebut: **kode**, **jam**
 - MariaDB/MySQL.
 - Composer.
 - **Wajib dicek di `php.ini` hosting/server:** `upload_max_filesize` dan `post_max_size` minimal **26M**. Kalau dibiarkan bawaan (2M), unggahan gagal **sebelum** Laravel sempat memberi pesan yang ramah.
+- **Aplikasi tidak mengambil apa pun dari internet saat dipakai.** Bootstrap, Font Awesome, dan SweetAlert2 ikut terpasang di `public/vendor/` (versinya dicatat di `docs/aset-vendor.md`), jadi arsip tetap tampil dan berfungsi normal walau DNS/ISP kantor bermasalah. Yang butuh internet hanya pencadangan ke Google Drive (A.4), itu pun opsional.
+- **Kalau JavaScript dimatikan kantor** (browser tertentu / kebijakan security), aplikasi tetap bisa dipakai: tombol Hapus, Nyahkan, Setujui, dan Tolak tetap bekerja karena form-nya sungguhan. Bedanya jelas dan perlu diketahui: **dengan JavaScript mati, tidak ada kotak konfirmasi sama sekali** — aksi langsung berjalan begitu tombol ditekan. Kalau JavaScript hidup tapi SweetAlert2 tidak tersedia, kotak konfirmasi digantikan pertanyaan bawaan browser. Jangan matikan JavaScript untuk menyembunyikan form: form isian (surat, draf, login) tetap butuh JavaScript untuk hal-hal kecil seperti tombol buka/tutup dan unggah bertahap.
 
 ### A.2 Pasang
 ```bash

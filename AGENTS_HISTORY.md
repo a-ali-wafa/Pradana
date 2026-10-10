@@ -920,6 +920,112 @@ dev server dihentikan.
 Gerbang akhir: **213 passed / 0 skipped** (871 assertion) · `Pint` 176 file · `Larastan` [OK] No
 errors · baseline 5 entri (identik dengan sebelum).
 
+### P0 dari daftar peningkatan — 10 Okt 2026 (aset lokal, laporan hemat, plafon agenda, CI, tanpa-JS)
+
+`docs/daftar-peningkatan.md` (9 Okt) menghasilkan empat paket P0; semuanya dikerjakan hari ini
+dalam tujuh commit. Tidak ada migration baru, tidak ada dependency baru.
+
+**1. `9a453e6` docs** — daftar peningkatan itu ikut ter-commit (isinya angka, bukan tebakan).
+
+**2. `7012062` test: skip "XAMPP mati" tidak lagi jadi merah.** Session ini dibuka dengan
+`php artisan test` yang melaporkan **13 FAILED** (`no such table: surat_masuk`, connection
+`sqlite :memory:`) padahal yang salah hanya server yang belum nyala. Rantainya:
+`markTestSkipped()` melempar → `MariaDbHarness::setUp()` berhenti SEBELUM
+`config(['database.default' => 'mysql_test_a'])` → PHPUnit tetap memanggil `tearDown()` →
+bersih-bersih menghantam SQLite milik kelas lain. Ditutup dengan flag `engineSiap` di harness
+dan di dua `tearDown()` anak (`AgregatMariaDbTest`, `UrutAktivitasMariaDbTest`), bukan dengan
+try/catch. `NomorSuratKeluarTest` — satu-satunya yang TIDAK memakai harness — justru skip dengan
+benar, dan itulah yang membuktikan diagnosisnya. Sekarang: 16 skipped dengan pesan cara menyalakan.
+
+**3. `ffa0fd0` perf: laporan hanya membaca kolom yang dipakai.** `barisMasuk()`/`barisKeluar()`
+mengangkat `isi_hasil_baca` LONGTEXT (batas writer 20.000 karakter) dan `ringkasan` TEXT yang
+tidak dicetak satu kolom pun. Ukuran 9 Okt @16.005 surat: 1.674 ms + 56 MB → 383 ms + 2 MB.
+Perbaikan: konstanta `KOLOM_ARSIP` + `->select([...])` + eager load berkolom terbatas
+(`primer:id,kode,nama`, `petugas:id,nama_lengkap` — `user_id`/`klasifikasi_primer_id` wajib ada
+di daftar induk supaya relasinya tidak senyap jadi "-"). `chunk()`/streaming CSV **tidak**
+dikerjakan: `baris()` harus menggabungkan dan mengurutkan dua tabel sebelum baris pertama boleh
+dicetak, jadi seluruh baris tetap dibutuhkan; setelah pemangkasan sisanya ±2 MB.
+Guardrail-nya (`LaporanHematKolomTest`) **lolos pada kode lama** di percobaan pertama: saya cek
+`assertStringNotContainsString('isi_hasil_baca', $sql)` dan `select * from`, padahal `withCount()`
+membuat Eloquent menulis `select "surat_masuk".*, (…) as "lampiran_count"`. Bentuk yang benar
+mengigit adalah assert POSITIF (daftar kolom eksplisit ada + wildcard tabel tidak). Diverifikasi
+dua arah dengan menghapus/mengembalikan baris `select()`.
+
+**4. `416aed5` fix: aset frontend dilokalkan.** 9 tag CDN (`layouts/app` 4, `auth/login` 3,
+`errors/layout` 2) → `asset('vendor/…')?v=<versi>`; Bootstrap 5.3.3 + Font Awesome 6.4.0 (hanya
+4 `.woff2`, tanpa `.ttf`) + SweetAlert2 **11.26.25** di-commit di `public/vendor/` (772 KB).
+Yang berubah bukan pilihan frontend (X1/G1/G2/M2/V2 tetap) tapi **asal** aset — tidak ada keputusan
+di register user yang menyebut CDN, dicek langsung ke `Daftar Keputusan PRADANA.md`. Tiga hal yang
+tidak bisa ditebak dari kode: `sweetalert2@11` adalah tag MENGAMBANG (browser staf bisa dapat rilis
+terbaru tanpa diff di repo ini), CSP ikut dipersempit menjadi hanya `'self'`+`'unsafe-inline'`,
+dan catatan versi/lisensi sengaja ditaruh di `docs/aset-vendor.md` dan BUKAN `public/vendor/`
+(folder publik tidak boleh menyajikan nomor versi pihak ketiga). `AsetLokalTest` (4 tes) diverifikasi
+dua arah dengan menyisipkan link CDN sungguhan. Dua jebakan ditangkap suite: `getExtension()` pada
+`index.blade.php` memberi `php` sehingga scan pertama menemukan NOL file dan "bersih" terbaca sukses
+(→ guard `assertGreaterThan(20, $jumlah)`), dan `blade()` adalah method milik `TestCase` Laravel
+(fatal "must be protected or weaker").
+
+**5. `7fee81c` ci: GitHub Actions.** Satu job PHP 8.2: `composer install` → `cp .env.example .env`
+→ `key:generate` → `php artisan test` → `pint --test` → `phpstan analyse`. Batasannya ditulis di
+dalam file itu sendiri: 13 tes engine-asli MariaDB di-SKIP di CI (tidak ada service MySQL dipasang),
+jadi suite lokal dengan XAMPP nyala tetap wajib sebelum serah terima. Workflow belum pernah dieksekusi
+— repo ini punya remote `github.com/a-ali-wafa/Pradana` tapi tidak ada push pada session ini.
+
+**6. `633e9c0` fix: konfirmasi tidak lagi hidup di JavaScript.** `pradanaConfirmHapus()` disalin
+TUJUH kali dan tiap salinan merakit form dari JS untuk tombol `type="button"`; tanpa JS atau tanpa
+SweetAlert2 (tidak ada satu pun salinan yang memeriksa `typeof Swal`) tombolnya diam total. Jadi:
+helper satu tempat `public/js/pradana-arsip.js` + form POST sungguhan di Blade dengan
+`data-konfirmasi`/`-judul`/`-catatan`/`-ya`; `window.Swal` tidak ada → `window.confirm()`; submit
+lewat `requestSubmit()` kalau tersedia supaya validasi HTML5 tidak dilompati. Pesan masuk ke `text`,
+BUKAN `html`/`footer`: nilai `data-*` yang di-escape Blade menjadi teks mentah saat dibaca
+`getAttribute()`, jadi jalur markup adalah XSS dari `nomor_surat`/`nama_file` (bentuk lama benar-benar
+menulis `html: \`File <strong>${namaFile}</strong>…\``). Pola blok dibuka-tutup dibalik
+(`data-pradana-tertutup` ditutup OLEH script): form **Tolak** pengajuan, form **Tolak** pemusnahan,
+dan form **Reset PIN** di daftar user (jalur pemulihan L-12) sekarang tercapai tanpa JavaScript.
+`pemusnahan-arsip/create` tetap punya skrip sendiri tapi sekarang hanya menulis angkanya ke
+`data-konfirmasi`. Dua show-surat yang memakai `onsubmit="return confirm(...)"` ikut diseragamkan.
+`KonfirmasiDestruktifTest` (6 tes): semua form `@method('DELETE')` membawa pesannya, tidak ada
+`function pradanaConfirm*`/`setujuiPemusnahan`/`Swal.fire` di view, helper punya fallback + tanpa
+`innerHTML`/`html:`, tidak ada `<div id="form-…" style="display:none">`. Komentar JS di `<script>`
+TIDAK dibuang oleh scanner — komentar sejarah yang saya tulis sendiri membuat tes gagal, dan itu
+dibiarkan berlaku karena membedakan komentar JS dari kode butuh parser.
+
+**7. `fe171e8` perf: plafon Buku Agenda.** 1.000 baris agenda = 8,36 s + 52 MB dalam satu request
+(L-02 tanpa queue); `max_execution_time`/`memory_limit` hosting kantor tidak bisa dinaikkan dari
+kode. `agenda()` menghitung `jumlah()` dan menolak sebelum satu baris pun dihidrasi kalau melewati
+`config('laporan.agenda_batas_baris')` (bawaan 2.000; `AGENDA_BATAS_BARIS` di `.env.example`), dan
+`/laporan` memperingatkan lebih dulu (merah: akan ditolak, kuning: di atas setengah plafon). Plafon
+di **config baru** `config/laporan.php` dan dibaca lewat `config()` — `env()` di controller akan
+null setelah `config:cache` dan `(int) null = 0` menolak SEMUA agenda di server sementara di laptop
+kelihatan normal. CSV sengaja tanpa plafon (keluaran murah, justru untuk rekap tahunan) dan ada tes
+yang mengunci perbedaan itu. `AgendaBatasBarisTest` (5 tes) diverifikasi mengigit dengan mematikan
+kondisi guard (`if (false && …)`). Percobaan pertama justru mengosongkan file controller (preg_replace
+saya mengembalikan null dan hasilnya ditulis apa adanya) — backup `/tmp` menyelamatkan, dan itu
+mengingatkan untuk selalu memverifikasi ukuran berkas setelah skrip penekan.
+
+**Guardrail tambahan: `tests/Unit/TeksSumberBersihTest.php`.** Dalam dua session, karakter CJK/Han
+empat kali menyisip di tengah kalimat Indonesia pada komentar dan dokumen; Pint dan Larastan tidak
+peduli karena mereka melihat byte. Tesnya memindai direktori kode + dokumen kantor dan langsung
+terbukti bekerja dua kali: docblock-nya sendiri sempat memakai huruf Han sebagai contoh (yang
+seharusnya tidak ditulis dengan huruf asli), dan ia menuntut pesan gagal yang terbaca (path Windows
+bercampur separator → dinormalisasi). Kelasnya `PHPUnit\Framework\TestCase` polos, dan itu menemukan
+fakta bahwa `base_path()` melempar `Container::basePath()` tanpa aplikasi.
+
+**Dokumentasi.** Manual kantor ikut diubah: A.1 menambah "tidak mengambil apa pun dari internet" +
+apa yang terjadi kalau JavaScript dimatikan (ditegaskan: dengan JS mati **tidak ada kotak konfirmasi
+sama sekali**, aksi langsung jalan), §12 dan §14 mencatat cetak agenda per semester. `README.md` tidak
+lagi menyebut "Bootstrap 5 via CDN". AGENTS.md Bagian 2 (baris Frontend) dan Bagian 3 (bullet
+"Susulan 10 Okt") diperbarui.
+
+**Gerbang akhir session:** 217 passed + **16 skipped** (XAMPP mati; total 233 tes / 36 kelas) ·
+`Pint` 182 file · `Larastan` [OK] No errors · baseline tetap 5 entri. Tidak ada perubahan skema.
+Verifikasi layar lewat dev server TIDAK dilakukan pada session ini (butuh izin user; yang belum
+terbukti di browser sungguhan: kotak Swal muncul, confirm() bawaan muncul saat Swal dihapus, dan
+form Tolak/Reset PIN terlihat tanpa JavaScript).
+
 ### Catatan lingkungan
 
-Sesuite **206 passed, 0 skipped** hanya tercapai saat MariaDB hidup: `CariArsipMariaDbTest` (10) + `AgregatMariaDbTest` (2) + `UrutAktivitasMariaDbTest` (1) + `NomorSuratKeluarTest` (3) memakai koneksi `mysql_test_a`/`mysql_test_b` (`DB_TEST_DATABASE`, default `pradana_test`) dan di-skip dengan pesan kalau XAMPP mati — skip itu bukan kegagalan, tapi berarti bukti portabilitasnya belum ada. `Pint` 172 file lolos sejak Fase 5 (169 setelah Fase 4 membuang tiga file PHP boilerplate; 172 sekarang karena dua file tes baru + satu migration); `Larastan` level 5 bersih dengan baseline menyusut **26 → 5** (return type generik di 31 method relasi + `@property-read $lampiran_count` + `self::` untuk method private + delegasi umur arsip ke model bertipe konkret + catch yang ternyata tidak pernah bisa terjadi dibuang). Dev server tidak dijalankan untuk fase-fase perapian ini — verifikasinya lewat HTTP di dalam suite (feature test) dan di MariaDB asli, bukan lewat browser.
+Suite sekarang **233 tes dalam 36 kelas**; yang tercapai saat MariaDB **mati** hanyalah
+**217 passed + 16 skipped** — dan sejak 10 Okt skip itu benar-benar skip, bukan merah
+(lihat bullet `7012062` di atas). Yang lama tercatat sebagai "206 passed, 0 skipped"
+hanya tercapai saat MariaDB hidup: `CariArsipMariaDbTest` (10) + `AgregatMariaDbTest` (2) + `UrutAktivitasMariaDbTest` (1) + `NomorSuratKeluarTest` (3) memakai koneksi `mysql_test_a`/`mysql_test_b` (`DB_TEST_DATABASE`, default `pradana_test`) dan di-skip dengan pesan kalau XAMPP mati — skip itu bukan kegagalan, tapi berarti bukti portabilitasnya belum ada. `Pint` 182 file per 10 Okt (176 sesudah Fase 7; enam file tes P0 ditambahkan) — dulu tercatat 172 (169 setelah Fase 4 membuang tiga file PHP boilerplate; 172 sekarang karena dua file tes baru + satu migration); `Larastan` level 5 bersih dengan baseline menyusut **26 → 5** (return type generik di 31 method relasi + `@property-read $lampiran_count` + `self::` untuk method private + delegasi umur arsip ke model bertipe konkret + catch yang ternyata tidak pernah bisa terjadi dibuang). Dev server tidak dijalankan untuk fase-fase perapian ini — verifikasinya lewat HTTP di dalam suite (feature test) dan di MariaDB asli, bukan lewat browser.
