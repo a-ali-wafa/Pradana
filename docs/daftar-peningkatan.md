@@ -135,6 +135,16 @@ kecuali yang ditandai.
    Isi DB (13 tabel) belum ada jalur backup otomatis — sekarang hanya catatan mysqldump manual
    di Lampiran A. Perlu `arsip:backup-db` (mysqldump via `Process`/`exec`, simpan ke folder
    Drive atau disk lokal, rotasi 30 hari) + prosedur uji pulih (X5) yang bisa dijalankan sungguhan.
+   **Kenyataan yang terjadi 10 Okt 2026, dan ini argumen terbaik untuk butir ini:** MariaDB dev di
+   laptop tidak bisa dinyalakan lagi setelah mati listrik/mati paksa — `[FATAL] InnoDB: Trying to
+   read page number 32769 in space 0 ... which is outside the tablespace bounds` (redo log menuntut
+   `ibdata1` ±512 MB, file sungguhan 79 MB). Tidak ada satu pun tes engine-asli yang bisa jalan, dan
+   **yang hilang bukan cuma data tes: database `pradana` (arsip dev kantor) ada di datadir yang sama**.
+   Satu-satunya alasan kejadiannya bisa dideal-kan adalah salinan manual folder
+   `C:\xampp\mysql\data` yang dibuat di tempat (`prd-mysql-data-backup-20261010`, 172 MB) — itu
+   persamaan uji yang diminta X5, hanya saja dilakukan setelah insiden, bukan sebelumnya.
+   Catatan: `mysqldump` per-database (`pradana`) juga harus masuk rutinitas, karena salinan datadir
+   hanya berguna selama mesin MariaDB versi yang sama masih ada untuk membukanya.
 5. **Ekspor log aktivitas** (P2) untuk keperluan audit: CSV dari `/aktivitas` dengan filter
    yang sedang aktif.
 6. **Multi-template PDF kop desa** 🔒 (F3, butuh bahan darimu: contoh kop/template asli desa).
