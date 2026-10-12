@@ -9,16 +9,29 @@
 # (contoh: vendor/bootstrap/bootstrap.min.css?v=5.3.3). Ganti versi = URL baru,
 # jadi browser tidak pernah memegang berkas basi. Berkas yang TIDAK boleh ikut
 # disimpan adalah text/html — itu sebabnya ada aturan 0 detik di bawah.
+#
+# PENTING untuk yang berikutnya menyentuh berkas ini: satu baris saja yang tidak
+# dikenali Apache membuat SELURUH situs menjawab 500 (bukan "fiturnya mati").
+# `php artisan serve` tidak membaca .htaccess sama sekali, jadi bug seperti ini
+# tidak akan pernah kelihatan di laptop kecuali diuji di Apache sungguhan --
+# dan dua di antaranya justru ketemu saat diuji 12 Okt (lihat komentar di blok
+# mod_filter di bawah). Uji ulang dengan XAMPP Apache sebelum mengubah isinya.
 # ─────────────────────────────────────────────────────────────────────────────
-<IfModule mod_deflate.c>
-    DeflateCompressionLevel 6
-    AddOutputFilterByType DEFLATE text/html
-    AddOutputFilterByType DEFLATE text/plain
-    AddOutputFilterByType DEFLATE text/css
-    AddOutputFilterByType DEFLATE text/javascript
-    AddOutputFilterByType DEFLATE application/javascript
-    AddOutputFilterByType DEFLATE application/json
-    AddOutputFilterByType DEFLATE image/svg+xml
+<IfModule mod_filter.c>
+    <IfModule mod_deflate.c>
+        # `AddOutputFilterByType` dimiliki mod_filter, BUKAN mod_deflate. Kalau blok
+        # ini hanya dijaga <IfModule mod_deflate.c> dan mod_filter tidak terpasang,
+        # Apache menjawab "Invalid command 'AddOutputFilterByType'" dan -- sama seperti
+        # kesalahan lain di .htaccess -- SEMUA request jadi 500, bukan sekadar
+        # "kompresi mati". Terjadi di uji Apache 12 Okt; karena itu dijaga dua lapis.
+        AddOutputFilterByType DEFLATE text/html
+        AddOutputFilterByType DEFLATE text/plain
+        AddOutputFilterByType DEFLATE text/css
+        AddOutputFilterByType DEFLATE text/javascript
+        AddOutputFilterByType DEFLATE application/javascript
+        AddOutputFilterByType DEFLATE application/json
+        AddOutputFilterByType DEFLATE image/svg+xml
+    </IfModule>
 </IfModule>
 
 <IfModule mod_mime.c>
