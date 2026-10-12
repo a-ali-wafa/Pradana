@@ -1417,6 +1417,93 @@ Satu guardrail teks sengaja TIDAK dibuat untuk kasus sticky ini (melarang `posit
 di view): pemakainya cuma satu, dan regex begitu lebih sering salah tuduh daripada menangkap regresi.
 
 
+### 12 Okt dini hari — lapisan performa, dan `artisan serve` yang selama ini membohongi pengukuran
+
+Tujuan yang dipasang user: "kerjakan yang bisa dikerjakan untuk peningkatan performa, se
+maksimal mungkin, mulai dari user ketika membuka web". Dikerjakan berurutan dari lapisan
+paling dekat ke mata (browser) ke lapisan runtime, masing-masing dengan angka sebelum/sesudah.
+Yang mendarat: `9478ad7` (subset CSS + defer + aturan kompresi), `aeee7ac` (**perbaikan 500
+di `.htaccess`**), `da32119` (subset glyph font), `0ee52cb` (`bin/deploy.sh` + `docs/deploy.md`).
+
+**1. `.htaccess` yang saya tulis sendiri membuat seluruh situs mati — dan tidak ada satu pun
+alat di project ini yang bisa menemukannya.** Blok kompresi 10/12 Okt lolos suite, lolos
+pemeriksaan manual di `http://127.0.0.1:8000`, dan terlihat sempurna. Ketika akhirnya diuji
+di Apache 2.4.58 (XAMPP, konfigurasi terpisah), setiap request menjawab **500** dengan
+`AH00436`-class error: `DeflateCompressionLevel not allowed here`. Setelah itu dibuang, muncul
+satu lagi: `Invalid command 'AddOutputFilterByType'` — direktif itu dimiliki **mod_filter**,
+bukan mod_deflate, jadi guard `<IfModule mod_deflate.c>` tidak melindunginya. Dua pelajaran
+yang berlaku umum:
+
+- Satu baris tak dikenali di `.htaccess` bukan "fiturnya mati", tapi **seluruh situs 500**.
+  `php artisan serve` tidak membaca berkas itu sama sekali, jadi bug kelas ini secara
+  struktural tidak mungkin tertangkap oleh cara uji yang dipakai selama ini.
+- Guard `<IfModule>` harus menyebut modul **pemilik direktif**, bukan modul yang
+  kebetulan membuat fitur itu berguna. Verifikasinya bukan hanya "situs hidup saat modul ada",
+  tapi "situs tetap hidup (tanpa fitur) saat modul tidak ada" — dijalankan dengan membuat
+  konfigurasi Apache kedua tanpa `mod_filter`: CSS tetap 200 seberat 232.803 B, nol baris
+  `alert` di error log. Guardrail teks `HtaccessApacheTest` (9 tes) diverifikasi dua arah
+  dengan menanam kembali kedua direktif itu: masing-masing merah dengan pesannya sendiri.
+
+**2. Subset CSS tanpa subset font hanya memindahkan pemborosan.** `pradana-icons.min.css`
+sudah 19 KB tapi `src:` masih menunjuk `fa-solid-900.woff2` (146,6 KB, 1.391 glyph), dan
+woff2 sudah Brotli di dalam filenya sehingga mod_deflate tidak bisa menolongnya. Tahap dua
+`bin/buat-subset-ikon.php` sekarang memotong glyph per codepoint yang benar-benar dituntut
+CSS (fontTools + brotli), lalu **membaca ulang cmap berkas jadi** lewat
+`bin/cek-kodepoin-font.py`. Verifikasi itu langsung membayar: daftar pertama saya ikut
+menyertakan `U+0020` "buat jaga-jaga" dan pemeriksaan gagal — `fa-solid-900` tidak punya
+glyph ASCII sama sekali (isinya PUA saja). Yang tidak bisa diminta tidak boleh ditagih.
+Hasil: 146,6 KB → **6,7 KB** (72 glyph), `?v=6.4.0-p2` di tiga layout.
+
+**3. Cara terkuat memeriksa glyph (belum pernah dipakai sebelumnya): bandingkan lebar render
+tiap ikon dengan font asli.** PHPUnit hanya bisa membuktikan aturan CSS ada; yang rusak bisa
+berupa glyph yang hilang dari berkas font. Di browser, setiap `<i class="fa-…">` diukur lebar
+`::before`-nya dengan font subset, lalu diukur ulang dengan `FontFace('FAUJI', url(fa-solid-900.woff2))`
+yang dimuat manual. Selisih > 0,6 px = glyph hilang. 36 ikon di dashboard: **0 selisih**, plus
+screenshot. Teknik ini yang akan menangkap bug kelas "users-gear" berikutnya tanpa menunggu
+mata.
+
+**4. Pengukuran lama dibaca ulang: `artisan serve` bukan proxy untuk hosting.** `/login` pada
+berkas yang sama butuh **304–393 ms** lewat `php artisan serve` dan **45–68 ms** lewat Apache
+mod_php. Jadi kesimpulan "OPcache tidak memberi apa-apa" dan "cache build tidak memberi
+apa-apa" yang diambil 10 Okt dengan `artisan serve` **metodenya salah**, bukan hanya hasilnya.
+Diulang dengan benar: OPcache terbukti hidup di SAPI web (`opcache_get_status()` dari dalam
+request `apache2handler`: `opcache_enabled: true`, `used_memory` 9,5 → 37,1 MB saat halaman
+dibuka), dan cache build tetap **tidak** mengubah waktu steady (23–72 ms tanpa vs 32–59 ms
+dengan — di dalam noise). Yang dibayarnya nyata adalah permintaan pertama: 0,26–0,98 s untuk
+layar yang view-nya belum terkompilasi, dan `view:cache` memindahkan biaya itu ke dalam skrip
+deploy — karena itu `bin/deploy.sh` menutup dengan **warm-up enam jalur lewat curl**: jangan
+biarkan petugas yang membayar klik pertama sesudah deploy.
+
+**5. Angka lapisan browser, lewat Apache, halaman dashboard.** Kunjungan pertama: TTFB 151 ms,
+first contentful paint 260 ms, load 359 ms, **179 KB** transfer (sebelum kerja malam ini:
+561 KB, dan 641 KB sebelum aset dilokalkan). Kunjungan kedua: **0 KB**, 7 dari 8 aset dari
+cache, FCP 320 ms. `bootstrap.min.css` 232.803 → 31.248 B saat deflate (−87%),
+`bootstrap.bundle.min.js` 79 KB → 23.799 B, woff2 6.852 B sengaja tidak dikompres. Yang
+tersisa sekarang justru **logo instansi 89,2 KB** (240×243 PNG) — berkas terbesar kedua di
+halaman, dan jalurnya bukan kompresi melainkan varian kecil untuk UI sementara PDF tetap
+memakai berkas asli; itu menyentuh data user, jadi tidak dikerjakan tanpa keputusan.
+
+**6. Aturan user untuk ronde ini: perubahan di-commit, berkas TES tidak.** Konsekuensinya
+dicatat jujur supaya agent berikutnya tidak mengira guardrail-nya sudah ada di repo:
+`IkonSubsetTest` (7) dan `HtaccessApacheTest` (9) hidup di laptop ini saja, jadi CI belum
+menjaga jebakan `.htaccess`. Suite checkout bersih tetap **259 tes / 40 kelas**; lokal
+**275 / 42 kelas** dengan 1.549 assertion, `pint --test` 192 file, Larastan bersih baseline 5,
+`node bin/uji-pradana-arsip.js` 22 pemeriksaan lolos. CI run #9/#10/#11 hijau.
+
+**7. Perubahan di luar repo (mesin ini, semua ada cadangannya).** `C:\xampp\php\php.ini`
+(backup `php.ini.bak-pradana-20261012`): OPcache dinyalakan — di Windows + mod_php ini
+membuat error log Apache menumpahkan `VirtualProtect() failed [87]` ribuan kali (1.638 baris
+untuk satu sesi uji); OPcache tetap bekerja dan ini tidak akan terjadi di hosting Linux.
+`C:\xampp\mysql\bin\my.ini` (backup `my.ini.bak-pradana-20261012`): `innodb_buffer_pool_size`
+16M → 256M, `max_allowed_packet` 1M → 16M, `sort_buffer_size` 2M — database kantor `pradana`
+diperiksa setelah restart dan isinya utuh. `pip install brotli` (fontTools sudah ada) untuk
+tahap subset font. Konfigurasi Apache uji: `C:\Users\asus\prd-apache-test\httpd.conf`
+(port 8080, DocumentRoot `A:/Pradana/public`, `AllowOverride All`) + `httpd-nofilter.conf`
+untuk menguji jalur gagal + `htdocs/status-opcache.php` (alat baca OPcache dari SAPI web,
+di-alias di luar `public/` dan hanya dari 127.0.0.1). `C:\xampp\apache\conf` tidak pernah
+disentuh. `XAMPP Apache` milik user yang berjalan di port 80 tidak dihentikan.
+
+
 ### Catatan lingkungan (terakhir diperbarui 10 Okt malam, sesudah pass UI)
 
 Suite sekarang **259 tes dalam 40 kelas**; yang tercapai saat MariaDB **mati** hanyalah
