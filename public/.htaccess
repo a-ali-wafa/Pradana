@@ -1,3 +1,51 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Kompresi + header cache untuk aset statis.
+#
+# Ditambah 12 Okt 2026 sesudah pengukuran (docs/daftar-peningkatan.md bagian 1.4):
+# halaman pertama memuat 641 KB aset dan Apache mengirimnya mentah-mentah, lalu
+# browser masih harus menanya ulang setiap navigasi.
+#
+# Kenapa satu tahun aman: SETIAP URL aset di layout membawa `?v=<versi>`
+# (contoh: vendor/bootstrap/bootstrap.min.css?v=5.3.3). Ganti versi = URL baru,
+# jadi browser tidak pernah memegang berkas basi. Berkas yang TIDAK boleh ikut
+# disimpan adalah text/html — itu sebabnya ada aturan 0 detik di bawah.
+# ─────────────────────────────────────────────────────────────────────────────
+<IfModule mod_deflate.c>
+    DeflateCompressionLevel 6
+    AddOutputFilterByType DEFLATE text/html
+    AddOutputFilterByType DEFLATE text/plain
+    AddOutputFilterByType DEFLATE text/css
+    AddOutputFilterByType DEFLATE text/javascript
+    AddOutputFilterByType DEFLATE application/javascript
+    AddOutputFilterByType DEFLATE application/json
+    AddOutputFilterByType DEFLATE image/svg+xml
+</IfModule>
+
+<IfModule mod_mime.c>
+    # woff2 sudah dikompresi Brotli di dalam filenya; deflate lagi cuma membakar CPU
+    # hosting tanpa menghemat satu byte pun. Karena itu woff2 TIDAK masuk daftar DEFLATE.
+    AddType font/woff2 .woff2
+    AddType font/woff .woff
+</IfModule>
+
+<IfModule mod_expires.c>
+    ExpiresActive On
+    ExpiresByType text/css "access plus 1 year"
+    ExpiresByType text/javascript "access plus 1 year"
+    ExpiresByType application/javascript "access plus 1 year"
+    ExpiresByType font/woff2 "access plus 1 year"
+    ExpiresByType font/woff "access plus 1 year"
+    ExpiresByType image/png "access plus 1 month"
+    ExpiresByType image/jpeg "access plus 1 month"
+    ExpiresByType image/svg+xml "access plus 1 month"
+    ExpiresByType text/html "access plus 0 seconds"
+</IfModule>
+
+<IfModule mod_headers.c>
+    # Kompresi per-user tidak boleh dibagikan proxy yang salah memahami Vary.
+    Header append Vary Accept-Encoding env=!dont-vary
+</IfModule>
+
 <IfModule mod_rewrite.c>
     <IfModule mod_negotiation.c>
         Options -MultiViews -Indexes

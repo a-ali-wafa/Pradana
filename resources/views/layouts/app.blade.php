@@ -55,8 +55,12 @@
          Versi ditulis di `?v=` supaya upgrade aset ikut memaksa browser staf
          memuat ulang (filenya sendiri di-overwrite, bukan diganti nama). --}}
     <link href="{{ asset('vendor/bootstrap/bootstrap.min.css') }}?v=5.3.3" rel="stylesheet">
-    <link rel="stylesheet" href="{{ asset('vendor/font-awesome/css/all.min.css') }}?v=6.4.0">
-    <script src="{{ asset('vendor/sweetalert2/sweetalert2.all.min.js') }}?v=11.26.25"></script>
+    <link rel="stylesheet" href="{{ asset('vendor/font-awesome/css/pradana-icons.min.css') }}?v=6.4.0-p1">
+    {{-- defer, bukan di-parse: 78 KB ini tadinya menahan rendering seluruh halaman
+         (first paint 420 ms terukur 12 Okt). Helper `pradana-arsip.js` hanya membaca
+         `window.Swal` saat form dikirim, dan sudah punya fallback `window.confirm()`,
+         jadi menunda pemuatannya tidak mengubah perilaku apa pun. --}}
+    <script src="{{ asset('vendor/sweetalert2/sweetalert2.all.min.js') }}?v=11.26.25" defer></script>
 
     <style>
         :root {
@@ -505,7 +509,7 @@
         </div>
     @endauth
 
-    <script src="{{ asset('vendor/bootstrap/bootstrap.bundle.min.js') }}?v=5.3.3"></script>
+    <script src="{{ asset('vendor/bootstrap/bootstrap.bundle.min.js') }}?v=5.3.3" defer></script>
     {{-- Helper bersama untuk konfirmasi aksi destruktif + blok buka/tutup.
          Dimuat di layout (bukan per halaman) supaya tidak ada lagi view yang
          menyalin `pradanaConfirmHapus()` — lihat berkasnya untuk alasannya. --}}

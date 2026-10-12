@@ -181,7 +181,7 @@ class AsetLokalTest extends TestCase
         $this->get('/login')
             ->assertOk()
             ->assertSee('vendor/bootstrap/bootstrap.min.css', false)
-            ->assertSee('vendor/font-awesome/css/all.min.css', false);
+            ->assertSee('vendor/font-awesome/css/pradana-icons.min.css', false);
 
         $this->actingAs($this->pegawai)
             ->get(route('surat-masuk.index'))
