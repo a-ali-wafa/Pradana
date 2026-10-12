@@ -38,6 +38,25 @@ Tetap jalankan cache-nya — di shared hosting (disk lambat, banyak file stat pe
 request) manfaatnya nyata, dan risikonya nol — tapi jangan klaim angka yang tidak
 diukur.
 
+**Cache aktif juga diverifikasi benar, bukan cuma cepat.** 12 Okt, dengan
+`config:cache` + `route:cache` + `view:cache` + `event:cache` menyala, sepuluh layar
+(`/dashboard`, kedua daftar, mode gabungan `?jenis=semua`, `/laporan`, `/aktivitas`,
+`/users`, `/klasifikasi-primer`, `/pemusnahan-arsip`, `/pengaturan-instansi/edit`,
+`/surat-masuk/create`) tetap 200 dengan layout dan konten sungguhan (nama instansi
+terbaca di daftar, panel "Pratinjau Kop Surat" ada di halaman pengaturan). Pemeriksaan
+ini belum pernah dijalankan sama sekali sebelumnya, padahal `config:cache` adalah cara
+paling umum membuat `env()` mengembalikan `null` di server: kalau ada satu konfigurasi
+yang dibaca lewat `env()` langsung, kegagalannya baru kelihatan di produksi.
+Latihan lokalnya: `bash bin/deploy.sh --hanya-cache --warmup=http://127.0.0.1:8080`
+(mode itu melewati gerbang `.env` supaya bisa jalan di laptop), lalu
+`php artisan optimize:clear` untuk mengembalikan keadaan dev.
+
+Catatan hangat-dari-terukur: `--warmup` hanya bisa mengakses halaman publik, jadi
+yang dipanaskan adalah bootstrap framework + OPcache + Blade hasil `view:cache`;
+klik pertama per layar sesudah deploy masih bisa 0,3–0,9 s. Itu harga kompilasi sekali
+per berkas, bukan bug — dan di OPcache dengan `validate_timestamps=1` ia hanya dibayar
+saat kode benar-benar berubah.
+
 ## Yang TIDAK bisa diverifikasi dari laptop ini
 
 1. **`upload_max_filesize` / `post_max_size` ≥ 26M.** PHP menolak sebelum Laravel

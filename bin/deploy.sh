@@ -44,19 +44,30 @@ fi
 # DIBACA dari .env, tidak ditulis oleh skrip. Ini bagian yang paling sering salah
 # tempel dan gejalanya baru kelihatan saat ada masalah: APP_DEBUG=true di server
 # kantor memancarkan nama tabel, path server, dan isi stack trace ke halaman 500.
-if grep -qE '^[[:space:]]*APP_ENV=production' .env; then
+#
+# `--hanya-cache` melewatkan gerbang ini DENGAN SENGAJA: mode itu dipakai untuk
+# latihan di mesin pengembang (APP_ENV=local) dan untuk memperbaiki cache deploy
+# yang terpotong. Yang dilewati hanya pemeriksaan .env — langkah cache-nya tetap
+# sama persis dengan deploy sungguhan.
+if [ "$HANYA_CACHE" -eq 1 ]; then
+    echo "  PERINGATAN: --hanya-cache, gerbang .env dilewati (mode latihan / perbaikan deploy terpotong)"
+elif grep -qE '^[[:space:]]*APP_ENV=production' .env; then
     echo "  APP_ENV=production  OK"
 else
     echo "GAGAL: APP_ENV belum 'production' di .env." >&2
     exit 1
 fi
-if grep -qE '^[[:space:]]*APP_DEBUG=false' .env; then
+if [ "$HANYA_CACHE" -eq 1 ]; then
+    :
+elif grep -qE '^[[:space:]]*APP_DEBUG=false' .env; then
     echo "  APP_DEBUG=false     OK"
 else
     echo "GAGAL: APP_DEBUG masih true — halaman error akan membocorkan isi server." >&2
     exit 1
 fi
-if grep -qE '^[[:space:]]*APP_KEY=base64:' .env; then
+if [ "$HANYA_CACHE" -eq 1 ]; then
+    :
+elif grep -qE '^[[:space:]]*APP_KEY=base64:' .env; then
     echo "  APP_KEY             OK"
 else
     echo "GAGAL: APP_KEY kosong. Jalankan: php artisan key:generate (SEKALI, sebelum ada data)." >&2
@@ -65,7 +76,9 @@ fi
 # Zona waktu kantor: nomor dan tanggal Berita Acara dihitung dari now(). Bawaan
 # Laravel dulu 'UTC' dan itu menghasilkan dokumen resmi bertanggal salah delapan jam
 # sebelum tengah malam WIB. Nilai boleh Asia/Makassar atau Asia/Jayapura.
-if grep -qE '^[[:space:]]*APP_TIMEZONE=Asia/' .env; then
+if [ "$HANYA_CACHE" -eq 1 ]; then
+    :
+elif grep -qE '^[[:space:]]*APP_TIMEZONE=Asia/' .env; then
     echo "  APP_TIMEZONE        OK ($(grep -E '^[[:space:]]*APP_TIMEZONE=' .env | cut -d= -f2))"
 else
     echo "GAGAL: APP_TIMEZONE belum diset ke zona kantor (Asia/Jakarta|Makassar|Jayapura)." >&2
@@ -114,6 +127,10 @@ if command -v curl >/dev/null 2>&1; then
         kode=$(curl -s -o /dev/null -w '%{http_code}' --max-time 60 "${WARMUP}${jalur}" || echo "000")
         printf '   %-14s %s\n' "$jalur" "$kode"
     done
+    echo "   302 di luar /login itu EXPECTED (curl tidak punya sesi)."
+    echo "   Yang dipanaskan di sini: bootstrap framework + OPcache + Blade yang tercompile"
+    echo "   lewat view:cache. Klik pertama per layar masih bisa 0,3-0,9 s sesudah deploy;"
+    echo "   itu harga kompilasi sekali per berkas yang belum dilewati /login, bukan bug."
 else
     echo "   curl tidak ada — lewati (klik pertama tetap lambat, tidak berbahaya)"
 fi
