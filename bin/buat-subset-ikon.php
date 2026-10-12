@@ -4,9 +4,10 @@
  * Pembuat subset Font Awesome.
  *
  * Kenapa: `all.min.css` (99,6 KB) mendefinisikan 1.856 ikon, sedangkan aplikasi
- * ini memakai 78. CSS itu blocking dan diminta di setiap halaman, jadi memangkasnya
+ * ini memakai <80. CSS itu blocking dan diminta di setiap halaman, jadi memangkasnya
  * adalah penghematan byte paling murah yang ada (docs/daftar-peningkatan.md 1.4#17,
- * terukur 12 Okt 2026: 99,6 KB -> 32,6 KB).
+ * terukur 12 Okt: 99,6 KB -> 19,3 KB). Skrip ini juga membuat subset FONT-nya;
+ * lihat tahap dua di bawah.
  *
  * Cara: salin all.min.css, buang HANYA aturan berformat persis
  *   .fa-<nama>:before{content:"\fxxx"}
@@ -121,6 +122,33 @@ $kepala = '/* pradana-icons.min.css - subset all.min.css (Font Awesome 6.4.0, MI
     .'bin/buat-subset-ikon.php. '.count($pakai).' ikon dipakai + '.count($awalan)
     .' awalan dinamis, '.$buang." aturan dibuang. JANGAN edit manual: jalankan ulang skripnya. */\n";
 
+/*
+ * Sumber huruf diganti ke berkas hasil subset glyph. Dulu CSS-nya sudah ramping
+ * (20 KB) tapi masih menuntut `fa-solid-900.woff2` seberat 150 KB: berkas itu
+ * memuat 1.391 glyph, padahal halaman ini hanya memanggil 71. CSS yang dipangkas
+ * tanpa memangkas fontnya hanya memindahkan pemborosan.
+ *
+ * `src:` ditulis ulang untuk SEMUA blok @font-face yang menunjuk berkas solid
+ * (Font Awesome 6 Free 900, Font Awesome 5 Free 900, FontAwesome) — kalau hanya
+ * satu yang diganti, alias lama masih menyedot berkas penuh.
+ *
+ * Reference `.ttf` dibuang sekaligus: berkasnya tidak pernah di-commit (10 Okt:
+ * hanya `.woff2`), jadi ia cuma janji gagal yang bisa terlihat di Network panel.
+ * Blok brands/regular/v4compatibility SENGAJA dibiarkan: browser tidak mengunduh
+ * @font-face yang tidak dipakai (terukur 12 Okt: hanya berkas solid yang jalan),
+ * dan membuangnya membuat pemakaian `far`/`fab` di masa depan gagal diam-diam.
+ */
+$hasil = str_replace(
+    'url(../webfonts/fa-solid-900.woff2) format("woff2")',
+    'url(../webfonts/pradana-solid-900.woff2) format("woff2")',
+    $hasil
+);
+$hasil = (string) preg_replace(
+    '/,url\(\.\.\/webfonts\/[A-Za-z0-9._-]+\.ttf\) format\("truetype"\)/',
+    '',
+    $hasil
+);
+
 file_put_contents($tujuan, $kepala.$hasil);
 
 printf(
@@ -183,3 +211,91 @@ if ($hilang !== []) {
 }
 
 echo "verifikasi: semua ikon yang dipakai punya aturan di berkas hasil.\n";
+
+/*
+ * Tahap dua: subset BERKAS FONT.
+ *
+ * Kenapa terpisah dari potongan CSS: font asli `fa-solid-900.woff2` memuat 1.391
+ * glyph (150 KB) sedangkan CSS hasil di atas hanya menuntut 71 codepoint. woff2
+ * sudah ter-Brotli, jadi mod_deflate hosting TIDAK menambah apa pun di sini —
+ * memangkas glyph adalah satu-satunya cara mengurangi berkasnya. Font ini juga
+ * satu-satunya aset yang tidak bisa diperbaiki dengan cache header: ia tetap
+ * diunduh penuh pada kunjungan pertama.
+ *
+ * Tool-nya Python + fontTools (brotli). Ini ALAT PENGEMBANG, sama seperti Node di
+ * `bin/uji-pradana-arsip.js`: aplikasi tidak pernah memanggil Python dan hosting
+ * tidak butuh apa pun selain dua berkas hasil yang di-commit.
+ *
+ * Verifikasi dibaca ULANG dari cmap berkas jadi, bukan dari angka yang dikirim ke
+ * pyftsubset — kalau ada codepoint yang ternyata tidak ada di font sumber, glyph
+ * itu hilang tanpa satu pun pesan di layar. Bukan kebetulan: daftar pertama sempat
+ * minta U+0020 "buat jaga-jaga" dan pemeriksaan itu gagal — `fa-solid-900` memang
+ * tidak punya glyph ASCII sama sekali (isinya PUA saja). Yang tidak bisa diminta
+ * tidak boleh ditagih, jadi daftar yang dipakai adalah codepoint yang benar-benar
+ * ditulis CSS.
+ */
+$sumberFont = $akar.'/public/vendor/font-awesome/webfonts/fa-solid-900.woff2';
+$tujuanFont = $akar.'/public/vendor/font-awesome/webfonts/pradana-solid-900.woff2';
+
+$kodepoin = [];
+foreach ($m[0] as $aturan) {
+    if (preg_match_all('/content:"\\\\\s*([0-9a-fA-F]{4,6})/', $aturan, $u)) {
+        foreach ($u[1] as $k) {
+            $kodepoin[strtoupper($k)] = true;
+        }
+    }
+}
+ksort($kodepoin);
+
+$python = null;
+$keluar = [];
+foreach (['python', 'python3'] as $calon) {
+    exec($calon.' --version 2>&1', $keluar, $kode);
+    if ($kode === 0) {
+        $python = $calon;
+        break;
+    }
+}
+
+if ($python === null || ! is_file($sumberFont)) {
+    fwrite(STDERR, "Font tidak bisa disubset: butuh Python + fontTools + brotli.\n");
+    fwrite(STDERR, "Pasang sekali:  pip install fonttools brotli\n");
+    exit(1);
+}
+
+$daftar = implode(',', array_map(static fn (string $k): string => 'U+'.$k, array_keys($kodepoin)));
+
+$jalankan = sprintf(
+    '%s -m fontTools.subset %s --unicodes=%s --layout-features= --flavor=woff2 --output-file=%s 2>&1',
+    $python,
+    escapeshellarg($sumberFont),
+    escapeshellarg($daftar),
+    escapeshellarg($tujuanFont)
+);
+$out = (string) shell_exec($jalankan);
+
+if (! is_file($tujuanFont)) {
+    fwrite(STDERR, "pyftsubset gagal:\n".$out."\n");
+    exit(1);
+}
+
+$cek = trim((string) shell_exec(sprintf(
+    '%s %s %s %s 2>&1',
+    $python,
+    escapeshellarg($akar.'/bin/cek-kodepoin-font.py'),
+    escapeshellarg($tujuanFont),
+    escapeshellarg($daftar)
+)));
+if (! str_starts_with($cek, 'OK')) {
+    fwrite(STDERR, "Berkas font hasil subset TIDAK memuat semua glyph yang dituntut CSS: {$cek}\n");
+    exit(1);
+}
+
+printf(
+    "fa-solid-900.woff2      %7.1f KB  (sumber, semua glyph)\npradana-solid-900.woff2  %7.1f KB  (%s, %d codepoint dipakai)\n",
+    filesize($sumberFont) / 1024,
+    filesize($tujuanFont) / 1024,
+    $cek,
+    count($kodepoin)
+);
+echo "verifikasi: cmap berkas font memuat semua codepoint yang dituntut CSS.\n";

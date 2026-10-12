@@ -55,7 +55,7 @@
          Versi ditulis di `?v=` supaya upgrade aset ikut memaksa browser staf
          memuat ulang (filenya sendiri di-overwrite, bukan diganti nama). --}}
     <link href="{{ asset('vendor/bootstrap/bootstrap.min.css') }}?v=5.3.3" rel="stylesheet">
-    <link rel="stylesheet" href="{{ asset('vendor/font-awesome/css/pradana-icons.min.css') }}?v=6.4.0-p1">
+    <link rel="stylesheet" href="{{ asset('vendor/font-awesome/css/pradana-icons.min.css') }}?v=6.4.0-p2">
     {{-- defer, bukan di-parse: 78 KB ini tadinya menahan rendering seluruh halaman
          (first paint 420 ms terukur 12 Okt). Helper `pradana-arsip.js` hanya membaca
          `window.Swal` saat form dikirim, dan sudah punya fallback `window.confirm()`,

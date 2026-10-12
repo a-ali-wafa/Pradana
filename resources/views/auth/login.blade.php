@@ -41,7 +41,7 @@
     {{-- Sama seperti layouts/app: aset dilokalkan, karena halaman login justru
          yang pertama dibuka saat staf datang dan internet kantor sedang putus. --}}
     <link href="{{ asset('vendor/bootstrap/bootstrap.min.css') }}?v=5.3.3" rel="stylesheet">
-    <link rel="stylesheet" href="{{ asset('vendor/font-awesome/css/pradana-icons.min.css') }}?v=6.4.0-p1">
+    <link rel="stylesheet" href="{{ asset('vendor/font-awesome/css/pradana-icons.min.css') }}?v=6.4.0-p2">
 
     <style>
         :root {
