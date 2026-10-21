@@ -2,7 +2,10 @@
 
 Ditulis 12 Okt 2026. Untuk petugas/IT yang memasang, bukan untuk pemakai akhir.
 Manual pemakaian kantor ada di `docs/manual-pemakaian.md` (Lampiran A isinya tumpang
-tindih dengan halaman ini — halaman ini versi yang bisa dijalankan).
+tindih dengan halaman ini — halaman ini versi yang bisa dijalankan). Halaman ini menjawab
+**cara memasang**; **apa yang masih menahan pemasangan** dan pilihan host-nya ada di
+`docs/kesiapan-deploy.md` (vonis 21 Okt 2026, termasuk langkah pemangkasan stub Google
+yang sekarang jadi bagian dari skrip ini).
 
 Satu perintah: **`bash bin/deploy.sh`** dari root aplikasi lewat SSH. Skripnya berhenti
 dengan pesan kalau `.env` belum benar; ia tidak pernah menulis `.env`.
