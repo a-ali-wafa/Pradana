@@ -1612,6 +1612,17 @@ membuka jalan bagi pilihan yang dokumennya bilang harus dihindari. (b) Provisi s
 butuh akun/kartu/keputusan user. (c) Mengubah `L-13` (batas unggah) supaya "cocok" dengan hosting
 gratis — itu keputusan user, bukan kompensasi teknis yang boleh agent lakukan sendiri.
 
+**9. Efek samping yang perlu diketahui user: Apache XAMPP milik user sempat ikut mati.**
+Bersih-bersih proses uji dilakukan dengan `taskkill /F /IM httpd.exe` — perintah itu
+membunuh SEMUA `httpd.exe`, termasuk Apache XAMPP yang dijalankan user di port 80 (PID
+20576 waktu itu). Dinyalakan kembali dengan `C:/xampp/apache/bin/httpd.exe` (conf bawaan,
+bukan lewat Control Panel) dan port 80 terukur melayani lagi (302 pada `/`). Yang benar
+untuk ronde berikutnya: catat PID proses uji sendiri dan bunuh PID itu, bukan per-nama
+image — `httpd` uji dan `httpd` user tidak bisa dibedakan dari namanya. Quick tunnel
+dibersihkan dengan benar (`taskkill /IM cloudflared.exe`, lalu terverifikasi 0 proses),
+`.env` dikembalikan dari salinan (0 baris `TRUSTED_PROXIES` tersisa), `optimize:clear`
+dijalankan, dan `storage/framework/down` tidak pernah dibuat.
+
 ### Catatan lingkungan (terakhir diperbarui 10 Okt malam, sesudah pass UI)
 
 Suite sekarang **259 tes dalam 40 kelas**; yang tercapai saat MariaDB **mati** hanyalah
