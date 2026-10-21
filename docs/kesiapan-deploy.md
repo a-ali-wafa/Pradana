@@ -286,6 +286,12 @@ Dua hal yang wajib diketahui sebelum mengandalkan jalur ini untuk sidang:
   yang masih hidup (`taskkill /F /IM cloudflared.exe`); meninggalkan tunnel hidup
   sama dengan membiarkan pintu ke Apache-mu terbuka selama listrik menyala.
 
+Yang **belum** diuji lewat tunnel, dan sengaja tidak saya ujikan: alur login + unggah
+lampiran + cetak PDF. Lewat Quick Tunnel aplikasi itu benar-benar terbuka di internet, dan
+DB yang di sini berisi akun dev ber-PIN `12345678` — mengekspos itu walau sebentar bukan
+trade yang sepadan untuk bukti yang sudah didapat dari 275 tes. Jalankan sendiri sebelum
+sidang, dan matikan `cloudflared` sesudahnya.
+
 Sudah diverifikasi bersih di mesin ini: tidak ada `cloudflared` tersisa, port 8080 tidak
 lagi menyandang `LISTENING`, Apache milik user di port 80 tidak pernah disentuh, dan
 `.env` dikembalikan seperti semula (0 baris `TRUSTED_PROXIES`).
