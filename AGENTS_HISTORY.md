@@ -1504,6 +1504,114 @@ di-alias di luar `public/` dan hanya dari 127.0.0.1). `C:\xampp\apache\conf` tid
 disentuh. `XAMPP Apache` milik user yang berjalan di port 80 tidak dihentikan.
 
 
+### 21 Okt — audit kesiapan deploy: 43.561 berkas vendor, dan apa yang sebenarnya menahan deploy
+
+Permintaan user: "cek dulu ini siap deploy apa engga, apa yang kurang atau perlu dikerjakan;
+setelah itu cari opsi deploy yang full gratis tapi tetap bagus dan persiapkan untuk itu".
+Hasil kerjanya ada di `docs/kesiapan-deploy.md`; bagian ini mencatat proses + angka.
+
+**1. Temuan terbesar tidak ada hubungannya dengan fitur.** `find vendor -type f` = **46.448**
+berkas; dari 43.561 paket produksi, **36.901 (130 MB) adalah `google/apiclient-services`** —
+335 layanan x {`src/<Nama>.php` + `src/<Nama>/`}, dibuktikan berpasangan 335/335. Kode aplikasi
+ini + `apiclient` + `auth` hanya menyentuh `Google\Service\Drive` (cadangan lampiran, L-01).
+Angka itu tidak pernah kelihatan sebelumnya karena di mesin pengembang tidak ada konsekuensinya:
+composer jalan normal, tes normal, `artisan serve` normal. Konsekuensinya muncul di hosting yang
+membatasi inode (InfinityFree/ByetHost: 30.000 berkas, pernyataan staf mereka) dan gejalanya
+"upload gagal" — bukan pesan yang menyebut jumlah berkas. Penutupnya:
+`bin/pangkas-layanan-google.php` → **36.901 menjadi 98 berkas**, vendor **46.448 menjadi 9.645**.
+Diverifikasi dengan cara yang bisa diulang: `class_exists()` untuk `Google\Client`,
+`Google\Service`, `Google\Service\Drive`, `Google\Service\Drive\DriveFile`;
+`php artisan arsip:sinkron-ke-drive --dry-run` tetap keluar 0 (`[dry-run] ... 0 terkirim`);
+suite penuh **275 passed** sesudah pangkas.
+
+**2. Tiga kegagalan berurutan saat skripnya dibuat — dan yang ketiga adalah bug yang diam.**
+(a) Run pertama berhenti di `src/Books`: `rmdir()` "Directory not empty" padahal seluruh isinya
+sudah terhapus — `RecursiveDirectoryIterator` menahan handle folder di Windows; solusinya
+kumpulkan daftar path, `unset($it)`, baru mulai menghapus. (b) Run ketiga berhenti di
+`src/CloudHealthcare/Resource`: berkas yang barusan di-`unlink` masih berstatus *pending delete*
+selama ada proses lain memegangnya (Defender/indexer melakukan ini persis pada file yang baru
+dihapus), jadi butuh retry berjeda, bukan percobaan serentak. (c) Yang paling berbahaya: run kedua
+**menghapus nol berkas dan keluar tanpa satu pun pesan galat**, karena saya menambahkan prefiks
+path `\\?\` yang ternyata tidak berfungsi di PHP 8.2.12 Windows ini — `file_exists()` mengembalikan
+false, jadi setiap folder "tidak ada" dan `$hapusPohon` dengan senang hati mengembalikan 0.
+Kompleksitas itu juga tidak dibutuhkan: path terpanjang di seluruh pohon ini **203 karakter**, di
+bawah batas API lama 260 (diukur, bukan diasumsikan). Yang menyelamatkan adalah pemeriksaan
+terakhir yang baru ditulis SETELAH kegagalan (b): baca ulang isi `src/` dari disk dan menuntut tidak
+ada entri di luar daftar yang dipertahankan. Pelajaran yang berlaku umum: **skrip yang melaporkan
+dirinya sendiri bukan bukti** — yang harus diperiksa adalah keadaan disk sesudahnya.
+
+**3. `TrustProxies` hari itu juga terbukti lubang, dan cara mengukurnya salah lebih dulu.**
+`$proxies` di kode adalah `null`, jadi di belakang proxy/tunnel `$request->ip()` menghasilkan IP
+mesin proxy untuk SEMUA petugas; karena kunci throttle login = email+IP
+(`LoginRequest::throttleKey()`, 5/menit), lima salah ketik PIN oleh satu orang mengunci satu
+kantor, dan tidak ada kolom IP di `aktivitas` yang bisa dipakai menjelaskan itu ke petugas.
+Perbaikannya dibaca dari `config('security.php')` (`TRUSTED_PROXIES`, default kosong), dibangun di
+constructor middleware supaya `config:cache` tetap berlaku. Verifikasi dua arah lewat bootstrap
+nyata: `127.0.0.1` dipercaya → `ip()=192.0.2.10`, skema `https`; daftar kosong → `203.0.113.9`,
+skema `http`. **Catatan yang layak diingat: versi pertama skrip cek membaca `ip()` di akhir,
+setelah arah kedua mengganti konfigurasi, dan menyimpulkan kodenya gagal — padahal `Symfony\Request`
+menyimpan daftar proxy secara global per proses.** Snapshot harus diambil segera sesudah
+`handle()`. Kode yang benar + cara ukur yang salah = tuduhan yang salah; ini kelas yang sama dengan
+`FlashKonsistenTest` yang dulu "lolos" karena polanya menuntut kutip pada baris yang sama.
+
+**4. `bin/deploy.sh` sekarang memeriksa server sebelum menyentuh database, dan dengan jujur
+membedakan apa yang TIDAK bisa dibuktikannya.** Langkah 2 menguji versi PHP, 10 ekstensi
+(`pdo_mysql, mbstring, fileinfo, zip, dom, xml, openssl, curl, gd, tokenizer`), nilai
+`upload_max_filesize`/`post_max_size`, dan ada/tidaknya `mysqldump` (tanpa biner,
+`arsip:backup-db` memang menolak jalan — itu sikap perintahnya, bukan bug deploy). Langkah 5
+menguji izin tulis `storage/` + `bootstrap/cache`, mencoba `chmod`, dan berhenti dengan pesan
+`chown` kalau user shell berbeda dari user PHP. Yang sengaja TIDAK dilaporkan sebagai lulus:
+nilai php.ini sisi FPM (boleh berbeda dari CLI) dan docroot `public/` — dua-duanya hanya terbukti
+dari sisi web, jadi keduanya masuk daftar "dicek manusia" dengan cara mengujinya
+(`curl -I <url>/.env` harus bukan isi konfigurasi). Blok PHP di dalam bash dieksekusi langsung
+(`php -r '...'`) sebelum diklaim, karena satu kutip yang salah di sana membuat seluruh deploy
+berhenti pada baris yang tidak ada hubungannya dengan penyebabnya.
+
+**5. Riset opsi gratis: yang menyingkirkan hosting gratis adalah angka aplikasinya sendiri.**
+Tiga batas yang tidak bisa dinegosiasi dari pihak host (pernyataan staf InfinityFree, dan angka
+yang sama di ByetHost): **10 MB per berkas** — sementara `StoreLampiranRequest` mengizinkan 25 MB
+(L-13, keputusan user); **tanpa cron** (dimatikan Agu 2023) — sementara `Kernel.php` punya 4 jadwal;
+**tanpa SSH/CLI** dan **docroot tidak bisa dipindah** — sementara deploy butuh `composer install`,
+`php artisan migrate`, dan penempatan `public/` di luar `storage/`/`.env`. PaaS/serverless tier
+gratis gagal di disk persisten dan/atau cron (Render, Koyeb, Railway, Fly, Vercel/Netlify, Workers);
+Supabase/Neon tidak menjawab apa pun karena Postgres sementara SQL aplikasi ini
+(`LIKE ? ESCAPE '!'`, `CASE` di `ORDER BY`, `EXPLAIN`, mysqldump) diuji di MySQL/MariaDB;
+000webhost tutup sejak Okt 2024. Dua kandidat lolos dari dokumentasi resmi pemiliknya:
+**Oracle Always Free** (1.500 OCPU-jam + 9.000 GB-jam = 2 OCPU/12 GB — dipangkas senyap dari 4/24
+pertengahan 2026; 200 GB block storage; region Indonesia hanya Batam `ap-batam-1`; butuh kartu
+kredit; risiko reklamasi idle >7 hari CPU<20% p95 + network<20% + memory<20%) dan **PC kantor +
+Cloudflare Tunnel** (Zero Trust gratis 50 user; data tidak keluar kantor). **Keputusannya tidak
+diambil agent**: K1=a (shared hosting) adalah keputusan user dan memindahkannya ke VPS/on-prem itu
+perubahan yang harus user sadari, termasuk konsekuensi "surat kantor berada di data center orang
+lain". Rekomendasi teknis yang menyertainya: pasang MariaDB di server target supaya engine-nya sama
+dengan yang dites, dan kalau kantor tetap ingin shared hosting 10 MB, itu berarti menurunkan L-13 —
+bukan hal yang boleh diam-diam dilakukan `php.ini`.
+
+**6. `TeksSumberBersihTest` akhirnya menjangkau `docs/`, dan buktinya terjadi hari itu juga.**
+Karakter CJK mendarat dua kali di `docs/kesiapan-deploy.md` yang baru saya tulis: dua-duanya
+menempel di ujung kata (habis "sudah" dan habis "*dan*"), masing-masing satu glyph Han. Cara saya
+mendokumentasikan temuan ini pun akhirnya tidak boleh memuat contoh karakternya apa adanya. Guardrail itu
+tidak menangkapnya karena berkas dokumen didaftarkan **satu-satu** dan
+`docs/deploy.md` (12 Okt) saja sudah tidak terdaftar — daftar hard-coded memang selalu tertinggal
+satu dokumen. Sekarang `docs` masuk `self::DIREKTORI`, daftar berkas tinggal tiga markdown root.
+Digigit/dipulihkan seperti aturan project: satu karakter Han ditanam ke `docs/deploy.md` → merah dengan pesan
+`docs/deploy.md:108 → ...` → baris dihapus → hijau, dan berkas dikembalikan utuh (`git diff` kosong).
+
+**7. Gerbang sesudah semua perubahan (MariaDB hidup).** `php artisan test` = **275 passed /
+0 skipped, 1.549 assertion** (83,6 s); `pint --test` = **194 file** bersih (193 + 1 skrip baru);
+`phpstan analyse` = **[OK] No errors** tanpa menambah baseline (perubahan `config/` + middleware
+tidak menyentuh jejak statis yang ada); `node bin/uji-pradana-arsip.js` = semua jalur terverifikasi;
+`migrate:status` = 16 migrasi `Ran`. Yang tidak dilakukan: dev server tidak dijalankan (tidak ada
+permintaan untuk itu dan tidak ada yang perlu dilihat di layar), dan tidak ada `composer install`
+ulang — kalau nanti butuh pohon Google lengkap lagi di laptop ini, jalurnya
+`composer reinstall google/apiclient-services`, bukan seluruh install.
+
+**8. Sengaja tidak dikerjakan.** (a) Skrip pengemasan zip untuk hosting tanpa SSH: dua kandidat
+teratas punya shell, dan membuat jalur "deploy tanpa composer + migrate lewat phpMyAdmin" justru
+membuka jalan bagi pilihan yang dokumennya bilang harus dihindari. (b) Provisi server sungguhan:
+butuh akun/kartu/keputusan user. (c) Mengubah `L-13` (batas unggah) supaya "cocok" dengan hosting
+gratis — itu keputusan user, bukan kompensasi teknis yang boleh agent lakukan sendiri.
+
 ### Catatan lingkungan (terakhir diperbarui 10 Okt malam, sesudah pass UI)
 
 Suite sekarang **259 tes dalam 40 kelas**; yang tercapai saat MariaDB **mati** hanyalah
