@@ -29,7 +29,7 @@ class TeksSumberBersihTest extends TestCase
     /** Rentang yang dicari: hiragana, katakana, kanji, hangul, dan CJK punctuation. */
     private const POLA = '/[\x{3000}-\x{30FF}\x{3400}-\x{4DBF}\x{4E00}-\x{9FFF}\x{F900}-\x{FAFF}\x{AC00}-\x{D7AF}]/u';
 
-    private const DIREKTORI = ['app', 'config', 'database', 'resources', 'routes', 'public/js', 'tests'];
+    private const DIREKTORI = ['app', 'config', 'database', 'resources', 'routes', 'public/js', 'tests', 'docs'];
 
     /**
      * root repo diambil dari __DIR__, BUKAN `base_path()`: kelas ini sengaja
@@ -73,6 +73,13 @@ class TeksSumberBersihTest extends TestCase
      * `node_modules/` tidak pernah dimasukkan — di sana memang ada contoh teks
      * asing (Carbon, portable-ascii).
      *
+     * `docs/` masuk sebagai DIREKTORI, bukan sebagai daftar berkas. Alasannya
+     * terjadi hari ini: daftar hard-coded selalu tertinggal satu berkas —
+     * `docs/deploy.md` (ditulis 12 Okt) tidak pernah ada di dalamnya, dan karakter
+     * CJK mendarat di `docs/kesiapan-deploy.md` pada 21 Okt. Yang menangkapnya
+     * waktu itu pindaian manual, bukan tes ini. Sekarang dokumen baru ikut
+     * dipindai sejak pertama kali disimpan, tanpa perlu ada yang ingat mendaftarnya.
+     *
      * @return \Generator<string>
      */
     private function berkas(): \Generator
@@ -95,7 +102,7 @@ class TeksSumberBersihTest extends TestCase
             }
         }
 
-        foreach (['AGENTS.md', 'AGENTS_HISTORY.md', 'README.md', 'docs/manual-pemakaian.md', 'docs/daftar-peningkatan.md', 'docs/plan-perapian-kode.md', 'docs/aset-vendor.md'] as $relatif) {
+        foreach (['AGENTS.md', 'AGENTS_HISTORY.md', 'README.md'] as $relatif) {
             if (is_file($this->root().'/'.$relatif)) {
                 yield $this->root().'/'.$relatif;
             }
