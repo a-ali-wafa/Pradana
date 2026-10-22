@@ -92,24 +92,29 @@ Dua hal yang ikut dirapikan hari ini karena terbukti menyesatkan, bukan kosmetik
 
 ### 3.2 Yang lolos dari angka kebutuhan di 3.1
 
-Tiga jalur ini tidak melanggar satu pun syarat keras. Perbandingannya sengaja satu tabel
+Dua jalur ini tidak melanggar satu pun syarat keras. Perbandingannya sengaja satu tabel
 saja (kalau tabel kembar, yang berubah nanti cuma salah satunya — pelajaran yang sudah
 dibayar di `docs/deploy.md`):
 
-| | **A. Oracle Cloud Always Free (VM)** | **B. Quick Tunnel dari laptop ini** | **C. PC kantor + Tunnel ber-akun** |
-|---|---|---|---|
-| Untuk apa | server "beneran" yang bisa tetap jalan setelah sidang | **demo/HKI minggu ini** | kantor pakai sungguhan, data tidak keluar |
-| Biaya | Rp 0 permanen (dengan syarat) | Rp 0, tanpa akun apa pun | Rp 0 + listrik |
-| Waktu setup | 2–4 jam (install sendiri) | **±10 menit, sudah dibuktikan hari ini (5.1)** | 1–2 jam |
-| URL untuk penguji | IP publik sendiri / domain sendiri | `https://<empat-kata>.trycloudflare.com` | nama tetap di domain kantor |
-| Hidup 24 jam? | **ya** | tidak — mati saat proses/laptop mati | ya, selama UPS-nya hidup |
-| 25 MB lampiran (L-13) | terpenuhi (php.ini sendiri) | terpenuhi (yang di sini terukur 40M) | terpenuhi |
-| Cron `schedule:run` | ada (SSH + cron asli) | **tidak ada** → perintah dijadwalkan manual/di-demo | Windows Task Scheduler tiap menit |
-| SSH + composer + `migrate` | ada | tidak perlu (menjalankan dari folder kerja) | perlu diatur per mesin |
-| Docroot `public/` | diatur sendiri → `.env`/`storage` aman | conf Apache ini sudah benar → `/.env` terukur 404 | sama seperti B |
-| Batas/risiko | 2 OCPU / 12 GB / 200 GB (Always Free; dipangkas dari 4/24 pertengahan 2026), **butuh kartu kredit** untuk daftar, kapasitas `VM.Standard.A1.Flex` bisa penuh, dan **reklamasi idle**: >7 hari CPU<20% p95 + network<20% + memory<20% boleh dihapus | URL acak berganti tiap dijalankan; bukan tempat data kantor | listrik mati paksa = **InnoDB korup** — sudah terjadi di laptop ini 10 Okt dan nyaris memakan `pradana_test`; tanpa UPS itu jadwal, bukan kemungkinan |
-| Region / latensi | `ap-batam-1` (Indonesia North, Batam); Oracle tidak punya region Jakarta | lewat edge Cloudflare | di kantor, 1–5 ms |
-| Catatan HTTPS | tanpa domain → sertifikat tidak wajar; http polos atau self-signed | **HTTPS nyata dari Cloudflare**, tapi lihat 5.1: `TRUSTED_PROXIES` wajib diisi, kalau tidak halaman datang **tanpa gaya** (mixed content) | HTTPS + domain kantor (S14) |
+| | **A. Oracle Cloud Always Free (VM)** | **B. PC/mini-PC kantor + Cloudflare Tunnel** |
+|---|---|---|
+| Untuk apa | server yang tetap jalan setelah sidang, dan bentuknya sama dengan yang nanti dipakai kantor | kantor pakai sungguhan tanpa surat keluar dari gedung |
+| Biaya | Rp 0 permanen (dengan syarat) | Rp 0 + listrik |
+| Waktu setup | 2–4 jam (install sendiri; `bin/sediakan-server.sh` + `docs/deploy-oracle.md`) | 1–2 jam |
+| URL untuk penguji | IP publik sendiri, atau domain kantor kalau sudah ada | nama tetap di domain kantor |
+| Hidup 24 jam? | **ya** | ya, selama UPS-nya hidup |
+| 25 MB lampiran (L-13) | terpenuhi (php.ini sendiri) | terpenuhi (di laptop ini terukur 40M) |
+| Cron `schedule:run` | ada (SSH + cron asli) | Windows Task Scheduler tiap menit |
+| SSH + composer + `migrate` | ada | perlu diatur per mesin |
+| Docroot `public/` | diatur sendiri → `.env`/`storage` aman | conf Apache terukur: `/.env` 404 (5.1) |
+| Batas/risiko | 2 OCPU / 12 GB / 200 GB (Always Free; dipangkas dari 4/24 pertengahan 2026), **butuh kartu kredit** untuk daftar, kapasitas `VM.Standard.A1.Flex` bisa penuh, dan **reklamasi idle**: >7 hari CPU<20% p95 + network<20% + memory<20% boleh dihapus | listrik mati paksa = **InnoDB korup** — sudah terjadi di laptop ini 10 Okt dan nyaris memakan `pradana_test`; tanpa UPS itu jadwal, bukan kemungkinan |
+| Region / latensi | `ap-batam-1` (Indonesia North, Batam); Oracle tidak punya region Jakarta | di kantor, 1–5 ms |
+| Catatan HTTPS | tanpa domain: sertifikat tidak wajar → http polos (demos) atau beli domain; jangan klaim "aman" tanpa sertifikat | HTTPS + domain kantor (S14) — dan **`TRUSTED_PROXIES` wajib diisi**, lihat 5.1 |
+
+Jalur ketiga (Quick Tunnel tanpa akun dari laptop) sengaja TIDAK dihitung sebagai opsi
+deploy: ia hanya menyalurkan Apache yang sama ke internet, URL-nya acak dan mati bersama
+prosesnya. Ia tetap dipakai hari ini — tapi sebagai **alat ukur**, dan itu yang dicatat
+di 5.1.
 
 ### 3.3 Kenapa "hosting PHP gratis" (InfinityFree/ByetHost/ProFreeHost) saya singkirkan
 
@@ -157,13 +162,17 @@ kantor". Jadi urutannya: pilih yang paling murah dalam uang DAN waktu setup DAN 
 bentuknya seperti produksi sungguhan, sambil menjaga pintu pindah tetap terbuka (4.4).
 Perbandingan tiga jalurnya sudah ada di satu tempat — **bagian 3.2** — jadi tidak diulang di sini.
 
-**Rekomendasi saya: A sebagai sasaran, B sebagai jalan keluar minggu ini.** A
-menempatkan tugas akhir pada bentuk yang sebenarnya (Linux + Apache + MariaDB + SSH +
-cron + `bin/deploy.sh` sungguhan), selalu hidup saat penguji membukanya, dan — yang
-paling penting untuk aturan "jangan bikin sulit dipindah" — tidak memerlukan satu pun
-trik di kode. Kalau pendaftaran Oracle tersendat (kartu kredit atau kapasitas shape
-sering menendang mahasiswa), B tetap memberi demonstrasi nyata di layar penguji tanpa
-menunggu apa pun; catatan jujurnya ada di 4.3.
+**Rekomendasi saya: A, Oracle Always Free VM.** Itu satu-satunya yang benar-benar gratis
+DAN tetap hidup saat penguji membukanya sendiri, DAN bentuknya sama dengan yang nanti
+dipakai kantor (Linux + Apache + MariaDB + SSH + cron + `bin/deploy.sh`), DAN yang paling
+penting untuk aturan "jangan bikin sulit dipindah" (4.4): tidak perlu satu pun trik di kode.
+Langkah-langkahnya sudah disiapkan di **`docs/deploy-oracle.md`** + `bin/sediakan-server.sh`.
+
+Yang perlu kamu sediakan untuk jalur ini cuma dua: **kartu kredit untuk pendaftaran**
+(tidak ditagih selama Always Free) dan keputusan **home region** — `ap-batam-1`, karena
+region tidak bisa diganti setelah akun dibuat. Kalau pendaftaran tersendat (kartu ditolak
+atau kapasitas `VM.Standard.A1.Flex` penuh, dua-duanya sering menimpa akun mahasiswa),
+B di 3.2 tetap bisa dipakai dan tidak mengubah apa pun di aplikasi.
 
 **Jangan** shared hosting gratis (InfinityFree/ProFreeHost/ByetHost). Alasannya bukan
 "gratis jadi jelek" — batas 30.000 berkasnya sudah dilewati sejak pemangkasan hari ini —
@@ -172,11 +181,6 @@ dijanjikan ke petugas, **tanpa cron dan tanpa SSH/CLI** vs 4 pekerjaan terjadwal
 `migrate`, dan **docroot yang tidak bisa dipindah** yang memaksa `.env` +
 `storage/app/private/arsip` + `db-backup/` berdiri di dalam folder web. Yang terakhir
 ini justru melanggar praktik dasar yang user minta dijaga.
-
-Kalau "gratis" boleh digeser jadi "murah": shared hosting Indonesia berbayar
-(±Rp 12.500–25.000/bulan) biasanya sudah memenuhi docroot, cron, PHP 8.2, dan backup
-mingguan — persis target K1=a yang dulu diputuskan. Bukan gratis, jadi dicatat sebagai
-pembanding, bukan sebagai jawaban.
 
 ### 4.3 Kompromi yang saya terima untuk tahap ini, dan apa yang menggantikannya
 
@@ -216,85 +220,63 @@ dan lampiran di luar `public/`.
    disimpulkan dari `php artisan serve` — lihat `docs/deploy.md`; laptop ini sudah punya
    resep Apache uji di port 8080.
 
-## 5. Runbook singkat
+## 5. Runbook
 
 ### A. Oracle Cloud VM
 
-1. Daftar Free Tier (butuh kartu kredit untuk verifikasi identitas, tidak ditagih
-   selama Always Free). **Pilih home region baik-baik: tidak bisa diganti** —
-   `ap-batam-1` paling dekat dengan Jawa, tapi cek dulu shape `VM.Standard.A1.Flex`
-   tersedia untuk Always Free di sana (kapasitasnya terbatas dan tidak bisa
-   dipesan lebih dulu).
-2. Image: Ubuntu 24.04 (PHP 8.3 ≥ 8.2). Install `apache2 libapache2-mod-php php-mysql
-   php-zip php-gd php-xml php-curl mariadb-server` — **Apache**, bukan nginx, supaya
-   `public/.htaccess` yang sudah diuji dua arah 12 Okt itu tetap yang bekerja.
-3. `git clone` ke `/var/www/pradana`, `cp .env.example .env`, isi blok bagian 6,
-   `php artisan key:generate`, lalu `bash bin/deploy.sh`.
-4. DocumentRoot → `/var/www/pradana/public`; `AllowOverride All`; cron per menit;
-   `systemctl enable --now cron`.
-5. Uji yang tidak bisa diotomasi (bagian 7), termasuk `arsip:backup-db` + uji pulih,
-   dan nyalakan `GOOGLE_DRIVE_*` supaya cadangan keluar benar-benar ada.
+Satu sumber untuk langkahnya: **`docs/deploy-oracle.md`** — dari pendaftaran akun
+(kartu kredit, home region tidak bisa diganti), bikin instance, dua lapis firewall,
+`sudo bash bin/sediakan-server.sh` untuk provisi Apache/PHP 8.2/MariaDB/cron/Composer,
+isi `.env`, `bash bin/deploy.sh`, sampai lima bukti yang menandakan deploy-nya benar-benar
+hidup. Jangan menyalin langkah itu ke tempat lain: yang disalin selalu melenceng.
 
-### B. PC kantor + Cloudflare Tunnel
+### B. PC/mini-PC kantor + Cloudflare Tunnel
+
+Dipakai kalau nanti kantor menolak data suratnya berdiri di server luar. Tidak ada
+perubahan kode:
 
 1. Apache virtual host menunjuk `public/` (resep conf-nya sudah dicatat di
    `docs/deploy.md` bagian "`.htaccess` harus diuji di Apache"), `Listen 80` lokal.
-2. `cloudflared tunnel` + route DNS ke `http://localhost`, jadi HTTPS dan nama
-   domain selesai tanpa IP publik/port-forward. Isi `TRUSTED_PROXIES=127.0.0.1` —
-   tanpanya halaman tampil **tanpa gaya** (bukti di 5.1), dan login kantor bisa
-   terkunci sendiri karena throttle membaca IP proxy.
-3. Task Scheduler: `php artisan schedule:run` tiap menit; `arsip:backup-db` harian
-   tetap lewat jalur itu.
-4. Dump keluar mesin: `arsip:sinkron-ke-drive` (sudah ada) — di opsi B ini bukan
-   pemanis, dia satu-satunya salinan kedua.
+2. `cloudflared tunnel` + route DNS ke `http://localhost`, jadi HTTPS dan nama domain
+   selesai tanpa IP publik/port-forward. Isi `TRUSTED_PROXIES` — tanpanya halaman tampil
+   **tanpa gaya** (bukti di 5.1).
+3. Task Scheduler tiap menit: `php artisan schedule:run` (perintahnya sama dengan cron).
+4. Dump keluar mesin: `arsip:sinkron-ke-drive` (sudah ada) — di jalur ini dia bukan
+   pemanis, dia satu-satunya salinan kedua, dan PC-nya satu-satunya salinan pertama.
+5. UPS. Insiden 10 Okt di laptop ini (mati listrik paksa → InnoDB korup) adalah gambaran
+   masa depan jalur ini tanpa UPS.
 
-### 5.1 Demonstrasi lewat Quick Tunnel — dijalankan hari ini, bukan rencana
+### 5.1 Bekas pengukuran: apa yang terbukti soal perilaku di balik proxy
 
-Ini jalur B yang paling murah untuk tugas akhir: **tanpa akun Cloudflare, tanpa domain,
-tanpa port-forward**, dan tidak perlu menunggu server mana pun. Yang dibutuhkan hanya
-Apache yang menunjuk `public/` (conf uji laptop ini sudah ada:
-`C:\Users\asus\prd-apache-test\httpd.conf`, `Listen 127.0.0.1:8080`) dan satu berkas
-biner resmi:
+Quick Tunnel dipakai hari ini **sebagai alat ukur, bukan sebagai jalur deploy** (URL-nya
+acak dan mati bersama prosesnya). Alat ini murah dan menjawab pertanyaan yang tidak bisa
+dijawab dari kode: apa yang terjadi kalau aplikasi berdiri di belakang proxy — keadaan
+yang juga bakal dialami VM Oracle kalau nanti dipasang Cloudflare/domain di depannya.
+Peralatannya: conf Apache uji laptop (`C:\Users\asus\prd-apache-test\httpd.conf`, port
+8080, DocumentRoot `public/`) + biner resmi
+`https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-windows-amd64.exe`
+(terpasang di `C:\Users\asus\prd-tools\cloudflared.exe`, v2026.10.2), lalu
+`cloudflared.exe tunnel --url http://127.0.0.1:8080`.
 
-```bash
-# alat: unduh sekali (biner resmi Cloudflare; versi terbaca 2026.10.2 di mesin ini)
-curl -sL -o cloudflared.exe \
-  https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-windows-amd64.exe
-
-# jalan: satu perintah, tanpa login, tanpa konfigurasi
-./cloudflared.exe tunnel --url http://127.0.0.1:8080
-#   -> https://<empat-kata-acak>.trycloudflare.com   (muncul di log, langsung bisa dibuka)
-```
-
-Yang terukur lewat URL publik itu, pada aplikasi yang sama seperti bagian 7:
-
-| yang diuji | hasil |
+| yang diuji lewat URL publik | hasil |
 |---|---|
-| halaman `/login` lewat HTTPS luar | `200` |
-| `/.env` lewat URL publik | `404` (docroot benar, kredensial tidak tersaji) |
-| header anti-index ikut sampai ke luar | `x-robots-tag: noindex, nofollow, noarchive, nosnippet` + dua `X-Robots-Tag: none` tambahan dari Cloudflare (quick tunnel memang tidak boleh ter-index) |
-| **`TRUSTED_PROXIES` kosong** | `asset()` menghasilkan **4× `http://`** di dalam halaman `https://` → browser memblokir sebagai mixed content: **layar tanpa gaya, persis kegagalan P0#1 yang sudah diperbaiki 10 Okt, hanya dipindahkan ke sisi proxy** |
+| `/login` lewat HTTPS luar | `200` |
+| `/.env` | `404` — kredensial tidak tersaji, dan ini dibuktikan lewat URL luar, bukan lewat percaya conf |
+| header anti-index | `x-robots-tag: noindex, nofollow, noarchive, nosnippet` + dua `X-Robots-Tag: none` tambahan dari Cloudflare |
+| **`TRUSTED_PROXIES` kosong** | `asset()` menghasilkan **4× `http://`** di dalam halaman `https://` → browser memblokir sebagai mixed content = **layar tanpa gaya**. Ini kegagalan P0#1 (10 Okt) yang dipindahkan ke sisi proxy, dan tidak ada satu pun tes PHPUnit yang bisa menangkapnya |
 | **`TRUSTED_PROXIES=127.0.0.1`** | 4× `https://` — halaman utuh |
 
-Dua hal yang wajib diketahui sebelum mengandalkan jalur ini untuk sidang:
+Dua batas yang perlu disebut, supaya tidak ada yang mengira ini lebih dari yang diukur:
 
-- **Quick tunnel itu sementara.** URL-nya acak dan berubah setiap dijalankan, dan
-  berhenti saat proses `cloudflared` mati. Untuk demo di depan penguji itu berarti:
-  yang memegang demo adalah laptopmu, bukan Cloudflare — jadi rekam juga video demo
-  + tangkapan layar sebagai cadangan (dan itu sekaligus bahan lampiran HKI/tugas akhir).
-- **Setop = matikan prosesnya.** Setelah selesai, pastikan tidak ada `cloudflared`
-  yang masih hidup (`taskkill /F /IM cloudflared.exe`); meninggalkan tunnel hidup
-  sama dengan membiarkan pintu ke Apache-mu terbuka selama listrik menyala.
-
-Yang **belum** diuji lewat tunnel, dan sengaja tidak saya ujikan: alur login + unggah
-lampiran + cetak PDF. Lewat Quick Tunnel aplikasi itu benar-benar terbuka di internet, dan
-DB yang di sini berisi akun dev ber-PIN `12345678` — mengekspos itu walau sebentar bukan
-trade yang sepadan untuk bukti yang sudah didapat dari 275 tes. Jalankan sendiri sebelum
-sidang, dan matikan `cloudflared` sesudahnya.
-
-Sudah diverifikasi bersih di mesin ini: tidak ada `cloudflared` tersisa, port 8080 tidak
-lagi menyandang `LISTENING`, Apache milik user di port 80 tidak pernah disentuh, dan
-`.env` dikembalikan seperti semula (0 baris `TRUSTED_PROXIES`).
+- Yang diuji **permintaan HTTP**, bukan alur lengkap. Login + unggah lampiran + cetak PDF
+  sengaja tidak dijalankan lewat tunnel: aplikasi itu sedang terbuka untuk seluruh internet,
+  dan basis data di laptop ini masih berisi akun dev ber-PIN `12345678`.
+- **Koridor pembersihannya sendiri pernah gagal.** Menutup proses uji dilakukan dengan
+  `taskkill /F /IM httpd.exe`, dan perintah itu membunuh SEMUA `httpd` — termasuk Apache
+  XAMPP milik user di port 80, yang bukan bagian dari uji. Sudah dinyalakan kembali
+  (`C:/xampp/apache/bin/httpd.exe`, port 80 terukur melayani lagi) dan kejadian ini dicatat
+  di `AGENTS_HISTORY.md`. Aturan untuk ronde berikutnya: matikan pakai PID yang dicatat
+  sendiri, jangan per-nama image.
 
 ## 6. Isi `.env` produksi (siap tempel, ganti nilai bertanda `«`)
 
@@ -365,16 +347,15 @@ Dijalankan satu per satu, dan yang dicatat adalah hasilnya, bukan niatnya:
 
 ## 8. Yang butuh keputusan user (bukan kerja agent)
 
-1. **Untuk minggu ini (demo/HKI):** boleh langsung pakai jalur B (Quick Tunnel, 5.1) atau
-   saya siapkan jalur A (Oracle). B hanya perlu menjalankan dua
-   perintah; A butuh **kartu kredit untuk pendaftaran** dan itu tidak bisa saya lakukan.
-2. Untuk tahap kantor: A atau C (bagian 3.2). hosting PHP gratis sudah saya
-   singkirkan di 3.3; kalau nanti tetap mau itu, konsekuensinya L-13 dan cron yang
-   berubah — bukan deploy-nya.
-3. 25 MB per lampiran (L-13): tetap, karena A/B/C semuanya menampung; batas ini hanya
-   jadi soal kalau kantor pindah ke shared hosting 10 MB, dan itu keputusan sadar,
-   bukan kompromi teknis yang boleh agent ambil sendiri.
-4. S14: nama domain + HTTPS (wajib begitu bisa diakses dari luar jaringan kantor).
-   Untuk demo, HTTPS sudah datang dari Cloudflare sendiri.
-5. F3: kirim kop/template resmi desa. D4: klasifikasi resmi kantor. L-19: nilai N
-   untuk auto-lock arsip.
+1. **Pendaftaran Oracle itu sendiri** — `docs/deploy-oracle.md` bagian 0–2. Butuh kartu
+   kredit/debit untuk verifikasi dan satu keputusan yang tidak bisa dibatalkan:
+   **home region** (`ap-batam-1`, tidak bisa diganti setelah akun jadi). Setelah instance
+   hidup dan SSH-nya ada di tanganmu, sisanya tinggal dijalankan:
+   `bin/sediakan-server.sh` → `.env` → `bin/deploy.sh`.
+2. Domain + HTTPS (S14). Tanpa domain, demo di VM berjalan di http dan itu harus dinyatakan
+   apa adanya di laporan, bukan ditutupi.
+3. Google Drive untuk cadangan keluar (L-01 + bagian 6 `docs/deploy-oracle.md`): butuh
+   Service Account JSON yang tidak boleh di-commit dan folder Drive yang sudah di-share.
+   Ini yang membuat reklamasi instance bukan kehilangan data.
+4. F3: kop/template resmi desa. D4: klasifikasi resmi kantor. L-19: nilai N auto-lock.
+   Ketiganya tidak menahan deploy, tapi menahan "dipakai sungguhan".

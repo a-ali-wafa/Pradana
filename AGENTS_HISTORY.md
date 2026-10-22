@@ -1623,6 +1623,32 @@ dibersihkan dengan benar (`taskkill /IM cloudflared.exe`, lalu terverifikasi 0 p
 `.env` dikembalikan dari salinan (0 baris `TRUSTED_PROXIES` tersisa), `optimize:clear`
 dijalankan, dan `storage/framework/down` tidak pernah dibuat.
 
+**10. Giliran user membalik arah: Quick Tunnel dicabut sebagai jalur deploy, Oracle jadi fokus.**
+Permintaannya persis: "tidak jadi, kamu langsung saja fokus ke deploy free nya, kalau tunnel
+membantu deploy di oracle nanti gapapa. kalau tidak ya jangan". Tunnel tetap dipakai sebagai
+**alat ukur** (itu yang membuktikan `TRUSTED_PROXIES` bukan teori) tapi tidak lagi ditawarkan
+sebagai tempat demo, jadi `bin/demo-terbuka.sh` dihapus dan `docs/kesiapan-deploy.md` §3.2 kini
+hanya punya dua jalur deploy: **A. Oracle Always Free VM** dan **B. PC kantor + Cloudflare
+Tunnel** (Zero Trust, bukan quick tunnel). Butir 8(b) di atas ("provisi server butuh akun/kartu")
+sejak itu **dikerjakan sebagian**: `bin/sediakan-server.sh` + `docs/deploy-oracle.md` ada dan
+siap dipakai, tapi pemasangannya sendiri tetap butuh user — akun Oracle + kartu verifikasi +
+keputusan home region yang tidak bisa dibatalkan.
+Status jujur skripnya: **belum pernah jalan di Linux**. Yang terbukti di Windows: `bash -n`
+bersih, `--cek` mencetak 21 rencana tanpa menulis apa pun, dan vhost yang dihasilkan menunjuk
+`DocumentRoot /var/www/pradana/public` (versi pertama skrip menghasilkan `/var/www/pradana`
+tanpa `public/` — itu bukan typo kosmetik: `.env`, `storage/app/private/arsip`, dan `db-backup/`
+akan tersaji sebagai berkas web; ketahuan cuma karena ada yang mencetak vhost-nya lalu membaca).
+Temuan inspeksi kedua, dan ini yang mengubah bentuk dokumen: **kepemilikan folder aplikasi harus
+satu penulis**. Urutan yang tadinya saya tulis (kloning sebagai user SSH → skrip men-`chown` ke
+`www-data` → `cp .env.example .env` + `bash bin/deploy.sh` sebagai user SSH) gagal di langkah
+terakhir, karena folder 755 milik `www-data` tidak bisa ditulis user SSH — `migrate` mati dengan
+"Permission denied" justru di langkah paling menentukan. Yang dipilih: seluruh perintah artisan
+di sisi server dijalankan `sudo -u www-data env HOME=/tmp bash -c '…'` (`env HOME=/tmp` karena
+`www-data` tidak punya home dan Composer menulis ke `$HOME`), bukan model dua-grup + setgid +
+`UMask=0002` untuk Apache. Alasannya bukan performa: di mesin yang tidak bisa saya uji, model
+dengan bagian bergerak lebih sedikit lebih mudah dipercaya, dan cron `schedule:run` memang sudah
+berjalan sebagai `www-data`, jadi ketiga jalur penulis itu satu user.
+
 ### Catatan lingkungan (terakhir diperbarui 10 Okt malam, sesudah pass UI)
 
 Suite sekarang **259 tes dalam 40 kelas**; yang tercapai saat MariaDB **mati** hanyalah
