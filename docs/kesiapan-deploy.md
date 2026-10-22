@@ -227,7 +227,8 @@ dan lampiran di luar `public/`.
 Satu sumber untuk langkahnya: **`docs/deploy-oracle.md`** — dari pendaftaran akun
 (kartu kredit, home region tidak bisa diganti), bikin instance, dua lapis firewall,
 `sudo bash bin/sediakan-server.sh` untuk provisi Apache/PHP 8.2/MariaDB/cron/Composer,
-isi `.env`, `bash bin/deploy.sh`, sampai lima bukti yang menandakan deploy-nya benar-benar
+isi `.env`, `bash bin/deploy.sh` (semua perintah sisi server berjalan sebagai `www-data`,
+dan alasannya ditulis di sana), sampai lima bukti yang menandakan deploy-nya benar-benar
 hidup. Jangan menyalin langkah itu ke tempat lain: yang disalin selalu melenceng.
 
 ### B. PC/mini-PC kantor + Cloudflare Tunnel
