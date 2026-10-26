@@ -17,17 +17,18 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  */
 class SuratKeluar extends Model
 {
-    // Lihat SuratMasuk: soft delete sesuai keputusan L-05.
+    // Sama seperti SuratMasuk: surat tidak pernah hilang benar-benar dari layar
+    // arsip; yang ada hanya tempat sampah yang bisa dipulihkan admin.
     use SoftDeletes;
 
-    // L-21: umur arsip dihitung dari `tanggal_surat`, satu cara untuk kedua
-    // jenis surat (lihat trait App\Models\Concerns\UmurArsip).
+    // Umur arsip dihitung dari `tanggal_surat`, satu cara untuk kedua jenis
+    // surat (lihat trait App\Models\Concerns\UmurArsip).
     use UmurArsip;
 
     protected $table = 'surat_keluar';
 
     /**
-     * Kolom yang digali kotak "cari" (L-15). Isi surat keluar TIDAK ada di
+     * Kolom yang digali kotak "cari". Isi surat keluar TIDAK ada di
      * tabel ini — ia di `draf_konten_surat_keluar`, lihat RELASI_CARI.
      */
     private const KOLOM_CARI = [
@@ -59,7 +60,7 @@ class SuratKeluar extends Model
 
     /**
      * Return type generik di seluruh model (format `BelongsTo<User, $this>`):
-     * alasannya ada di SuratMasuk, file yang sama, perapian 9 Okt 2026.
+     * alasannya ada di SuratMasuk.
      *
      * @return BelongsTo<User, $this>
      */

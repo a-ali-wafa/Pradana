@@ -5,8 +5,8 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * Baris kop surat versi 5 Okt 2026 (permintaan user: PDF "sesuaikan dengan standar
- * perkantoran desa umumnya").
+ * Baris kop surat bertingkat untuk keluaran PDF, mengikuti standar perkantoran
+ * desa pada umumnya.
  *
  * Kop naskah dinas desa yang benar bertingkat tiga — Kabupaten → Kecamatan → Desa —
  * lihat Permendagri 1/2023 tentang Tata Naskah Dinas dan contoh kop pemerintah desa
@@ -16,7 +16,7 @@ use Illuminate\Support\Facades\Schema;
  *
  * Semuanya NULLABLE dan additive: kantor yang mau kop satu baris ("PRADANA KEC. X")
  * cukup mengosongkan kolomnya, dan template PDF mencetak baris yang terisi saja.
- * Ini migration BARU setelah squash S11 (bukan mengubah file 2026_10_04_100002) —
+ * Migration ini additive (bukan mengubah file 2026_10_04_100002) —
  * jadi database yang sudah ada tinggal `php artisan migrate`, tidak perlu
  * `migrate:fresh` dan data user/instansi tidak hilang.
  */

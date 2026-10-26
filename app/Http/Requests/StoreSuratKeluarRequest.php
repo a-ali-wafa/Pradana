@@ -11,8 +11,8 @@ use Illuminate\Validation\Rule;
 class StoreSuratKeluarRequest extends FormRequest
 {
     /**
-     * Otorisasi: cukup "sudah login" (middleware `auth`). L-07 memutuskan input
-     * surat boleh dilakukan semua role, jadi tidak ada cek role di sini.
+     * Otorisasi: cukup "sudah login" (middleware `auth`). Menginput surat boleh
+     * dilakukan semua peran, jadi tidak ada cek role di sini.
      */
     public function authorize(): bool
     {
@@ -47,10 +47,10 @@ class StoreSuratKeluarRequest extends FormRequest
 
             // 'nomor_surat' SENGAJA tidak ada di sini. Nomor di-generate otomatis
             // oleh NomorSuratKeluarGenerator (dipanggil SuratKeluarController di
-            // dalam transaksi) — format L-20 `{urutan}/{kodeP.kodeS.kodeT}/{bulan
+            // dalam transaksi) — format `{urutan}/{kodeP.kodeS.kodeT}/{bulan
             // romawi}/{tahun}`, urutan global per tahun dan reset tiap tahun.
             // Staf biasa tidak mengisinya; koreksi manual hanya lewat update()
-            // dan hanya untuk admin (L-20).
+            // dan hanya untuk admin.
 
             // 'user_id' juga tidak divalidasi dari input — diisi dari auth()->id()
             // di controller, bukan dari form.

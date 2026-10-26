@@ -1,10 +1,9 @@
 # Aset pihak ketiga di `public/vendor/`
 
 Semua berkas CSS/JS/font di `public/vendor/` disimpan **di dalam repo ini**, bukan
-diambil dari CDN saat halaman dimuat (10 Okt 2026). Alasannya operasional: kantor
+diambil dari CDN saat halaman dimuat. Alasannya operasional: kantor
 punya satu ISP, dan sebelumnya internet/DNS bermasalah berarti arsip tetap terbuka
 tapi tanpa tata letak dan tanpa konfirmasi apa pun di tombol Hapus/Nyahkan.
-`docs/daftar-peningkatan.md` temuan #1.
 
 | Folder | Paket | Versi | Lisensi | Sumber unduhan |
 |---|---|---|---|---|
@@ -12,7 +11,7 @@ tapi tanpa tata letak dan tanpa konfirmasi apa pun di tombol Hapus/Nyahkan.
 | `sweetalert2/` | SweetAlert2 (`sweetalert2.all.min.js`) | 11.26.25 | MIT | cdn.jsdelivr.net/npm/sweetalert2@11.26.25 |
 | `font-awesome/` | Font Awesome Free (CSS `all.min.css` + 4 `.woff2`) | 6.4.0 | Font: SIL OFL 1.1 · Ikon: CC BY 4.0 · Kode: MIT | cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0 |
 
-## Yang sebenarnya dimuat halaman (subset, dibuat 12 Okt 2026)
+## Yang sebenarnya dimuat halaman (subset)
 
 `all.min.css` dan `fa-solid-900.woff2` adalah **bahan**, bukan yang disajikan. Yang
 dimuat browser adalah dua berkas hasil `php bin/buat-subset-ikon.php`:
@@ -46,7 +45,7 @@ ditransfer.
 
 `php artisan serve` tidak membaca `.htaccess` dan memakai satu proses PHP untuk semua
 request, jadi ia tidak bisa dipakai menilai kompresi, header cache, maupun kecepatan
-aplikasi. Angka di bawah diambil 12 Okt 2026 dengan Apache 2.4.58 + mod_php 8.2.12
+aplikasi. Angka di bawah diambil dengan Apache 2.4.58 + mod_php 8.2.12
 (XAMPP, konfigurasi terpisah di luar repo) pada halaman dashboard:
 
 | | tanpa kompresi | dengan mod_deflate |

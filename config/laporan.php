@@ -7,7 +7,7 @@
 |
 | Kenapa file config dan bukan konstanta di controller: `LaporanController` tidak
 | boleh menebak-nebak batasnya saat tes — angka ini memang perlu diubah (hosting
-| kantor belum diketahui `max_execution_time`/`memory_limit`-nya, K1=a) dan harus
+| kantor belum diketahui `max_execution_time`/`memory_limit`-nya) dan harus
 | bisa dinaikkan saat serah terima tanpa menyentuh kode. Nilai dibaca lewat
 | `config()`, bukan `env()` di dalam controller, karena deploy memakai
 | `config:cache` dan setelah itu `env()` mengembalikan null (jebakan yang sama
@@ -18,7 +18,7 @@ return [
     /*
      * Jumlah baris maksimum satu Buku Agenda PDF.
      *
-     * Diukur 9 Okt 2026 di MariaDB tanding (XAMPP laptop, PHP 8.2): 1.000 baris
+     * Diukur di MariaDB tanding (XAMPP laptop, PHP 8.2): 1.000 baris
      * agenda = 8,36 detik dan puncak 52 MB. shared hosting kantor biasanya
      * `max_execution_time` 30 dtk dan `memory_limit` 128 M — jadi 2.000 baris
      * sudah di luar batas masuk akal untuk SATU permintaan, dan itu bukan

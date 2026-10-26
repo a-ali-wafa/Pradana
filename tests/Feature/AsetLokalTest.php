@@ -7,8 +7,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 /**
- * Aset frontend dimuat dari aplikasi sendiri, bukan dari CDN asing
- * (P0#1 di `docs/daftar-peningkatan.md`, dikerjakan 10 Okt 2026).
+ * Aset frontend dimuat dari aplikasi sendiri, bukan dari CDN asing.
  *
  * Kenapa ini perlu dijaga, dan dijaga dengan tes: sampai 10 Okt seluruh
  * `layouts/app`, `auth/login`, dan `errors/layout` mengambil Bootstrap 5.3.3,
@@ -61,7 +60,7 @@ class AsetLokalTest extends TestCase
      * Sumber Blade TANPA komentar.
      *
      * Ini pelajaran yang sudah dibeli dua kali di project ini (FlashKonsistenTest,
-     * Fase 6): guardrail teks harus membaca KODE, bukan komentar. Comment block
+     * sudah dibeli dua kali di project ini): guardrail teks harus membaca KODE,
      * `layouts/app.blade.php` menyebut nama kedua CDN lama sebagai penjelasan
      * kenapa mereka tidak dipakai lagi — kalau komentarnya tidak dibuang, tes ini
      * menegur file yang justru mendokumentasikan perbaikannya.
@@ -141,7 +140,7 @@ class AsetLokalTest extends TestCase
         // ditempel ke pesan gagal: assert di bawah ini mencetak satu nomor,
         // bukan 79 KB minified JavaScript, kalau versinya berubah.
         preg_match('/sweetalert2 v([0-9.]+)/i', $swal, $versi);
-        $this->assertSame('11.26.25', $versi[1] ?? null, 'Versi SweetAlert2 berubah tanpa dicatat di AGENTS.md.');
+        $this->assertSame('11.26.25', $versi[1] ?? null, 'Versi SweetAlert2 berubah tanpa dicatat di docs/aset-vendor.md.');
 
         // Tag mengambang `sweetalert2@11` adalah salah satu yang dibuang: kalau
         // file yang ter-commit tidak menyebut versi, tidak ada yang tahu apa yang

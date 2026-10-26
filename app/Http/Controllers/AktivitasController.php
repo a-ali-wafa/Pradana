@@ -12,20 +12,20 @@ use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
- * Halaman log aktivitas untuk admin (L-22 / P3=a).
+ * Halaman log aktivitas — khusus admin, dan hanya dibaca.
  *
  * Log ini satu-satunya jejak "siapa mengubah apa" di aplikasi tanpa sistem
- * kepemilikan (L-10: user boleh dihapus walau punya surat; B8: "log aktivitas
- * hanya membantu untuk berjaga jika terjadi sesuatu"). Karena itu halamannya
+ * kepemilikan (user boleh dihapus walau suratnya tetap ada), jadi log ini
+ * cuma membantu berjaga kalau terjadi sesuatu. Karena itu halamannya
  * read-only — tidak ada edit/hapus dari UI. Baris lama dibersihkan lewat
- * perintah `arsip:bersihkan-log` (E6), bukan dari layar.
+ * perintah `arsip:bersihkan-log`, bukan dari layar.
  */
 class AktivitasController extends Controller
 {
     /**
-     * 30 baris per halaman, BUKAN 20 seperti daftar surat (H2/L-14).
+     * 30 baris per halaman, BUKAN 20 seperti daftar surat.
      *
-     * Sengaja, dan di luar jangkauan H2: keputusan itu dibuat untuk daftar surat
+     * Sengaja: angka 20 itu dibuat untuk daftar surat
      * yang satu barisnya berat (klasifikasi, sifat, tombol aksi). Baris log cuma
      * tiga kolom teks dan satu relasi `user` yang sudah di-eager-load, jadi
      * layar bisa memuat lebih banyak tanpa biaya query tambahan — berguna justru
@@ -58,7 +58,7 @@ class AktivitasController extends Controller
 
     /**
      * Rekap CSV dari log, dengan FILTER YANG SAMA PERSIS dengan layar
-     * (`docs/daftar-peningkatan.md` §2 butir 5, keperluan audit).
+     * (keperluan audit: angka di layar dan angka di berkas tidak boleh berbeda).
      *
      * Satu `terapkanFilter()` untuk dua keluaran bukan gaya-gayaan: ini pola yang
      * sudah dipakai `LaporanController` (`baris()`), dan alasan yang sama —

@@ -27,9 +27,9 @@ class User extends Authenticatable
         'pin',
     ];
 
-    // `remember_token` dan `email_verified_at` sudah dibuang dari skema (L-11 +
-    // squash S11): login tinggal email+PIN tanpa "ingat saya", dan tidak ada
-    // verifikasi email karena kantor tanpa SMTP.
+    // `remember_token` dan `email_verified_at` sudah dibuang dari skema: login
+    // tinggal email+PIN tanpa "ingat saya", dan verifikasi email tidak ada karena
+    // kantor tanpa SMTP.
 
     // PIN dipakai sebagai kredensial login, menggantikan kolom "password" bawaan Laravel
     public function getAuthPassword()
@@ -61,7 +61,7 @@ class User extends Authenticatable
     }
 
     /**
-     * L-07: hanya 2 tingkat. `admin` adalah kepala desa/lurah dan punya hak
+     * hanya 2 tingkat. `admin` adalah kepala desa/lurah dan punya hak
      * nyata (hapus user, approval pemusnahan, koreksi nomor, pengaturan);
      * `pegawai` adalah staf. Label dipakai bersama oleh form user, daftar
      * user, dan topbar supaya tidak ada dua tempat yang bisa tidak cocok.

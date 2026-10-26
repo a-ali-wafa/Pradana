@@ -9,42 +9,23 @@
     <title>@yield('title', 'PRADANA')</title>
 
     {{--
-        Layout dasar PRADANA — dibuat 31 Agu 2026, DIROMBAK ULANG di hari yang sama
-        setelah user kasih preview HTML sistem LAMA (Google Apps Script). Sebelum ini,
-        AGENTS.md berkali-kali bilang "tidak ada Code.gs yang bisa dicek" (12.16 poin 1,
-        LOCKED #15) — sekarang minimal ada referensi FRONTEND-nya, jadi desain di bawah
-        ini SENGAJA MENIRU gaya visual file itu (bukan reka-reka bebas seperti versi
-        pertama layout ini), sesuai G1 "replikasi tampilan lama".
+        Layout dasar PRADANA: Bootstrap 5 + Blade, dirender server per route
+        (BUKAN SPA), desktop-first, tanpa dark mode. Warnanya dipakai lewat
+        variabel CSS di blok <style> di bawah supaya sidebar, topbar, dan kartu
+        punya satu sumber.
 
-        ⚠️ PENTING: yang diupload user itu preview HTML/JS SISI KLIEN sistem lama, BUKAN
-        `Code.gs` (backend Apps Script asli). Jadi yang bisa diambil cuma: (1) desain
-        visual (warna/tipografi/layout kartu — diambil persis dari sana), dan (2) pola
-        FORMAT nomor surat yang kebaca dari JS-nya (lihat AGENTS.md 12.19 & D1 di
-        Bagian 10 — TIDAK otomatis jadi final, D1 tetap butuh keputusan user). Logika
-        BACKEND asli (pembuatan folder Drive, generate PDF, dst) TETAP tidak bisa dicek
-        dari file ini — jangan disamakan dua hal itu.
+        Ikon: Font Awesome 6.4 (BUKAN Bootstrap Icons). Dialog konfirmasi:
+        SweetAlert2 dengan fallback `window.confirm()` — lihat
+        public/js/pradana-arsip.js.
 
-        Token desain (disalin persis dari file referensi):
-        --primary: #ffffff (dipakai sbg bg sidebar/topbar)  --secondary: #3b82f6 (biru aktif)
-        --accent: #14b8a6 (belum dipakai luas di referensi)  --bg-color: #f3f6f9 (bg halaman)
-        --text-dark: #334155  Font: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif
-        Ikon: FontAwesome 6.4.0 (BUKAN Bootstrap Icons — ganti dari draft pertama layout
-        ini supaya konsisten dgn referensi). SweetAlert2 ikut dimuat (belum dipakai di
-        view Pengaturan Instansi, disiapkan utk view lain yg butuh dialog konfirmasi
-        gaya sama seperti referensi, mis. hapus Klasifikasi/approve Pengajuan Hapus).
-
-        Perbedaan SENGAJA dari referensi (bukan salah copy, ini keputusan adaptasi):
-        - Referensi itu 1 file HTML SPA (ganti-ganti div lewat JS `switchMenu()`), CATATAN:
-          project ini sekarang Laravel multi-halaman (server-rendered Blade per route),
-          jadi navigasi sidebar di bawah pakai <a href> ke route asli, BUKAN JS switching.
-        - Nav item HANYA yang route-nya SUDAH ada di `web.php` sampai sesi ini. Beberapa
-          menu di referensi (mis. "Buat Surat (PDF)", "Log Aktivitas", "Daftar Seluruh
-          Surat" gabungan Masuk+Keluar) belum ada controller/route-nya sama sekali di
-          project Laravel — SENGAJA TIDAK ditaruh linknya dulu supaya tidak 404.
-          Klasifikasi juga TETAP 3 link terpisah (Primer/Sekunder/Tersier), BUKAN 1
-          halaman gabungan seperti referensi — sesuai LOCKED #1 (3 tabel berjenjang).
-        - Nav ditampilkan SAMA ke SEMUA role yang login (tanpa filter) — B1 (matriks
-          permission) masih [WAJIB TANYA USER], sama seperti versi layout sebelumnya.
+        Aturan navigasi yang berlaku di file ini:
+        - Sidebar hanya berisi link yang route-nya memang ada di routes/web.php;
+          link ke halaman yang belum jadi hanya menghadiahkan 404.
+        - Link admin disaring dengan `auth()->user()->isAdmin()`. Route-nya sudah
+          dipagari middleware `admin`, tapi menu yang isinya 403 tetap
+          membingungkan staf.
+        - Klasifikasi tetap tiga link terpisah (primer/sekunder/tersier), sesuai
+          tiga tabel berjenjang di skema.
     --}}
 
     {{-- Aset diambil dari aplikasi sendiri (public/vendor), BUKAN CDN asing.
@@ -56,10 +37,10 @@
          memuat ulang (filenya sendiri di-overwrite, bukan diganti nama). --}}
     <link href="{{ asset('vendor/bootstrap/bootstrap.min.css') }}?v=5.3.3" rel="stylesheet">
     <link rel="stylesheet" href="{{ asset('vendor/font-awesome/css/pradana-icons.min.css') }}?v=6.4.0-p2">
-    {{-- defer, bukan di-parse: 78 KB ini tadinya menahan rendering seluruh halaman
-         (first paint 420 ms terukur 12 Okt). Helper `pradana-arsip.js` hanya membaca
-         `window.Swal` saat form dikirim, dan sudah punya fallback `window.confirm()`,
-         jadi menunda pemuatannya tidak mengubah perilaku apa pun. --}}
+    {{-- defer, bukan di-parse: skrip tidak boleh menahan rendering seluruh halaman.
+         Helper `pradana-arsip.js` hanya membaca `window.Swal` saat form dikirim,
+         dan sudah punya fallback `window.confirm()`, jadi menunda pemuatannya tidak
+         mengubah perilaku apa pun. --}}
     <script src="{{ asset('vendor/sweetalert2/sweetalert2.all.min.js') }}?v=11.26.25" defer></script>
 
     <style>
@@ -291,11 +272,11 @@
                 <a class="nav-link {{ request()->routeIs('surat-keluar.*') ? 'active' : '' }}" href="{{ route('surat-keluar.index') }}">
                     <i class="fas fa-paper-plane fa-fw"></i> Surat Keluar
                 </a>
-                {{-- Link "Pencarian Arsip" dihapus 5 Okt 2026: tiap daftar surat sudah
-                     punya kotak pencarian sendiri (dan sekarang menggali isi surat juga). --}}
-                {{-- Link di bawah ini disaring per role (L-07, 4 Okt 2026).
-                    Route-nya memang sudah dipagari middleware `admin`, tapi tanpa
-                    filter ini staf non-admin melihat menu yang isinya 403 semua. --}}
+                {{-- Tidak ada link "Pencarian Arsip": tiap daftar surat sudah punya
+                     kotak pencariannya sendiri, dan kotak itu menggali isi surat juga. --}}
+                {{-- Link berikut disaring per role. Route-nya memang sudah dipagari
+                     middleware `admin`, tapi tanpa filter ini staf non-admin melihat
+                     menu yang isinya 403 semua. --}}
                 @if (auth()->user()->isAdmin())
                     <a class="nav-link {{ request()->routeIs('pengajuan-hapus-lampiran.*') ? 'active' : '' }}" href="{{ route('pengajuan-hapus-lampiran.index') }}">
                         <i class="fas fa-trash-alt fa-fw"></i> Pengajuan Hapus Lampiran
@@ -351,7 +332,7 @@
                         @php
                             /*
                              * "Akun" = satu tempat untuk hal-hal milik user yang login. Ganti PIN
-                             * dibuka dari sini sebagai popup, bukan sebagai halaman sendiri (4 Okt 2026).
+                             * dibuka dari sini sebagai popup, bukan sebagai halaman sendiri.
                              *
                              * Dirapikan 10 Okt mengikuti pola menu akun yang dipakai produk nyata
                              * (avatar + identitas di kepala menu, item digrup pakai pembatas, aksi
@@ -439,11 +420,10 @@
     </div>
 
     @auth
-        {{-- Popup "Ganti PIN" (L-12/A5=a), dipanggil dari menu Akun di topbar.
-            4 Okt 2026: sebelumnya halaman sendiri di /profil/pin — atas permintaan
-            user, aksi milik akun dikumpulkan di menu Akun dan ditampilkan sebagai
-            popup. Formulirnya tetap <form> POST sungguhan: kalau JavaScript mati,
-            tombol Simpan masih bekerja biasa dan controller membalas redirect+flash. --}}
+        {{-- Popup "Ganti PIN", dipanggil dari menu Akun di topbar: aksi milik akun
+            dikumpulkan di satu tempat, bukan jadi halaman sendiri. Formulirnya tetap
+            <form> POST sungguhan — kalau JavaScript mati, tombol Simpan masih bekerja
+            dan controller membalas redirect + flash. --}}
         <div class="modal fade" id="modalGantiPin" tabindex="-1" aria-labelledby="modalGantiPinJudul" aria-hidden="true">
             <div class="modal-dialog modal-dialog-centered">
                 <div class="modal-content">

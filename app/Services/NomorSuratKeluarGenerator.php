@@ -10,8 +10,7 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Satu-satunya tempat nomor surat keluar dibentuk (format D1 [LOCKED] di
- * AGENTS.md Bagian 8 #17):
+ * Satu-satunya tempat nomor surat keluar dibentuk. Formatnya mengikuti tata naskah dinas:
  *
  *   {urutan 3 digit}/{kodeP.kodeS.kodeT}/{bulan romawi}/{tahun}  -> 001/01.01.01/IX/2026
  *

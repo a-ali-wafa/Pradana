@@ -15,7 +15,7 @@ class EventServiceProvider extends ServiceProvider
      * Satu-satunya event aplikasi: mencatat aksi ke tabel `aktivitas`.
      * `Registered => SendEmailVerificationNotification` dulu ada di sini dari
      * boilerplate Laravel, tapi kantor tidak punya registrasi publik maupun SMTP
-     * (L-11: login dibuat manual oleh admin lewat `arsip:akun-pertama`), jadi
+     * (login dibuat manual oleh admin lewat `arsip:akun-pertama`), jadi
      * pasangan itu tidak pernah bisa jalan dan sudah dibuang.
      *
      * @var array<class-string, array<int, class-string>>

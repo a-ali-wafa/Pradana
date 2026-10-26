@@ -2,8 +2,8 @@
     /*
      * Ikon info yang menjelaskan dirinya saat disorot (hover) atau difokusi.
      *
-     * Dipakai 10 Okt 2026 atas permintaan user: teks bantuan yang selalu tampil
-     * membuat layar yang padat jadi harus digulir sebelum isinya kelihatan.
+     * Teks bantuan yang selalu tampil membuat layar padat harus digulir dulu
+     * sebelum isinya kelihatan, makanya penjelasan disembunyikan di balik ikon.
      *
      * Bentuknya SENGAJA `title` + `data-bs-toggle="tooltip"`, bukan tooltip yang
      * dibangun JavaScript sendiri:

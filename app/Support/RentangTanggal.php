@@ -18,7 +18,7 @@ use Illuminate\Support\Carbon;
  *    memotong jam sehingga masih cocok; di SQLite string `2026-12-31 00:00:00`
  *    tersimpan utuh dan `<= '2026-12-31'` jadi FALSE. Efeknya surat tertanggal
  *    hari TERAKHIR hilang dari rekap CSV dan Buku Agenda — dibuktikan
- *    BatasTanggalLaporanTest sebelum perapian 9 Okt 2026.
+ *    BatasTanggalLaporanTest.
  * 2. `whereDate('created_at', '<=', X)` → `date(created_at) <= ?`, dan
  *    `whereMonth()/whereYear()` → `month(...) = ? and year(...) = ?`. Hasilnya
  *    benar, tapi fungsi di atas kolom membuat index `tanggal_surat` /

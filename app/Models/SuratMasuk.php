@@ -17,22 +17,22 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  */
 class SuratMasuk extends Model
 {
-    // L-05: surat tidak pernah hilang benar-benar dari sistem; yang ada hanya
+    // Surat tidak pernah hilang benar-benar dari sistem; yang ada hanya
     // disembunyikan dari daftar (pulihkan lewat admin) atau dimusnahkan lewat
     // alur pemusnahan + Berita Acara.
     use SoftDeletes;
 
-    // L-21: umur arsip dihitung dari `tanggal_surat`, satu cara untuk kedua
-    // jenis surat (lihat trait-nya).
+    // Umur arsip dihitung dari `tanggal_surat`, satu cara untuk kedua
+    // jenis surat (lihat trait UmurArsip).
     use UmurArsip;
 
     protected $table = 'surat_masuk';
 
     /**
-     * Kolom yang digali kotak "cari" (L-15).
+     * Kolom yang digali kotak "cari".
      *
-     * `isi_hasil_baca` ikut sejak 9 Okt 2026: fitur baca otomatis isi lampiran
-     * (5 Okt 2026) menyimpan teks hasil baca PDF/DOCX/XLSX di kolom itu, tapi
+     * `isi_hasil_baca` juga ikut digali: fitur baca otomatis isi lampiran
+     * menyimpan teks hasil baca PDF/DOCX/XLSX di kolom itu, tapi
      * tidak ada satu pun query yang mencarinya — jadi isinya terbaca ke layar
      * dan tetap tidak bisa ditemukan. `ringkasan` saja tidak cukup karena ia
      * hanya berubah kalau user mencentang "jadikan ringkasan".
@@ -55,7 +55,7 @@ class SuratMasuk extends Model
 
     /**
      * SENGAJA tidak ada di $fillable: `isi_hasil_baca`, `isi_dibaca_dari`,
-     * `isi_dibaca_pada`, `isi_terverifikasi_pada` (fitur baca otomatis 5 Okt 2026).
+     * `isi_dibaca_pada`, `isi_terverifikasi_pada` (hasil baca otomatis).
      * Keempatnya dikelola sistem — ditulis `LampiranController` saat unggah dan
      * `SuratMasukController::updateIsi()` saat user memeriksa. Kalau suatu hari
      * form surat ikut mengirimkannya, isinya harus lewat jalur eksplisit itu,
@@ -70,7 +70,7 @@ class SuratMasuk extends Model
 
     /**
      * Petugas yang mencatat surat ini. `withTrashed()` supaya nama tetap tampil
-     * walau usernya sudah dihapus (L-10: tidak ada sistem kepemilikan).
+     * walau usernya sudah dihapus (tidak ada sistem kepemilikan).
      *
      * Return type generik (`BelongsTo<User, $this>`, bukan `BelongsTo` polos)
      * dipakai PHPStan/IDE untuk tahu MODEL sebelah mana yang kembali: tanpa itu

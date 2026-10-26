@@ -5,13 +5,13 @@
 | Cadangkan database (arsip:backup-db)
 |--------------------------------------------------------------------------
 |
-| Kenapa ini ada dan kenapa mendesak: pada 10 Okt 2026 MariaDB di laptop
-| pengembangan korup setelah mati listrik paksa (`InnoDB: page 32769 in space 0
-| outside the tablespace bounds`) dan satu-satunya alasan kejadiannya bisa
-| dideal-kan adalah salinan manual folder datadir yang kebetulan dibuat sebelumnya.
-| Lampiran sudah dicadangkan ke Google Drive (`arsip:sinkron-ke-drive`, L-01), tapi
-| isi database — 13 tabel surat, klasifikasi, log aktivitas, Berita Acara — belum
-| punya jalur otomatis sama sekali.
+| Kenapa ini ada dan kenapa mendesak: MariaDB di laptop pengembangan pernah
+| korup setelah mati listrik paksa (`InnoDB: page 32769 in space 0 outside the
+| tablespace bounds`) dan satu-satunya alasan kejadiannya bisa dideal-kan adalah
+| salinan manual folder datadir yang kebetulan dibuat sebelumnya. Lampiran sudah
+| dicadangkan ke Google Drive (`arsip:sinkron-ke-drive`), tapi isi database —
+| surat, klasifikasi, log aktivitas, Berita Acara — belum punya jalur otomatis
+| sama sekali.
 |
 | Semua nilai dibaca lewat `config()`, BUKAN `env()` di dalam command: deploy
 | memakai `config:cache` dan setelah itu `env()` mengembalikan null (jebakan yang
@@ -44,10 +44,10 @@ return [
      * kalau suatu saat kantor memakainya. Biayanya tidak nol di target deploy:
      * di MariaDB 10.4 `--routines` menuntut hak baca ke tabel sistem (`mysql.proc`)
      * dan `--events` menuntut privilege EVENT — pemakai database tunggal di
-     * shared hosting (K1=a) sering tidak punya keduanya, dan mysqldump-nya keluar
+     * shared hosting sering tidak punya keduanya, dan mysqldump-nya keluar
      * dengan error, bukan dengan cadangan.
      *
-     * Sekarang skema PRADANA punya NOL prosedur dan NOL event (digerok 10 Okt di
+     * Sekarang skema PRADANA punya NOL prosedur dan NOL event (sudah digerok di
      * seluruh `database/` dan `app/`), jadi kalau perintah ini gagal di server
      * kantor dengan "Access denied", setel dua nilai itu false lewat .env:
      * cadangan tetap lengkap untuk skema yang ada. Kalau nanti ada migration yang

@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Auth;
 
 /**
- * Dicatat otomatis untuk setiap aksi model (dibuat 1 Sep 2026, dipakai 11 Observer
+ * Dicatat otomatis untuk setiap aksi model (dipakai 11 Observer
  * di `app/Observers/` yang diregistrasikan di `AppServiceProvider::boot()`).
  *
  * Dipakai oleh Model Observer supaya tiap Observer tidak menulis ulang logika
@@ -18,7 +18,7 @@ use Illuminate\Support\Facades\Auth;
  * perintah console, atau jadwal terjadwal), log DILEWATI, bukan dipaksa. Alasannya
  * `aktivitas.user_id` tidak nullable dengan FK `restrictOnDelete` — insert tanpa
  * user akan gagal, dan memberi user_id karangan sendiri berarti memalsukan jejak
- * "siapa mengubah apa" (L-22: log ini satu-satunya jejak itu; L-10: arsip kantor
+ * "siapa mengubah apa" (log ini satu-satunya jejak itu; arsip kantor
  * tidak punya pemilik).
  */
 trait LogsAktivitas

@@ -8,14 +8,14 @@ use Illuminate\Support\Carbon;
  * Satu angka untuk satu aturan: berapa lama arsip harus disimpan sebelum boleh
  * diusulkan musnah / hapus.
  *
- * E1 + L-04 [LOCKED]: retensi 5 tahun, SERAGAM untuk semua jenis surat, dan
+ * retensi 5 tahun, SERAGAM untuk semua jenis surat, dan
  * sistem hanya MEMBERI DAFTAR yang sudah lewat — keputusan men-*inaktif*-kan dan
  * menyetujui pemusnahan tetap di tangan orang kantor.
  *
  * Kenapa konstanta kelas biasa dan bukan konstanta di trait `UmurArsip`: PHP
  * melarang akses konstanta trait dari luar kelas pemakainya
  * (`UmurArsip::BATAS_RETENSI_TAHUN` melempar Error "Cannot access trait constant
- * directly" — kesalahan yang dibuat dan ditangkap suite pada 9 Okt 2026). Kelas
+ * directly" — kesalahan yang langsung ditangkap suite). Kelas
  * konstanta bisa dibaca dari model, controller, maupun perintah artisan tanpa
  * pura-pura lewat salah satu model surat.
  *
@@ -26,7 +26,7 @@ use Illuminate\Support\Carbon;
  */
 final class RetensiArsip
 {
-    /** Tahun sejak `tanggal_surat` (L-21: acuan diseragamkan ke tanggal surat). */
+    /** Tahun sejak `tanggal_surat` (acuan diseragamkan ke tanggal surat). */
     public const TAHUN = 5;
 
     /**

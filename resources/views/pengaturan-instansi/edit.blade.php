@@ -4,24 +4,24 @@
 @section('page-title', 'Pengaturan Instansi')
 
 {{--
-    View Pengaturan Instansi — dibuat 31 Agu 2026, dirombak ulang 5 Okt 2026.
+    View Pengaturan Instansi.
 
-    Tiga alasan dirombak:
+    Tiga hal yang dirombak:
     1. Logo tidak pernah tampil. `Storage::url()` menunjuk `public/storage/...` yang
        bergantung pada symlink `artisan storage:link`; symlink itu belum ada di laptop
-       dev dan tidak tentu bisa dibuat di shared hosting kantor (K1=a). Sekarang lewat
+       dev dan tidak tentu bisa dibuat di shared hosting kantor. Sekarang lewat
        route `instansi.logo` — `$pengaturanInstansi->logoUrl()`.
     2. Halaman sempit dan kosong (satu kolom di tengah). Sekarang dua kolom: kiri data
        kop, kanan PRA-TINJAU kop yang meniru partials/kop-pdf.blade.php, jadi user
        melihat hasil sebelum menyimpan.
     3. Kop desa bertingkat (Kabupaten > Kecamatan > Desa) belum bisa ditulis sama
        sekali; kolom `nama_kabupaten`/`nama_kecamatan`/`kode_pos` ditambahkan lewat
-       migration 5 Okt 2026.
+       migration additive.
 
     Pola interaksi "field readonly, klik Edit baru bisa isi" SENGAJA dipertahankan
     (meniru `handleEditHeader()` sistem lama) supaya kop surat tidak kepencet berubah.
-    Penyimpanan tetap <form> POST+PUT standar Laravel, bukan AJAX — lihat
-    `UpdatePengaturanInstansiRequest` dan AGENTS.md 12.18.
+     Penyimpanan tetap <form> POST+PUT standar Laravel, bukan AJAX — lihat
+     `UpdatePengaturanInstansiRequest`.
 --}}
 
 @section('content')
@@ -199,7 +199,7 @@
                 </div>
 
                 {{-- Hanya ikonnya yang tampil: kalimatnya sudah ada di dalam tooltip
-                     (permintaan user 10 Okt — info kop surat cukup saat mouse mengarah). --}}
+                     (info kop surat cukup saat mouse mengarah). --}}
                 <div class="small text-secondary mt-3">
                     @include('partials.ikon-info', ['pesan' => 'Kop ini dipakai untuk surat keluar, Berita Acara Pemusnahan, dan Buku Agenda. Pratinjau berubah mengikuti isian di kiri, tapi PDF baru memakai versi yang sudah disimpan.'])
                 </div>
@@ -289,7 +289,7 @@
 
         // Logo yang sudah tersimpan dipakai sebagai dasar pratinjau kop: halaman ini
         // dibuka tanpa memilih berkas pun harus tetap menunjukkan kop sungguhan
-        // (permintaan user 10 Okt 2026). Diisi dari Blade, jadi tidak ada tebakan path.
+        // Diisi dari Blade, jadi tidak ada tebakan path.
         const logoTersimpan = @json($pengaturanInstansi->logoUrl());
 
         function tampilkanLogoKop(url) {

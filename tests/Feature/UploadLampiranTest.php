@@ -12,7 +12,7 @@ use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 /**
- * L-01 + L-02 + L-13: lampiran disimpan sinkron ke disk lokal `arsip`,
+ * lampiran disimpan sinkron ke disk lokal `arsip`,
  * bukan lagi dikirim ke Google Drive lewat queue.
  */
 class UploadLampiranTest extends TestCase
@@ -72,10 +72,10 @@ class UploadLampiranTest extends TestCase
 
     public function test_file_word_dan_excel_diterima(): void
     {
-        // L-13: dulu hanya pdf/jpg/png yang lolos, padahal surat antar-instansi
+        // dulu hanya pdf/jpg/png yang lolos, padahal surat antar-instansi
         // sering datang sebagai .docx — file itu tidak bisa diarsipkan sama sekali.
         // Isi sengaja beda: UploadedFile::fake()->create() menghasilkan byte identik
-        // untuk ukuran sama, dan duplikat seperti itu memang dilewati (I1).
+        // untuk ukuran sama, dan duplikat seperti itu memang dilewati.
         $this->actingAs($this->petugas)->post(
             route('surat-masuk.lampiran.store', $this->surat),
             ['files' => [
@@ -89,7 +89,7 @@ class UploadLampiranTest extends TestCase
 
     public function test_file_isi_sama_di_surat_sama_dilewati(): void
     {
-        // Keputusan I1: duplikat di surat yang sama tidak disimpan dua kali.
+        // Duplikat di surat yang sama tidak disimpan dua kali.
         $isi = 'isi-yang-sama';
 
         foreach ([$isi, $isi] as $_) {
@@ -119,7 +119,7 @@ class UploadLampiranTest extends TestCase
 
     private function assertLength(?string $hash): void
     {
-        $this->assertNotNull($hash, 'hash_file harus terisi untuk deteksi duplikat (I1).');
+        $this->assertNotNull($hash, 'hash_file harus terisi untuk deteksi duplikat.');
         $this->assertSame(64, strlen($hash));
     }
 }

@@ -14,7 +14,7 @@ use Tests\MariaDbHarness;
 
 /**
  * Dua bentuk SQL BARU yang dipakai di hampir semua layar, dibuktikan di MariaDB
- * sungguhan (L-24 / Q1=b) — keduanya masuk lewat perapian Fase 1, 9 Okt 2026:
+ * sungguhan — keduanya masuk saat alur data dirapikan:
  *
  * 1. `SUM(CASE WHEN … THEN 1 ELSE 0 END)` sebagai pengganti sembilan `count()`
  *    di dashboard, dengan batas periode interval setengah terbuka. Di SQLite

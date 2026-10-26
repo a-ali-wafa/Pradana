@@ -5,8 +5,8 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * SQUASH S11. Alur hapus lampiran: staf mengajukan, admin menyetujui, dan hanya
- * untuk surat yang sudah lewat retensi 5 tahun (L-05/E4). `lampiran_id`
+ * Alur hapus lampiran: staf mengajukan, admin menyetujui, dan hanya
+ * untuk surat yang sudah lewat retensi 5 tahun. `lampiran_id`
  * **null on delete** (bukan cascade) supaya riwayat pengajuan tetap terbaca
  * setelah file-nya benar-benar hilang; nama file diselamatkan lebih dulu ke
  * `nama_file_snapshot` karena itu satu-satunya yang tersisa setelahnya.

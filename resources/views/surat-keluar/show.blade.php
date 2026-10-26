@@ -217,7 +217,7 @@
                             </a>
                             {{-- Lihat catatan yang sama di surat-masuk/show.blade.php:
                                  umur arsip ditanyakan ke UmurArsip::lewatRetensi()
-                                 (L-21, acuan `tanggal_surat`) dan status pengajuan dibaca
+                                 (acuan `tanggal_surat`) dan status pengajuan dibaca
                                  dari koleksi eager-loaded, bukan query per berkas. --}}
                             @if($suratKeluar->lewatRetensi())
                                 @if($lamp->pengajuanHapus->where('status', 'menunggu')->isEmpty())

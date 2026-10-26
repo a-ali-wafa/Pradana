@@ -66,7 +66,7 @@ class AppServiceProvider extends ServiceProvider
         // Inggris meskipun `config/app.locale` = 'id' (Carbon punya locale sendiri).
         Carbon::setLocale('id');
 
-        // H1=b: satu-satunya "notifikasi" yang diminta kantor adalah antrian
+        // Satu-satunya "notifikasi" yang diminta kantor adalah antrian
         // pengajuan yang menunggu approval admin. Tidak ada email/WA (kantor
         // tanpa SMTP), jadi angkanya ditempel di menu sidebar admin — kalau
         // tidak, antrian itu tidak pernah terlihat.
@@ -108,9 +108,9 @@ class AppServiceProvider extends ServiceProvider
             ]);
         });
 
-        // Logging aktivitas otomatis (dibuat 1 Sep 2026) — riwayat panjangnya ada di
-        // `AGENTS_HISTORY.md` Bagian 12/13, bukan di `AGENTS.md` yang sekarang ringkas.
-        // Registrasi observer ditaruh di sini supaya satu tempat terlihat jelas;
+        // Logging aktivitas: satu tempat registrasi supaya terlihat jelas siapa
+        // mencatat apa. Kalau menambah model yang perlu jejak aktivitas, daftarkan
+        // observer-nya di sini, bukan tersebar di controller.
         // urutan di antara sesama observe() tidak penting.
         SuratMasuk::observe(SuratMasukObserver::class);
         SuratKeluar::observe(SuratKeluarObserver::class);

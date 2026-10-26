@@ -11,15 +11,12 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 /**
- * Alur pengajuan-persetujuan hapus lampiran — keputusan user 31 Agu 2026
- * (lihat AGENTS_HISTORY.md 12.17), MENGGANTIKAN `LampiranController::destroy()`
- * admin-langsung yang dibuat sebelumnya (lihat 12.16 poin 6, sekarang
- * dihapus/superseded).
+ * Alur pengajuan-persetujuan hapus lampiran. Ini satu-satunya jalan menghapus
+ * lampiran: `LampiranController::destroy()` untuk admin langsung sudah dibuang.
  *
- * Aturan bisnis (dikonfirmasi user, BUKAN tebakan):
+ * Aturan bisnis yang ditegakkan:
  * - Hapus lampiran HANYA boleh diajukan kalau surat induknya sudah berumur
- *   LEBIH DARI 5 TAHUN, sesuai E1 [LOCKED] (retensi 5 tahun seragam untuk
- *   semua jenis, dikonfirmasi user 31 Agu 2026 — lihat AGENTS.md Bagian 9).
+ *   LEBIH DARI 5 TAHUN (retensi 5 tahun, seragam untuk semua jenis).
  * - Siapa saja yang login boleh MENGAJUKAN (`store()`).
  * - Hanya admin yang boleh MENYETUJUI (`setujui()`) atau MENOLAK (`tolak()`).
  *   File & record `lampiran` baru benar-benar terhapus setelah disetujui.
@@ -64,7 +61,7 @@ class PengajuanHapusLampiranController extends Controller
 
     public function index(Request $request): View
     {
-        // L-23: riwayat pengajuan yang sudah diputuskan tidak boleh hilang dari
+        // riwayat pengajuan yang sudah diputuskan tidak boleh hilang dari
         // layar — seluruh alasan kolom lampiran_id di-set nullOnDelete adalah audit.
         $status = $request->query('status', 'semua');
 
@@ -89,9 +86,9 @@ class PengajuanHapusLampiranController extends Controller
 
         abort_if(! $lampiran, 410, 'Lampiran yang diajukan sudah tidak ada (mungkin sudah terhapus lewat pengajuan lain).');
 
-        // L-02: penghapusan berkas dilakukan sinkron, tanpa queue worker.
+        // penghapusan berkas dilakukan sinkron, tanpa queue worker.
         //
-        // URUTAN sengaja dibalik (9 Okt 2026): database lebih dulu, berkas fisik
+        // URUTAN sengaja dibalik: database lebih dulu, berkas fisik
         // belakangan, dan kedua penulisan DB dalam SATU transaksi.
         // `hapusBerkasFisik()` tidak bisa di-rollback, sedangkan baris `lampiran`
         // dan status pengajuan bisa. Bentuk lama membuang berkas lebih dulu, jadi

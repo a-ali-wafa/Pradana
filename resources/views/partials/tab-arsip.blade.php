@@ -2,17 +2,16 @@
     /*
      * Pemilih jenis arsip — Surat Masuk | Surat Keluar.
      *
-     * 10 Okt 2026: tab ketiga ("Semua arsip") DIBUANG dari deretan tombol atas,
-     * atas permintaan user — tiga tombol besar di kepala halaman terasa seperti
-     * bagian terpisah dari aplikasi, padahal mode gabungan itu cuma bantuan
-     * pencarian. Kemampuannya TIDAK hilang (L-15 tetap berlaku, tetap tanpa route
-     * baru): dia pindah ke samping, hanya muncul saat ada kata kunci — justru di
-     * situlah orang tidak ingat suratnya masuk atau keluar.
+     * Tidak ada tab ketiga "Semua arsip" di deretan tombol: tiga tombol besar di
+     * kepala halaman terasa seperti bagian terpisah dari aplikasi, padahal mode
+     * gabungan itu cuma bantuan pencarian. Kemampuannya tetap ada dan pindah ke
+     * samping — hanya muncul saat ada kata kunci, justru di situlah orang tidak
+     * ingat suratnya masuk atau keluar.
      *
      * TIDAK ada route baru di sini. Mode gabungan hanya menambah `?jenis=semua`
      * pada halaman ASAL ($routeAsal), dan controller halaman itulah yang memanggil
      * DaftarArsipGabungan. Alasannya sama seperti saat halaman /pencarian dihapus
-     * 5 Okt 2026: satu kotak cari saja, jangan ada layar kedua.
+     * Satu kotak cari saja, jangan ada layar kedua.
      *
      * Dipakai dengan $aktif = 'masuk' | 'keluar' | 'semua' dan $routeAsal.
      * Kata kunci ikut dibawa saat berpindah jenis surat; filter lain sengaja

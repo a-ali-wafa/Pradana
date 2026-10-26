@@ -6,7 +6,7 @@
 |--------------------------------------------------------------------------
 |
 | Kenapa file config sendiri dan bukan `env()` di dalam middleware: deploy
-| target memakai `php artisan config:cache` (K1=a, shared hosting), dan begitu
+| target memakai `php artisan config:cache` (shared hosting), dan begitu
 | config di-cache Laravel mengembalikan null untuk `env()` — jadi sakelar ini
 | akan diam-diam "mati" di server kantor padahal menyala di laptop. Nilai env
 | hanya boleh dibaca di file config. (Jebakan yang sama sudah dicatat untuk
@@ -60,16 +60,15 @@ return [
      * Pengaturan Instansi, salin hasil baca, reload. Angka di atas dihitung dari
      * `resources/views/`, supaya klaim ini bisa diperiksa, tidak dipercaya.)
      *
-     * 10 Okt 2026: `script-src`/`style-src`/`font-src` TIDAK lagi menyebut
-     * cdn.jsdelivr.net atau cdnjs.cloudflare.com. Bootstrap, SweetAlert2, dan
-     * Font Awesome sekarang hidup di `public/vendor/` (lihat AGENTS.md,
-     * "Susulan 10 Okt"), jadi dua host itu cuma membuka jalan bagi muatan dari
-     * luar yang tidak dipakai lagi — semakin sedikit asal yang diizinkan, semakin
-     * berarti header-nya. Kalau nanti ada aset CDN baru, itu keputusan sadar,
-     * bukan warisan.
+     * Sejak aset vendor pindah ke repo, `script-src`/`style-src`/`font-src` tidak lagi
+     * menyebut cdn.jsdelivr.net atau cdnjs.cloudflare.com. Bootstrap, SweetAlert2, dan
+     * Font Awesome hidup di `public/vendor/` sendiri (versinya dicatat di
+     * `docs/aset-vendor.md`), jadi dua host itu cuma membuka jalan bagi muatan dari luar
+     * yang tidak dipakai lagi — semakin sedikit asal yang diizinkan, semakin berarti
+     * header-nya. Kalau nanti ada aset CDN baru, itu keputusan sadar, bukan warisan.
      *
      * `img-src ... blob:` dibutuhkan pratinjau logo di Pengaturan Instansi
-     * (URL.createObjectURL, 4 Okt 2026); `data:` di font-src dibiarkan karena
+     * (URL.createObjectURL); `data:` di font-src dibiarkan karena
      * sebagian browser memuat font base64 dari stylesheet vendor. `connect-src
      * 'self'` masih mengizinkan unggah AJAX lampiran karena endpoint-nya milik
      * aplikasi sendiri.

@@ -12,8 +12,8 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 /**
- * I1=b (ekspor laporan) + I2=b (Buku Agenda) + H1=b (notifikasi antrian
- * approval), keputusan 3 Okt 2026.
+ * Ekspor laporan CSV, Buku Agenda PDF, dan badge antrian persetujuan
+ * pengajuan hapus lampiran.
  */
 class LaporanAgendaTest extends TestCase
 {

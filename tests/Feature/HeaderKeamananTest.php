@@ -7,7 +7,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 /**
- * Anti-indexing + header keamanan (9 Okt 2026).
+ * Anti-indexing + header keamanan.
  *
  * Alasannya bukan formalitas: berkas `public/robots.txt` bawaan Laravel berisi
  * `User-agent: *` + `Disallow:` KOSONG, dan nilai kosong itu berarti crawler
@@ -103,7 +103,7 @@ class HeaderKeamananTest extends TestCase
         $this->assertNotNull($csp);
         $this->assertStringContainsString("'unsafe-inline'", $csp, 'Blade memakai @push(scripts) dan onclick inline.');
         $this->assertStringContainsString('blob:', $csp, 'Pratinjau logo memakai URL.createObjectURL.');
-        // 10 Okt 2026: Bootstrap/SweetAlert2/Font Awesome dilokalkan ke
+        // Bootstrap/SweetAlert2/Font Awesome dilokalkan ke
         // public/vendor, jadi dua host CDN itu tidak lagi punya alasan berada di
         // dalam CSP. Arah assertnya sengaja dibalik: yang diizinkan sekarang
         // HANYA 'self' — kalau ada orang menambah host asing lagi, tes ini yang

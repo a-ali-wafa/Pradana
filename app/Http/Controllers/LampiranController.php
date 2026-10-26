@@ -20,18 +20,18 @@ use Throwable;
 /**
  * Upload & unduh lampiran surat masuk/keluar.
  *
- * Keputusan L-01: file fisik disimpan di DISK LOKAL (disk `arsip`, root
+ * Berkas fisik disimpan di DISK LOKAL (disk `arsip`, root
  * storage/app/private/arsip — di luar public/), bukan lagi Google Drive.
  * Drive turun jadi target sinkronisasi backup terjadwal
  * (php artisan arsip:sinkron-ke-drive), jadi upload tidak lagi bergantung
- * pada kuota/API pihak ketiga maupun pada queue worker (L-02: semua sync).
+ * pada kuota/API pihak ketiga maupun pada queue worker (semua sync).
  *
  * Kolom `google_drive_file_id` tetap dipertahankan untuk (a) data lama yang
  * cuma punya file Drive supaya masih bisa diunduh, dan (b) catatan hasil
  * backup. Aturan lama tetap berlaku: TIDAK PERNAH simpan/serve link publik —
  * akses selalu lewat controller ber-middleware auth.
  *
- * Sejak 5 Okt 2026 upload surat MASUK juga mencoba membacakan isi berkasnya
+ * Upload surat MASUK juga mencoba membacakan isi berkasnya
  * (PembacaIsiLampiran). Hasilnya disimpan di `surat_masuk.isi_hasil_baca` dan
  * ditampilkan sebagai draf yang BELUM diverifikasi — tidak pernah menimpa
  * `ringkasan` tanpa aksi user. Pembacaan dibungkus try/catch: kegagalan baca
@@ -55,15 +55,15 @@ class LampiranController extends Controller
     }
 
     /**
-     * Stream file ke browser. Default inline (preview), `?mode=unduh`
-     * memaksa attachment — keputusan F5 (dua-duanya dipakai).
-     *
-     * Tidak ada cek kepemilikan di sini: route ini sudah `middleware('auth')`,
-     * dan L-09/B5/L-10 memutuskan arsip kantor boleh dibaca/DIUNDUH semua yang
-     * login tanpa regard siapa pengunggahnya. `LampiranPolicy` lama (yang
-     * melarang staf membuka file milik staf lain) dihapus 4 Okt 2026 karena
-     * menabrak keputusan itu — bug-nya tertutup saat dites sebagai pegawai,
-     * sebelumnya tidak kelihatan karena semua uji jalan sebagai admin.
+ * Stream file ke browser. Default inline (pratinjau), `?mode=unduh` memaksa
+ * attachment — dua-duanya dipakai kantor, jadi keduanya harus tetap ada.
+ *
+ * Tidak ada cek kepemilikan di sini: route ini sudah `middleware('auth')`, dan
+ * arsip kantor boleh dibaca serta diunduh siapa pun yang login, tanpa regard
+ * siapa pengunggahnya. `LampiranPolicy` lama — yang melarang staf membuka file
+ * milik staf lain — dihapus karena menabrak aturan itu. Bug-nya baru kelihatan
+ * setelah ada yang menguji sebagai pegawai; sebelumnya semua uji manual
+ * dijalankan sebagai admin.
      */
     public function download(Request $request, Lampiran $lampiran): Response
     {
@@ -80,7 +80,7 @@ class LampiranController extends Controller
             );
         }
 
-        // Jalur hanya untuk data lama (sebelum L-01) yang file-nya masih di Drive.
+        // Jalur hanya untuk data lama yang berkasnya masih tersimpan di Drive.
         abort_unless(filled($lampiran->google_drive_file_id), 404, 'Berkas arsip ini tidak ditemukan.');
 
         $file = $this->drive->getFileContent($lampiran->google_drive_file_id);
@@ -93,7 +93,7 @@ class LampiranController extends Controller
     /**
      * Simpan semua file dari request ke disk lokal, satu baris `lampiran`
      * per file. File yang isinya identik dengan yang sudah ada di surat yang
-     * sama dilewati dan dilaporkan balik sebagai duplikat (keputusan I1).
+     * sama dilewati dan dilaporkan balik sebagai duplikat.
      */
     private function simpanLampiran(StoreLampiranRequest $request, SuratMasuk|SuratKeluar $surat, string $folderJenis): JsonResponse|RedirectResponse
     {

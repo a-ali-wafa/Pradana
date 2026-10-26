@@ -10,9 +10,9 @@ use Throwable;
 use ZipArchive;
 
 /**
- * Membaca ISI berkas lampiran supaya staf tidak perlu mengetik ulang ringkasan
- * (permintaan user 5 Okt 2026: "baca isinya otomatis jika user upload, nanti
- * ditampilkan di dalam form untuk divalidasi").
+ * Membaca ISI berkas lampiran supaya staf tidak perlu mengetik ulang ringkasan.
+ * Hasilnya tidak pernah jadi isi surat: ia ditampilkan di form sebagai draf yang
+ * menunggu divalidasi manusia.
  *
  * Prinsip yang dipakai:
  * 1. HASIL SELALU DITAMPILKAN SEBAGAI DRAF YANG BELUM VERIFIKASI. Teks mesin
@@ -20,10 +20,10 @@ use ZipArchive;
  *    di `surat_masuk` mencatat kapan manusia menyimpannya.
  * 2. TIDAK PERNAH menggagalkan upload. Semua kegagalan dibaca sebagai
  *    "catatan", bukan exception — lampiran yang tersimpan adalah prioritas,
- *    hasil baca hanya bonus (L-02: tidak ada queue, jadi ini jalan inline di
+ *    hasil baca hanya bonus (tidak ada queue, jadi ini jalan inline di
  *    request unggah).
  * 3. Tanpa dependency berat dan tanpa binary server. PDF pakai `smalot/pdfparser`
- *   (murni PHP, jalan di shared hosting K1=a); DOCX/XLSX dibedah sebagai ZIP +
+ *   (murni PHP, jalan di shared hosting); DOCX/XLSX dibedah sebagai ZIP +
  *    XML pakai `ZipArchive` extension bawaan.
  *
  * BATASAN yang jujur (dan disampaikan ke user lewat `catatan`, bukan ditutupi):

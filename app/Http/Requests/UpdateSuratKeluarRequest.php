@@ -64,9 +64,9 @@ class UpdateSuratKeluarRequest extends FormRequest
     }
 
     /**
-     * L-20 (D7=b): hanya admin yang boleh MENGUBAH nomor surat keluar yang sudah
-     * terbit. Form tetap mengirim nilai nomor aslinya untuk semua role, jadi
-     * yang dilarang adalah deltasnya — bukan field-nya.
+     * Hanya admin yang boleh MENGUBAH nomor surat keluar yang sudah terbit.
+     * Form tetap mengirim nilai nomor aslinya untuk semua role, jadi yang
+     * dilarang adalah deltasnya — bukan field-nya.
      */
     protected function validateKoreksiNomorOlehAdmin(Validator $validator): void
     {

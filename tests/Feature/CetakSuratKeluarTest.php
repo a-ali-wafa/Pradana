@@ -13,7 +13,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 /**
- * Struktur surat keluar versi tata naskah dinas desa (5 Okt 2026).
+ * Struktur surat keluar versi tata naskah dinas desa.
  *
  * Yang diuji di sini adalah HTML hasil render template, bukan berkas PDF-nya:
  * byte PDF-nya dikompres dan tidak bisa dipakai membuktikan urutan baris kop.
@@ -137,7 +137,7 @@ class CetakSuratKeluarTest extends TestCase
         $this->assertStringContainsString('>Sifat<', $html);
         $this->assertStringContainsString('Penting', $html);
         $this->assertStringContainsString('>Lampiran<', $html);
-        // P6=a: notasi dihitung dari berkas, ditulis `0 (nol)` ala surat dinas.
+        // Notasi dihitung dari berkas, ditulis `0 (nol)` ala surat dinas.
         $this->assertStringContainsString('0 (nol) berkas', $html);
         // Kode klasifikasi 3 level ikut dicetak.
         $this->assertStringContainsString('>Klasifikasi<', $html);

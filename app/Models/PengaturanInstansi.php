@@ -7,8 +7,8 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
 
 /**
- * Pengaturan instansi — satu baris tunggal (aplikasi satu kantor, L-26/J1),
- * diedit lewat `Route::singleton` oleh admin saja (B4/L-07).
+ * Pengaturan instansi — satu baris tunggal (aplikasi melayani satu kantor),
+ * diedit lewat `Route::singleton` oleh admin saja.
  *
  * Kolomnya dipakai untuk mencetak KOP SURAT di semua keluaran PDF (surat keluar,
  * Berita Acara Pemusnahan, Buku Agenda), jadi helper di bawah ini sengaja taruh
@@ -17,7 +17,7 @@ use Illuminate\Support\Facades\Storage;
  * kopBarisAtas() menghasilkan daftar baris bertingkat ala tata naskah dinas desa
  * (Kabupaten > Kecamatan > Desa — Permendagri 1/2023). Baris yang kolomnya kosong
  * TIDAK diemit, sehingga kantor dengan kop satu baris tetap tercetak benar dan
- * data lama (sebelum migration 5 Okt 2026) tidak terlihat rusak.
+ * data lama tidak terlihat rusak.
  */
 class PengaturanInstansi extends Model
 {
@@ -97,7 +97,7 @@ class PengaturanInstansi extends Model
      *
      * SENGAJA lewat route `instansi.logo`, BUKAN `Storage::url()`: yang terakhir
      * menunjuk `public/storage/...` dan butuh `php artisan storage:link`. Di shared
-     * hosting kantor (K1=a) symlink itu sering tidak dibuat — dan memang tidak bisa
+     * hosting kantor symlink itu sering tidak dibuat — dan memang tidak bisa
      * dibuat lewat FTP biasa — akibatnya logo hilang diam-diam tanpa error.
      * Query `?v=` dibuat dari nama berkas: nama berkas logo selalu baru tiap upload
      * (`store('logo')` mengirim nama acak), jadi URL-nya berubah tepat saat logo
@@ -117,7 +117,7 @@ class PengaturanInstansi extends Model
      *
      * `layouts.app` dirender di SETIAP halaman, jadi kalau method ini memanggil
      * database tanpa cache, setiap klik staf menambah satu query cuma untuk gambar
-     * yang jarang berubah. `Cache::remember` (driver file, S10) membuat biayanya
+     * yang jarang berubah. `Cache::remember` (driver file) membuat biayanya
      * satu pembacaan disk, bukan satu SELECT; kunci dibuang di
      * `PengaturanInstansiObserver::updated()` sehingga logo baru langsung muncul
      * tanpa menunggu kedaluwarsa.

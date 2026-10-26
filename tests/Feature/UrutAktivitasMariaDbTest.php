@@ -9,7 +9,7 @@ use Tests\MariaDbHarness;
  * Bukti bahwa index `(created_at, id)` di tabel `aktivitas` SUNGGUHAN dipakai
  * optimizer MariaDB — bukan sekadar "migration berhasil".
  *
- * Pola yang sama dipakai `CariArsipMariaDbTest` (L-24 / Q1=b): bentuk yang cuma
+ * Polanya sama dengan `CariArsipMariaDbTest`: bentuk yang cuma
  * ada di engine produksi diuji di engine itu, dan DI-SKIP dengan pesan kalau
  * XAMPP mati.
  *

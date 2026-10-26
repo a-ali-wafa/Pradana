@@ -1,7 +1,7 @@
 # ─────────────────────────────────────────────────────────────────────────────
 # Kompresi + header cache untuk aset statis.
 #
-# Ditambah 12 Okt 2026 sesudah pengukuran (docs/daftar-peningkatan.md bagian 1.4):
+# Ditambah sesudah pengukuran ukuran aset (12 Okt 2026):
 # halaman pertama memuat 641 KB aset dan Apache mengirimnya mentah-mentah, lalu
 # browser masih harus menanya ulang setiap navigasi.
 #

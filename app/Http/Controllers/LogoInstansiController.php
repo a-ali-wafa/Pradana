@@ -7,13 +7,13 @@ use Illuminate\Support\Facades\Storage;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 /**
- * Melayani berkas logo instansi ke browser — BARU 5 Okt 2026.
+ * Melayani berkas logo instansi ke browser.
  *
  * Kenapa perlu route sendiri padahal Laravel punya `Storage::url()`: URL itu
  * menunjuk `public/storage/logo/...` yang HANYA ada kalau `php artisan
  * storage:link` pernah dijalankan. Di laptop dev user symlink itu belum ada
  * (logo jadi tidak tampil di Pengaturan Instansi maupun halaman login), dan di
- * shared hosting kantor (K1=a) symlink juga sering tidak bisa dibuat. Route ini
+ * shared hosting kantor symlink juga sering tidak bisa dibuat. Route ini
  * membaca langsung dari disk `public`, jadi logo tampil tanpa setup tambahan.
  *
  * Rutenya SENGAJA di luar grup `auth`: halaman login menampilkan kop + logo

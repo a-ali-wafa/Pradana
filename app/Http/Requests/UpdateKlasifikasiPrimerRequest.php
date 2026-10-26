@@ -5,7 +5,7 @@ namespace App\Http\Requests;
 use Illuminate\Validation\Rule;
 
 /**
- * extends StoreKlasifikasiPrimerRequest (pola sama seperti UpdateSuratMasukRequest, lihat 12.6),
+ * extends StoreKlasifikasiPrimerRequest (pola sama seperti UpdateSuratMasukRequest),
  * cuma override rules() untuk ignore ID sendiri di unique check `kode` supaya update tanpa
  * ganti kode tidak ikut ditolak.
  */

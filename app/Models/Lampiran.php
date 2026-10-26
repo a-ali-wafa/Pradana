@@ -44,7 +44,7 @@ class Lampiran extends Model
     }
 
     /**
-     * File fisik sudah tersedia di disk lokal (sumber utama sejak L-01)?
+     * File fisik sudah tersedia di disk lokal (tempat utama penyimpanan arsip)?
      */
     public function adaDiLokal(): bool
     {
@@ -53,7 +53,7 @@ class Lampiran extends Model
 
     /**
      * Lampiran boleh DIAJUKAN untuk dihapus kalau surat induknya sudah lewat
-     * retensi (L-04: lebih dari 5 tahun; L-21: acuannya `tanggal_surat` untuk
+     * retensi (lebih dari 5 tahun; acuannya `tanggal_surat` untuk
      * kedua jenis surat).
      *
      * Nama method diubah ke Indonesia (`layakDihapus`) karena seluruh kosakata

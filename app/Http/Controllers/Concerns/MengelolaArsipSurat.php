@@ -17,11 +17,11 @@ use Illuminate\View\View;
 /**
  * Bagian arsip surat yang IDENTIK untuk surat masuk dan surat keluar.
  *
- * Kenapa digabung sekarang: Fase 6 (9 Okt 2026) menemukan bug yang hanya mungkin
+ * Kenapa digabung: duplikasi menemukan bug yang hanya mungkin
  * ada karena duplikasi — `updateStatusArsip()` ditulis dua kali dan KEDUANYA
  * salah memilih kunci flash (`status`, tidak dirender layout), jadi "Nyahkan"
  * terasa mati di dua layar sekaligus. Aturan yang sama sudah dipakai di project
- * ini untuk filter daftar (L-14), partial cascade JS (H6), dan kop PDF: kalau
+ * ini untuk filter daftar, partial cascade JS, dan kop PDF: kalau
  * dua salinan boleh berbeda, suatu hari mereka pasti berbeda.
  *
  * Yang SENGAJA ditinggal di controller adalah hal yang memang berbeda dan yang
@@ -81,8 +81,8 @@ trait MengelolaArsipSurat
     }
 
     /**
-     * "Nyahkan" / "Aktifkan kembali" (L-19, E8+E9) — satu tempat untuk kunci
-     * flash supaya kesalahan 'status' seperti Fase 6 tidak bisa terulang dua kali.
+     * "Nyahkan" / "Aktifkan kembali" — satu tempat untuk kunci flash, supaya
+     * kesalahan kunci 'status' (tidak dirender layout) tidak bisa terulang dua kali.
      */
     protected function ubahStatusArsip(
         UpdateStatusArsipRequest $request,
@@ -100,7 +100,7 @@ trait MengelolaArsipSurat
     }
 
     /**
-     * Soft delete (L-05) oleh admin saja. Perintahnya sengaja TIDAK dibungkus
+     * Soft delete oleh admin saja. Perintahnya sengaja TIDAK dibungkus
      * catch(QueryException): soft delete hanyalah UPDATE `deleted_at`, FK restrict
      * tidak pernah tersentuh, jadi pesan "masih direferensikan" tidak mungkin
      * muncul dan justru menutupi kesalahan lain.

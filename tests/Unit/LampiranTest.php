@@ -8,7 +8,7 @@ use App\Models\SuratMasuk;
 use Tests\TestCase;
 
 /**
- * Aturan retensi 5 tahun (L-04/L-21). Sejak L-21 umur arsip untuk KEDUA jenis
+ * Aturan retensi 5 tahun. Umur arsip untuk KEDUA jenis
  * surat diukur dari `tanggal_surat` — sebelumnya surat masuk memakai
  * `tanggal_diterima`, sehingga satu aturan punya dua dasar hitung.
  */

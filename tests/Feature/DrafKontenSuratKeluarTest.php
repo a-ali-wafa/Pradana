@@ -10,9 +10,9 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 /**
- * L-16: halaman draf konten adalah satu-satunya jalan mengisi tabel
+ * Halaman draf konten adalah satu-satunya jalan mengisi tabel
  * draf_konten_surat_keluar. Tanpa itu cetak PDF selalu ditolak
- * (CetakSuratKeluarController::cetak), jadi tes ini menutup fitur inti F1.
+ * (CetakSuratKeluarController::cetak), jadi tes ini menutup jalur cetak surat.
  */
 class DrafKontenSuratKeluarTest extends TestCase
 {

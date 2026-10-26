@@ -11,7 +11,7 @@ use Symfony\Component\Process\Process;
 /**
  * `arsip:backup-db` — cadangkan database ke berkas SQL di luar `public/`.
  *
- * Kenapa perintah ini ada (P1 di docs/daftar-peningkatan.md, dikerjakan 10 Okt 2026):
+ * Kenapa perintah ini ada:
  * `arsip:sinkron-ke-drive` mengurus LAMPIRAN, tapi isi database (13 tabel: surat,
  * klasifikasi, log aktivitas, pemusnahan + Berita Acara) belum punya jalur cadangan
  * otomatis sama sekali — cuma catatan `mysqldump` manual di Lampiran A. Desakan
@@ -29,7 +29,7 @@ use Symfony\Component\Process\Process;
  *    ke argumen. Ada tes yang menuntut `--defaults-extra-file` muncul dan password
  *    tidak muncul di array argumen.
  * 2. **`--single-transaction`** supaya dump konsisten tanpa mengunci tabel: InnoDB
- *    (S2=a, MariaDB) mendukungnya, dan kantor tetap bisa input surat saat cron
+ *    (InnoDB di MariaDB) mendukungnya, dan kantor tetap bisa input surat saat cron
  *    jalan tengah malam. `--lock-tables` sengaja tidak dipakai — mengunci tabel
  *    tersibuk di jam kerja justru merusak pemakaian.
  * 3. **`--databases` wajib, `--routines`/`--events` bisa dimatikan**: tanpa
@@ -262,7 +262,7 @@ class BackupDatabaseCommand extends Command
         //   MariaDB : CREATE DATABASE /*!32312 IF NOT EXISTS*/ `pradana` /*!40100 ... */;
         //   MySQL 8 : CREATE DATABASE IF NOT EXISTS `pradana` /*!40100 ... */;
         // Pola lama di versi ini menuntut bentuk kedua dan MENOLAK dump sungguhan
-        // dari MariaDB 10.4 — tes dump nyata yang menangkapnya, 10 Okt 2026.
+        // dari MariaDB 10.4 — tes dump nyata yang menangkapnya.
         $pola = '/CREATE DATABASE\s+(?:\/\*!\d+\s+IF NOT EXISTS\s*\*\/|IF NOT EXISTS)\s+`'
             .preg_quote($database, '/').'`/';
 
@@ -380,7 +380,7 @@ class BackupDatabaseCommand extends Command
     private function componentError(string $driver, string $koneksi): void
     {
         $this->error("Perintah ini khusus MySQL/MariaDB, koneksi `{$koneksi}` memakai driver `{$driver}`.");
-        $this->line('  Cadangan database kantor dijalankan di server produksi (S2=a) — di laptop');
+        $this->line('  Cadangan database kantor dijalankan di server produksi — di laptop');
         $this->line('  pakai --connection=mysql_test_a untuk menguji jalur dump-nya.');
     }
 }

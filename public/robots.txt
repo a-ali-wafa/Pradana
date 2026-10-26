@@ -8,7 +8,7 @@
 # hanya larangan merayapi dan bisa tertimpa versi bawaan saat deploy.
 #
 # JANGAN tambah sitemap.xml — tidak ada yang boleh ditemukan dari luar.
-# Detail: AGENTS.md Bagian 2 (L-01) & Bagian 4.
+# Header X-Robots-Tag dipasang middleware `TandaiArsipPrivat` + App\Exceptions\Handler.
 
 User-agent: *
 Disallow: /

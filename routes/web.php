@@ -24,79 +24,32 @@ use Illuminate\Support\Facades\Route;
 |--------------------------------------------------------------------------
 | Web Routes — PRADANA
 |--------------------------------------------------------------------------
-| Catatan (31 Agu 2026), baca sebelum menambah route baru:
+| Yang perlu diketahui sebelum menambah route di sini:
 |
-| 1. Route Auth (login/logout) & manajemen user ("registrasi" oleh admin)
-|    ditambahkan 28 Agu 2026 — grup `guest` baru untuk login, digabung ke
-|    grup `auth` yang sudah ada untuk logout + `users.*`. "Register" =
-|    admin bikin user langsung (BUKAN self-register publik), sesuai A3
-|    [LOCKED, dikonfirmasi user 28 Agu 2026]. Belum ada view (`auth.login`,
-|    `users.index`, `users.create`). Detail lengkap: AGENTS.md 12.14.
-|
-| 2. Route Lampiran ditambahkan 31 Agu 2026 — `LampiranController` BENAR-BENAR
-|    BARU (sebelumnya cuma migration `lampiran` yang ada, controllernya belum
-|    pernah dibuat sama sekali — koreksi klaim lama, lihat AGENTS.md Bagian 3
-|    & 12.16). Upload nested di bawah surat induk (surat-masuk/{..}/lampiran,
-|    surat-keluar/{..}/lampiran); unduh langsung lewat {lampiran}. Struktur
-|    folder Drive (root env = Arsip_PRADANA, subfolder cuma level primer)
-|    SUDAH dikonfirmasi user (lihat 12.17, kode C6 [DEFAULT] Bagian 9).
-|    **Hapus lampiran BUKAN admin-langsung** — sejak 31 Agu 2026 lewat alur
-|    pengajuan (staf) + persetujuan (admin) di `PengajuanHapusLampiranController`,
-|    hanya untuk lampiran pada surat berumur >5 tahun (E1 [LOCKED]). Lihat
-|    AGENTS.md 12.17.
-|
-| 2b. Route Pengaturan Instansi ditambahkan 31 Agu 2026 (koreksi catatan #2 di
-|     atas yang sudah basi — controller & Form Request-nya sekarang sudah ada,
-|     $fillable model SUDAH cross-checked cocok 100%). Single-row settings →
-|     cuma edit()+update() lewat Route::singleton()->only(['edit','update']),
-|     TIDAK ada create/store/destroy. Logo disimpan lokal (disk `public`),
-|     BUKAN Google Drive — dikonfirmasi user 31 Agu 2026. Detail: AGENTS.md 12.18.
-|
-| 3. Route `surat-masuk` didaftarkan penuh (termasuk `show`) — status
-|    "disengketakan" di `SuratMasukController` SUDAH resolved 26 Agu 2026:
-|    dikonfirmasi user file lama memang stub kosong, CRUD lengkap baru
-|    dibuat di sesi ini. Lihat AGENTS.md Bagian 3 & 12.11.
-|
-| 4. Konvensi parameter route: URI kebab-case, wildcard snake_case
-|    (mis. `klasifikasi-primer` → {klasifikasi_primer}), otomatis dari
-|    Route::resource() — sesuai pola yang sudah dipakai di
-|    SuratMasukController/SuratKeluarController (lihat AGENTS.md 12.7).
-|
-| 5. Klasifikasi TIDAK punya route `show` (->except(['show'])) — halaman
-|    detail terpisah dianggap tidak perlu untuk tabel referensi sederhana
-|    ini; index sudah menampilkan list + relasi induknya. Kalau nanti
-|    dianggap perlu, tinggal hapus except-nya.
-|
-| 6. `users` resource cuma daftar `index`/`create`/`store` (->only(...))
-|    — belum ada edit/delete/ganti-PIN, di luar scope Auth sesi ini
-|    (lihat A4/A5 di AGENTS.md Bagian 10, belum diimplementasikan).
-|
-| 7. `dashboard` (28 Agu 2026): widget statistik dipilih bebas dari skema,
-|    BUKAN spesifikasi eksplisit user — gampang diubah. ⚠️ **Koreksi 1 Sep
-|    2026**: baris ini sebelumnya bilang relasi `Aktivitas::user()` "dipakai
-|    tanpa verifikasi" — itu sudah basi, relasi itu SUDAH dicek 28 Agu 2026
-|    (model `Aktivitas.php` diupload & `belongsTo(User::class)` terkonfirmasi
-|    tepat, lihat AGENTS_HISTORY.md 12.15). Belum ada view (`dashboard.index`).
-|
-| 8. Route `surat-keluar/{surat_keluar}/cetak` (baru, 1 Sep 2026) — generate
-|    PDF surat keluar via `CetakSuratKeluarController` (dompdf, sesuai F2
-|    [DEFAULT]). `auth` polos, bukan admin-only (mencetak bukan aksi
-|    destruktif). Detail: AGENTS.md 12.20.
-|
-| 9. Route `pencarian` (1 Sep 2026) — DIHAPUS 5 Okt 2026 atas permintaan user, karena
-|    tiap daftar surat masuk/keluar sudah punya kotak pencariannya sendiri. Isi
-|    `PencarianController` (menggali `ringkasan` + `isi_surat`, L-15) tidak dibuang:
-|    kemampuannya dipindah ke filter `cari` di `SuratMasukController::index()` dan
-|    `SuratKeluarController::index()`. Detail: AGENTS.md Bagian 3 langkah 8.
-|
-| 10. Route `instansi/logo` (baru, 5 Okt 2026) — melayani berkas logo dari disk
-|     `public` lewat `LogoInstansiController`, BEBAS login (harus tampil di halaman
-|     login). Ini pengganti `Storage::url()` yang bergantung symlink `public/storage`
-|     — symlink itu tidak ada di laptop dev dan tidak tentu bisa dibuat di shared
-|     hosting K1=a. Lihat catatan kelas controllernya.
-*/
+| 1. Tidak ada self-register. "Registrasi user" = admin membuat akun lewat
+|    `users.*`; login memakai email + PIN 8 digit. Semua halaman butuh login,
+|    kecuali `instansi/logo` (dipakai halaman login) dan keduanya tetap
+|    membawa header anti-index dari middleware `TandaiArsipPrivat`.
+| 2. URI kebab-case, wildcard snake_case ({klasifikasi_primer}) — mengikuti
+|    pola Route::resource() yang sudah dipakai controller surat.
+| 3. Klasifikasi tidak punya `show` (->except(['show'])): tabel referensi
+|    tiga tingkat cukup tampil bersama induknya di halaman daftar.
+| 4. `pengaturan-instansi` satu baris untuk satu kantor: hanya edit+update
+|    lewat Route::singleton()->only(['edit','update']); tidak ada
+|    create/store/destroy, dan logo disimpan di disk `public` lokal.
+| 5. Menghapus lampiran tidak lewat DELETE langsung: ada alur pengajuan (staf)
+|    -> persetujuan (admin) di `PengajuanHapusLampiranController`, dan hanya
+|    untuk surat berumur lebih dari 5 tahun (retensi 5 tahun seragam).
+| 6. Tidak ada route pencarian sendiri. Penggalian isi (`ringkasan`, `isi_surat`,
+|    isi hasil baca lampiran) hidup di filter `cari` pada `surat-masuk.index`
+|    dan `surat-keluar.index`, termasuk mode gabungan `?jenis=semua`.
+| 7. Yang mengubah struktur (klasifikasi, user, pengaturan instansi,
+|    pemusnahan, menyetujui/menolak pengajuan) berada di belakang middleware
+|    `admin`; yang cuma mencatat surat cukup di `auth` dan ditulis ke log
+|    aktivitas lewat observer.
+|*/
 
-// Logo kop instansi — harus bisa diminta halaman login (guest), lihat catatan #10.
+// Logo instansi: sengaja di luar grup auth supaya halaman login (guest) bisa memintanya.
 Route::get('instansi/logo', [LogoInstansiController::class, 'show'])->name('instansi.logo');
 
 Route::middleware('guest')->group(function () {
@@ -108,23 +61,23 @@ Route::middleware('auth')->group(function () {
     Route::post('logout', [AuthController::class, 'logout'])->name('logout');
     Route::get('dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
-    // Manajemen user — admin-only penuh (A3 [LOCKED], B1 [LOCKED #16], 1 Sep 2026)
+    // Manajemen user — admin-only penuh
     Route::resource('users', UserController::class)
         ->only(['index', 'create', 'store', 'destroy'])
         ->middleware('admin');
 
-    // Reset PIN oleh admin (L-12 / A4). Di luar resource di atas karena route
+    // Reset PIN oleh admin. Di luar resource di atas karena route
     // users.* admin-only, dan jalur "ganti PIN sendiri" tidak boleh admin-only.
     Route::patch('users/{user}/pin', [UserController::class, 'updatePin'])
         ->name('users.pin.update')
         ->middleware('admin');
 
-    // Ganti PIN milik sendiri (L-12 / A5) — semua role yang login. Sejak 4 Okt
+    // Ganti PIN milik sendiri — semua role yang login. Sejak 4 Okt
     // 2026 pop up dari menu "Akun" di topbar, jadi tidak ada halaman GET-nya lagi.
     Route::patch('profil/pin', [ProfilController::class, 'updatePin'])->name('profil.pin.update');
 
     // Klasifikasi: index() terbuka untuk semua role yang login;
-    // create/store/edit/update/destroy hanya admin (B1 [LOCKED #16], B3 [DEFAULT])
+    // create/store/edit/update/destroy hanya admin 
     Route::resource('klasifikasi-primer', KlasifikasiPrimerController::class)->only(['index']);
     Route::resource('klasifikasi-primer', KlasifikasiPrimerController::class)->except(['show', 'index'])->middleware('admin');
 
@@ -134,8 +87,8 @@ Route::middleware('auth')->group(function () {
     Route::resource('klasifikasi-tersier', KlasifikasiTersierController::class)->only(['index']);
     Route::resource('klasifikasi-tersier', KlasifikasiTersierController::class)->except(['show', 'index'])->middleware('admin');
 
-    // Pengaturan Instansi — admin-only penuh (B4 [DEFAULT], B1 [LOCKED #16], 1 Sep 2026)
-    // (catatan #2b, 31 Agu 2026, lihat AGENTS.md 12.18)
+    // Pengaturan Instansi — admin-only penuh
+    // Lihat catatan #4 di atas: satu baris untuk satu kantor, hanya edit+update
     Route::singleton('pengaturan-instansi', PengaturanInstansiController::class)
         ->only(['edit', 'update'])
         ->middleware('admin');
@@ -143,20 +96,20 @@ Route::middleware('auth')->group(function () {
     Route::resource('surat-masuk', SuratMasukController::class);
     Route::resource('surat-keluar', SuratKeluarController::class);
 
-    // Aktif/inaktif status arsip (L-04: sistem hanya menampilkan daftar surat
+    // Aktif/inaktif status arsip (sistem hanya menampilkan daftar surat
     // lewat retensi, keputusan menonaktifkan tetap di tangan user).
     Route::patch('surat-masuk/{surat_masuk}/status-arsip', [SuratMasukController::class, 'updateStatusArsip'])
         ->name('surat-masuk.status-arsip');
     Route::patch('surat-keluar/{surat_keluar}/status-arsip', [SuratKeluarController::class, 'updateStatusArsip'])
         ->name('surat-keluar.status-arsip');
 
-    // Simpan/validasi hasil baca otomatis isi lampiran (5 Okt 2026). Semua role
-    // yang login boleh (L-08); endpoint terpisah karena UpdateSuratMasukRequest
+    // Simpan/validasi hasil baca otomatis isi lampiran. Semua role
+    // yang login boleh; endpoint terpisah karena UpdateSuratMasukRequest
     // memvalidasi seluruh field surat, bukan satu kolom teks.
     Route::patch('surat-masuk/{surat_masuk}/isi', [SuratMasukController::class, 'updateIsi'])
         ->name('surat-masuk.isi.update');
 
-    // Pulihkan dari tempat sampah — admin only (L-05; tombol "Nyahkan" = soft delete)
+    // Pulihkan dari tempat sampah — admin only (tombol "Nyahkan" = soft delete)
     Route::patch('surat-masuk/{surat_masuk}/pulihkan', [SuratMasukController::class, 'restore'])
         ->name('surat-masuk.restore')
         ->middleware('admin');
@@ -164,33 +117,32 @@ Route::middleware('auth')->group(function () {
         ->name('surat-keluar.restore')
         ->middleware('admin');
 
-    // Cetak PDF surat keluar (baru, 1 Sep 2026, lihat catatan #8 di atas & AGENTS.md 12.20)
+    // Cetak PDF surat keluar — bukan aksi destruktif, jadi `auth` saja
     Route::get('surat-keluar/{surat_keluar}/cetak', [CetakSuratKeluarController::class, 'cetak'])
         ->name('surat-keluar.cetak');
 
-    // Draf konten surat keluar (L-16, baru 4 Okt 2026) — tanpa halaman ini tabel
+    // Draf konten surat keluar — tanpa halaman ini tabel
     // draf_konten_surat_keluar tidak pernah terisi, dan cetak PDF selalu menolak.
     Route::get('surat-keluar/{surat_keluar}/draf', [DrafKontenSuratKeluarController::class, 'edit'])
         ->name('surat-keluar.draf.edit');
     Route::put('surat-keluar/{surat_keluar}/draf', [DrafKontenSuratKeluarController::class, 'update'])
         ->name('surat-keluar.draf.update');
 
-    // Pencarian arsip global — HALAMAN /pencarian DIHAPUS 5 Okt 2026 (catatan #9 di
-    // atas). Kemampuannya menggali isi surat (L-15) sekarang hidup di filter `cari`
-    // pada surat-masuk.index & surat-keluar.index.
+    // Tidak ada halaman /pencarian sendiri (lihat catatan #6 di atas): penggalian isi
+    // surat hidup di filter `cari` pada surat-masuk.index & surat-keluar.index.
 
-    // Log aktivitas — read-only, admin only (L-22 / P3)
+    // Log aktivitas — read-only, khusus admin
     Route::get('aktivitas', [AktivitasController::class, 'index'])->name('aktivitas.index');
     // Rekap CSV untuk audit: kerangka filter yang sama dengan layar di atas
     // (lihat AktivitasController::terapkanFilter()), jadi angka layar = isi berkas.
     Route::get('aktivitas/rekap', [AktivitasController::class, 'rekap'])->name('aktivitas.rekap');
 
-    // Laporan & Buku Agenda (I1=b + I2=b) — semua role yang login
+    // Laporan & Buku Agenda — semua role yang login
     Route::get('laporan', [LaporanController::class, 'index'])->name('laporan.index');
     Route::get('laporan/rekap', [LaporanController::class, 'rekap'])->name('laporan.rekap');
     Route::get('laporan/agenda', [LaporanController::class, 'agenda'])->name('laporan.agenda');
 
-    // Lampiran (baru, 31 Agu 2026) — lihat catatan #2 di atas & AGENTS.md 12.16/12.17.
+    // Lampiran — nested di bawah surat induk (lihat catatan #5)
     Route::post('surat-masuk/{surat_masuk}/lampiran', [LampiranController::class, 'storeForSuratMasuk'])
         ->name('surat-masuk.lampiran.store');
     Route::post('surat-keluar/{surat_keluar}/lampiran', [LampiranController::class, 'storeForSuratKeluar'])
@@ -198,9 +150,9 @@ Route::middleware('auth')->group(function () {
     Route::get('lampiran/{lampiran}/unduh', [LampiranController::class, 'download'])
         ->name('lampiran.download');
 
-    // Pengajuan hapus lampiran (baru, 31 Agu 2026, lihat AGENTS.md 12.17) —
+    // Pengajuan hapus lampiran (lihat catatan #5 di atas) —
     // store() terbuka untuk semua role yang login (siapa saja boleh ajukan);
-    // index/setujui/tolak admin-only (B1 [LOCKED #16])
+    // index/setujui/tolak admin-only 
     Route::post('lampiran/{lampiran}/pengajuan-hapus', [PengajuanHapusLampiranController::class, 'store'])
         ->name('lampiran.pengajuan-hapus.store');
     Route::get('pengajuan-hapus-lampiran', [PengajuanHapusLampiranController::class, 'index'])
@@ -213,7 +165,7 @@ Route::middleware('auth')->group(function () {
         ->name('pengajuan-hapus-lampiran.tolak')
         ->middleware('admin');
 
-    // Pemusnahan arsip SURAT + Berita Acara (L-06 / E3, baru 4 Okt 2026) —
+    // Pemusnahan arsip SURAT + Berita Acara — persetujuan hanya admin
     // pola sama seperti pengajuan hapus lampiran: semua role boleh mengajukan,
     // hanya admin yang menyetujui/menolak. setujui() = satu-satunya jalur yang
     // menghapus data sungguhan, jadi dipagari middleware admin di route DAN

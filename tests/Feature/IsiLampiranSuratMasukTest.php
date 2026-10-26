@@ -17,7 +17,7 @@ use Tests\TestCase;
 use ZipArchive;
 
 /**
- * Fitur "baca isi lampiran otomatis" surat masuk (permintaan user 5 Okt 2026):
+ * Fitur "baca isi lampiran otomatis" surat masuk:
  * berkas yang diunggah dicoba dibaca isinya, hasilnya ditampilkan sebagai DRAF
  * YANG BELUM VERIFIKASI untuk diperiksa manusia — tidak pernah menimpa ringkasan
  * tanpa aksi eksplisit, dan tidak pernah membuat upload gagal.
@@ -115,7 +115,7 @@ class IsiLampiranSuratMasukTest extends TestCase
 
     public function test_foto_tidak_dibaca_tapi_upload_tetap_sukses(): void
     {
-        // OCR butuh tesseract yang tidak ada di shared hosting kantor (K1=a),
+        // OCR butuh tesseract yang tidak ada di shared hosting kantor,
         // jadi berkas gambar harus tetap tersimpan DAN alasannya disampaikan.
         $response = $this->actingAs($this->petugas)->postJson(
             route('surat-masuk.lampiran.store', $this->surat),

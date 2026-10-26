@@ -16,16 +16,16 @@ use Illuminate\Support\Facades\DB;
 /**
  * Daftar "Semua arsip" — surat masuk dan keluar dalam satu urutan.
  *
- * Ini bukan halaman /pencarian yang dihapus 5 Okt 2026, dan SENGAJA tidak punya
+ * Ini bukan halaman pencarian sendiri, dan SENGAJA tidak punya
  * route sendiri: ia hidup sebagai tab `?jenis=semua` di dalam kedua halaman
  * daftar yang sudah ada, jadi satu kotak cari per daftar tetap utuh. Yang
- * dikembalikan cuma urutan gabungan; filter dan penggalian isi (L-15) dikerjakan
+ * dikembalikan cuma urutan gabungan; filter dan penggalian isi dikerjakan
  * oleh FilterArsip + scopeCari, sama persis seperti mode per-jenis.
  *
  * Kenapa UNION dan bukan dua `paginate()` yang digabung di PHP: hasilnya dari
  * dua tabel, jadi pagination tidak bisa benar kalau masing-masing di-paginate
  * sendiri — halaman 2 akan berisi 20 surat masuk + 20 surat keluar, bukan 20
- * teratas dari gabungan (kesalahan yang sama seperti `limit(50)` lama, H7).
+ * teratas dari gabungan (kesalahan yang sama seperti `limit(50)` lama).
  * Kerangka UNION hanya membaca (id, jenis, tanggal, skor); model + relasinya
  * baru dimuat untuk 20 baris di halaman itu saja.
  */

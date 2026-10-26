@@ -5,7 +5,7 @@
  *
  * Kenapa: `all.min.css` (99,6 KB) mendefinisikan 1.856 ikon, sedangkan aplikasi
  * ini memakai <80. CSS itu blocking dan diminta di setiap halaman, jadi memangkasnya
- * adalah penghematan byte paling murah yang ada (docs/daftar-peningkatan.md 1.4#17,
+ * adalah penghematan byte paling murah yang ada (tercatat 12 Okt:
  * terukur 12 Okt: 99,6 KB -> 19,3 KB). Skrip ini juga membuat subset FONT-nya;
  * lihat tahap dua di bawah.
  *

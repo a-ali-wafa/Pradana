@@ -1,7 +1,7 @@
 {{--
     Kop surat untuk SEMUA keluaran PDF (surat keluar, Berita Acara Pemusnahan,
-    Buku Agenda) — dibuat 5 Okt 2026 saat kop diseragamkan ke tata naskah dinas
-    desa (Permendagri 1/2023). Dulu ketiga template menulis kop masing-masing,
+    Buku Agenda) — dipakai sejak kop diseragamkan ke tata naskah dinas
+    desa (Permendagri 1/2023). Sebelumnya ketiga template menulis kop masing-masing,
     akibatnya kop Buku Agenda beda dua baris dengan kop surat resmi kantor.
 
     Variabel yang dibaca:

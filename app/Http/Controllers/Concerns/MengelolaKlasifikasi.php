@@ -11,8 +11,8 @@ use Illuminate\View\View;
 /**
  * Bagian CRUD klasifikasi bertingkat yang IDENTIK untuk primer, sekunder, dan
  * tersier (tiga controller, 260 baris, dulu tiga salinan yang sudah mulai
- * melenceng bentuk — lihat pola yang sama pada parsial cascade JS [H6] dan
- * filter daftar [L-14]).
+ * melenceng bentuk — pola yang sama juga ada pada parsial cascade JS dan pada
+ * kotak filter daftar surat.
  *
  * Yang disengaja TIDAK masuk ke trait: kelas modelnya (`KlasifikasiPrimer::create()`
  * dsb. tetap di controller, karena `class-string<TModel>` membuat Larastan kehilangan
@@ -21,13 +21,13 @@ use Illuminate\View\View;
  * menghasilkan helper yang penuh parameter dan tidak menghapus apa pun.
  *
  * Yang paling berharga untuk disatukan justru `hapusKlasifikasi()`: `catch`
- * QueryException dari FK restrict + pesan ramah + kunci flash. Fase 6 membuktikan
- * bahwa kunci flash yang disalin tangan bisa salah dua kali sekaligus.
+ * QueryException dari FK restrict + pesan ramah + kunci flash. Kunci flash yang
+ * disalin tangan bisa salah dua kali sekaligus di dua berkas yang berbeda.
  */
 trait MengelolaKlasifikasi
 {
     /**
-     * Daftar satu tingkat klasifikasi, urut kode, 20 per halaman (H2).
+     * Daftar satu tingkat klasifikasi, urut kode, 20 per halaman.
      *
      * @template TModel of Model
      *

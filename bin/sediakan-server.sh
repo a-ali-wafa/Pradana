@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #
-# Provisi server untuk PRADANA di Ubuntu 24.04 (dipakai untuk Oracle Cloud Always Free,
-# tapi tidak terikat ke Oracle — VM mana pun dengan Ubuntu 24.04 bisa).
+# Provisi server untuk PRADANA di Ubuntu 24.04. Tidak terikat ke satu penyedia: VM
+# mana pun dengan Ubuntu 24.04 bisa dipakai.
 #
 # Kenapa skrip terpisah dari bin/deploy.sh: deploy.sh memasang APLIKASI (composer,
 # migrasi, cache) dan sengaja menolak jalan kalau servernya belum benar. Skrip ini
@@ -10,8 +10,15 @@
 #
 # Jujur tentang statusnya: skrip ini TIDAK PERNAH dijalankan di Linux. Yang bisa diuji
 # di mesin pengembang sudah (sintaks bash, bentuk konfigurasi, urutan paket), sisanya
-# baru terbukti saat dijalankan sekali di VM — dan checklist pembuktiannya ada di
-# docs/kesiapan-deploy.md bagian 7. Jangan mengutip file ini sebagai "sudah teruji".
+# baru terbukti saat dijalankan sekali di VM. Jangan menyebutnya "sudah teruji" sebelum
+# lima hal berikut benar-benar dilihat di server:
+#   - `curl -I http://<IP>/login` menjawab 200;
+#   - `curl -s http://<IP>/.env` kosong atau 404 — satu-satunya bukti docroot benar;
+#   - unggahan ±20 MB lewat UI berhasil (batas UploadMaxFilesize yang berlaku adalah
+#     nilai FPM, dan nilai CLI di terminal bisa berbeda);
+#   - `arsip:backup-db` jalan sebagai www-data dan dump-nya benar-benar bisa dipulihkan;
+#   - `/var/log/pradana-cron.log` bertambah — membuktikan `schedule:run` dijalankan,
+#     bukan hanya dipasang.
 #
 # Cara pakai (lewat SSH sebagai user biasa, dengan sudo):
 #   sudo bash bin/sediakan-server.sh --cek      # lihat apa yang akan dilakukan
@@ -21,8 +28,8 @@
 #   - Tidak menulis `.env`. Kredensial dan APP_URL adalah keputusan manusia, dan skrip
 #     yang mengarang `.env` akan menghasilkan server yang "kelihatan" jalan dengan isi
 #     yang salah (APP_KEY daur ulang, zona waktu bawaan, DB root).
-#   - Tidak menghapus apa pun. Kalau `$APP_DIR` sudah berisi — dan urutan di
-#     docs/deploy-vm.md memang `git clone` dulu, baru skrip ini — isinya dibiarkan,
+#   - Tidak menghapus apa pun. Urutan yang dipakai: `git clone` dulu, baru skrip ini —
+#     jadi kalau `$APP_DIR` sudah berisi hasil checkout, isinya dibiarkan,
 #     hanya kepemilikannya disetel ke `www-data:www-data`.
 #   - Tidak menghapus dump/arsip yang sudah ada di `storage/app/private/`.
 
@@ -92,7 +99,7 @@ tulis() {
 }
 
 # ── 1. Jangan menimpa kerja orang ───────────────────────────────────────────────────
-# Urutan yang dipakai docs/deploy-vm.md: `git clone` DULU, baru skrip ini — karena
+# Urutan yang dipakai: `git clone` DULU, baru skrip ini — karena
 # kepemilikan folder disetel di langkah 4/6, kloning belakangan akan meninggalkan berkas
 # milik user SSH dan Apache (www-data) tidak bisa menulis `storage/`. Jadi folder yang
 # berisi HASIL CHECKOUT PRADANA bukan alasan untuk berhenti; yang harus ditolak adalah
@@ -138,7 +145,7 @@ DEBIAN_FRONTEND=noninteractive jalan apt-get install -y -qq \
 # engine-nya sengaja SAMA dengan mesin pengembang (MariaDB, bukan MySQL 8): SQL yang
 # dipakai aplikasi ini (`LIKE ? ESCAPE '!'`, `CASE` di ORDER BY, dan perilaku
 # restrictOnDelete yang di MariaDB jadi NO ACTION) sudah diuji di MariaDB sungguhan,
-# bukan di SQLite saja. Rinciannya ada di docs/kesiapan-deploy.md H8.
+# bukan di SQLite saja — itu alasan engine-nya tidak boleh ditukar diam-diam.
 echo "-- 3/6 MariaDB"
 DEBIAN_FRONTEND=noninteractive jalan apt-get install -y -qq mariadb-server mariadb-client
 jalan systemctl enable --now mariadb
@@ -186,7 +193,7 @@ echo "-- 4/6 Apache"
 DEBIAN_FRONTEND=noninteractive jalan apt-get install -y -qq apache2
 # Modul ini yang dipakai public/.htaccess. `filter` bukan hiasan: AddOutputFilterByType
 # dimiliki mod_filter, dan tanpa modul itu blok kompresi membuat SELURUH situs 500
-# (terjadi sungguhan 12 Okt; lihat docs/deploy.md).
+# (terjadi sungguhan: seluruh situs menjawab 500).
 jalan a2enmod rewrite filter deflate expires headers mime dir
 # Satu penulis, satu pemilik. Semua yang ditulis PHP — `.env`, `storage/logs`,
 # `storage/framework/{views,sessions}`, lampiran kantor di `storage/app/private/arsip`,
@@ -239,7 +246,7 @@ fi
 # ── 6. php.ini: batas unggah + zona waktu + OPcache ─────────────────────────────────
 # Dua file, bukan satu: mod_php membaca `.../apache2/php.ini`, `php artisan` membaca
 # `.../cli/php.ini`. Mengedit yang CLI saja membuat unggah tetap ditolak di web — dan
-# gejalanya "tombol Unggah diam" (L-13: lampiran sampai 25 MB, jadi 26 M+ dua-duanya).
+# gejalanya "tombol Unggah diam" (lampiran sampai 25 MB, jadi 26 M+ dua-duanya).
 echo "-- 5/6 php.ini ($PHP_VERSI)"
 for SAPI in apache2 cli; do
     INI="/etc/php/${PHP_VERSI}/${SAPI}/php.ini"
@@ -341,7 +348,7 @@ echo
 echo "Server siap. Yang BELUM (dan memang tidak boleh dikerjakan skrip ini):"
 echo
 echo "  1. Kodenya harus ADA di $APP_DIR. Dua cara yang benar:"
-echo "       a) SEBELUM skrip ini (urutan di docs/deploy-vm.md bagian 4): kloning ke folder"
+echo "       a) SEBELUM skrip ini (urutan yang disarankan): kloning ke folder"
 echo "          kosong sebagai user SSH, lalu skrip menyetel kepemilikannya ke www-data;"
 echo "       b) SESUDAH skrip ini: kloning sebagai user PHP, jadi pemiliknya langsung benar:"
 echo "            sudo -u www-data git clone https://github.com/a-ali-wafa/Pradana.git $APP_DIR"
@@ -372,7 +379,7 @@ echo "       sudo -u www-data env HOME=/tmp bash -c 'cd $APP_DIR && php artisan 
 echo "     PIN-nya 8 digit dan diminta di terminal. Kalau ini VM demo, jangan pakai"
 echo "     PIN yang tertulis di dokumen (nilai dev) karena VM ini punya IP publik."
 echo
-echo "  5. Bukti, bukan perasaan — jalankan checklist di docs/kesiapan-deploy.md bagian 7."
+echo "  5. Bukti, bukan perasaan — lima hal di kepala file ini harus terlihat nyata."
 echo "     Termasuk: buka http://<IP>/.env dan harus 404, lalu"
 echo "       sudo -u www-data env HOME=/tmp bash -c 'cd $APP_DIR && php artisan arsip:backup-db'"
 echo "     dan uji pulih sekali SEBELUM ada data yang disayangi."

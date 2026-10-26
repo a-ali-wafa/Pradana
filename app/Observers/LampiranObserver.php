@@ -6,10 +6,10 @@ use App\Models\Lampiran;
 use App\Traits\LogsAktivitas;
 
 /**
- * Dibuat 1 Sep 2026, sekarang SUDAH diregistrasikan di AppServiceProvider::boot()
- * (lihat `AGENTS.md`). Aksi dicatat lewat trait LogsAktivitas → LogAktivitasEvent.
+ * Diregistrasikan di AppServiceProvider::boot(). Aksi dicatat lewat trait
+ * LogsAktivitas → LogAktivitasEvent.
  * Sengaja TIDAK ada updated() — lampiran (file) tidak diedit in-place di alur
- * yang sudah ada, cuma diunggah baru atau dihapus (lihat LampiranController, 12.16).
+ * yang sudah ada, cuma diunggah baru atau dihapus (lihat LampiranController).
  */
 class LampiranObserver
 {

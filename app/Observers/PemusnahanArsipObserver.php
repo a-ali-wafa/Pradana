@@ -6,9 +6,9 @@ use App\Models\PemusnahanArsip;
 use App\Traits\LogsAktivitas;
 
 /**
- * BARU — 4 Okt 2026 (L-06 / E3).
+ * Pemusnahan arsip: pengajuan → persetujuan admin → eksekusi + Berita Acara.
  *
- * Log pemusnahan JANGAN sampai dihapus oleh perintah retensi log (L-22):
+ * Log pemusnahan JANGAN sampai dihapus oleh perintah retensi log:
  * Berita Acara bisa dicetak bertahun-tahun kemudian, dan jejak "siapa yang
  * menyetujui pemusnahan ini" adalah bagian dari pembuktiannya.
  */

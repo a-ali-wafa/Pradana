@@ -7,10 +7,10 @@ use App\Traits\LogsAktivitas;
 use Illuminate\Support\Facades\Cache;
 
 /**
- * Dibuat 1 Sep 2026, sekarang SUDAH diregistrasikan di AppServiceProvider::boot()
- * (lihat `AGENTS.md`). Aksi dicatat lewat trait LogsAktivitas → LogAktivitasEvent.
+ * Diregistrasikan di AppServiceProvider::boot(). Aksi dicatat lewat trait
+ * LogsAktivitas → LogAktivitasEvent.
  * Cuma updated() — pengaturan_instansi single row, tidak ada create/delete
- * lewat aplikasi (sesuai desain edit-only PengaturanInstansiController, 12.18).
+ * lewat aplikasi (desain PengaturanInstansiController memang edit-only).
  */
 class PengaturanInstansiObserver
 {

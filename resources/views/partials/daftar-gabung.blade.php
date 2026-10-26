@@ -5,7 +5,7 @@
      * Isinya model SuratMasuk atau SuratKeluar, dibedakan lewat atribut
      * `jenis_arsip` yang dipasang DaftarArsipGabungan::muat(). Baris ini sengaja
      * ringkas: tidak ada tombol Nyahkan/Reset PIN di daftar gabungan, karena
-     * aksi destruktif butuh konteks halaman suratnya sendiri (L-05). Yang mau
+     * aksi destruktif butuh konteks halaman suratnya sendiri. Yang mau
      * menghapus/memusnahkan masuk lewat "Detail".
      *
      * `CariArsip::sorot()` men-escape teks LEBIH DULU baru menyisipkan <mark>,

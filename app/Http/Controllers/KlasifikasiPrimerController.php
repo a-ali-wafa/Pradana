@@ -12,18 +12,16 @@ use Illuminate\View\View;
 /**
  * CRUD Klasifikasi Primer.
  *
- * Ditulis ulang 1 Sep 2026 — versi sebelumnya (26 Agu 2026, lihat AGENTS_HISTORY.md 12.11)
- * ternyata tidak pernah masuk ke project sebenarnya: routes/web.php sudah mendaftarkan
- * class ini, tapi file controllernya sendiri hilang (kasus sama seperti 12.9). Spek di
- * bawah mengikuti persis hasil cross-check 26 Agu 2026 terhadap KlasifikasiPrimer.php asli:
+ * Spek di
+ * bawah mengikuti persis skema `klasifikasi_primer` dan `KlasifikasiPrimer` aslinya:
  * - $fillable: ['kode', 'nama']
  * - Relasi: sekunder() -> hasMany(KlasifikasiSekunder::class)
  *
- * - Route `show` sengaja tidak didaftarkan (->except(['show'])), lihat 12.11.
- * - Admin-only untuk semua mutasi (B3 [DEFAULT]) — ditangani oleh middleware('admin')
- *   yang didaftarkan di routes/web.php (retrofit B1, 1 Sep 2026).
+ * - Route `show` sengaja tidak didaftarkan (->except(['show'])).
+ * - Admin-only untuk semua mutasi — ditangani oleh middleware('admin')
+ * yang didaftarkan di routes/web.php.
  * - Daftar, redirect+flash, dan hapus-FK-restrict pindah ke trait
- *   `MengelolaKlasifikasi` (9 Okt 2026) supaya tidak bisa lagi melenceng bertiga;
+ * `MengelolaKlasifikasi` supaya tidak bisa lagi melenceng bertiga;
  *   yang tertinggal di sini hanya yang khas primer: jumlah sekunder per kode.
  */
 class KlasifikasiPrimerController extends Controller

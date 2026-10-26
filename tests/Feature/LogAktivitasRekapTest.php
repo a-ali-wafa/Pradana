@@ -9,8 +9,8 @@ use Illuminate\Support\Carbon;
 use Tests\TestCase;
 
 /**
- * Rekap CSV log aktivitas (`docs/daftar-peningkatan.md` §2 butir 5, P2 — dikerjakan
- * 10 Okt 2026) untuk keperluan audit.
+ * Rekap CSV log aktivitas untuk keperluan audit — dibuat bareng jadwal
+ * cadangan database, karena dua-duanya jawab pertanyaan "bisa dibuktikan tidak?".
  *
  * Yang dijamin di sini bukan bentuk berkasnya saja, tapi SATU hal yang membuat
  * ekspor bisa dipercaya orang kantor: isi CSV = apa yang sedang ditampilkan layar.

@@ -75,7 +75,7 @@ class BackupDatabaseMariaDbTest extends MariaDbHarness
         // mengeluarkan `CREATE DATABASE /*!32312 IF NOT EXISTS*/ \`db\`` dan MySQL 8
         // `CREATE DATABASE IF NOT EXISTS \`db\``. Asumsi lama ("coba cocokkan teks
         // MySQL") menolak dump sah hasil biner di laptop ini — itulah bug yang
-        // ditangkap tes nyata ini pada 10 Okt 2026.
+        // ditangkap tes nyata ini.
         $baris = array_values(array_filter(
             explode("\n", $isi),
             fn (string $s): bool => str_starts_with($s, 'CREATE DATABASE')

@@ -12,21 +12,21 @@ use Tests\TestCase;
 
 /**
  * Perilaku CRUD klasifikasi bertingkat SETELAH ketiganya berbagi trait
- * `MengelolaKlasifikasi` (9 Okt 2026).
+ * `MengelolaKlasifikasi`.
  *
  * Kenapa tes ini ada sekarang: sebelum digabung, tidak ada satu pun tes yang
  * menyentuh endpoint klasifikasi (dicari `route('klasifikasi-` di tests/ → nol
  * hasil). Refactor tanpa tes adalah cara paling mudah untuk memindahkan bug,
  * jadi tingkah laku yang barusan disatukan dikunci lebih dulu:
  *
- * 1. daftar urut `kode` + pagination 20 (H2), untuk ketiga tingkat;
+ * 1. daftar urut `kode` + pagination 20, untuk ketiga tingkat;
  * 2. `store`/`update`/`destroy` menulis flash pada kunci yang dirender layout
  *    (`success`) dan redirect ke index tingkat itu sendiri;
  * 3. `destroy` pada kode yang masih dipakai surat TIDAK menghapus apa pun dan
  *    memberi pesan ramah — ini bukti bahwa `catch (QueryException)` di trait
  *    bukan dead code (PHPStan menyangka begitu; SQLite dengan
  *    `foreign_key_constraints=true` membuktikan sebaliknya);
- * 4. staf boleh membaca daftar, tapi mutasi tetap admin-only (B3 [LOCKED]).
+ * 4. staf boleh membaca daftar, tapi mutasi tetap admin-only.
  */
 class KlasifikasiCrudTest extends TestCase
 {

@@ -3,7 +3,7 @@
  *
  * Cara jalan: `node bin/uji-pradana-arsip.js` (butuh Node di mesin pengembang saja —
  * ini ALAT UJI, bukan bagian aplikasi: tidak ada `package.json`, tidak ada dependency,
- * tidak ada langkah build saat deploy, jadi keputusan X1=a tetap utuh. GitHub Actions
+ * tidak ada langkah build saat deploy. GitHub Actions
  * menjalankan ini sebagai langkah terakhir karena runner-nya memang punya Node.)
  *
  * Kenapa ada: PHPUnit sudah membuktikan markup-nya benar (form + `data-konfirmasi`),

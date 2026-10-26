@@ -7,7 +7,7 @@
     @page { margin: 2cm 1.5cm 2cm 1.5cm; }
     body { font-family: 'Times New Roman', Times, serif; font-size: 11pt; color: #000; }
     /* Kop tidak didefinisikan di sini — ikut partial partials/kop-pdf.blade.php
-       supaya identik dengan surat keluar dan Berita Acara (5 Okt 2026). */
+       supaya identik dengan surat keluar dan Berita Acara. */
     .judul { text-align: center; margin-bottom: 12px; }
     .judul h2 { font-size: 13pt; font-weight: bold; text-transform: uppercase; margin: 0; }
     .judul p { font-size: 10pt; margin: 3px 0 0; }

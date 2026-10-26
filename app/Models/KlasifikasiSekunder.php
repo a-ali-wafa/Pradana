@@ -10,7 +10,7 @@ class KlasifikasiSekunder extends Model
 {
     protected $table = 'klasifikasi_sekunder';
 
-    /** Lihat alasan di KlasifikasiPrimer: `$with = ['tersier']` dibuang 9 Okt 2026. */
+    /** Lihat alasan di KlasifikasiPrimer: `$with = ['tersier']` juga dibuang. */
     protected $fillable = ['klasifikasi_primer_id', 'kode', 'nama'];
 
     /** @return BelongsTo<KlasifikasiPrimer, $this> */

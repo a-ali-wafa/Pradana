@@ -13,15 +13,14 @@ use Illuminate\View\View;
 /**
  * CRUD Klasifikasi Tersier.
  *
- * Ditulis ulang 1 Sep 2026 dari spek yang sudah cross-checked 26 Agu 2026 terhadap
- * KlasifikasiTersier.php asli (lihat AGENTS_HISTORY.md 12.11):
+ * Mengikuti skema `klasifikasi_tersier` dan model `KlasifikasiTersier` aslinya:
  * - $fillable: ['klasifikasi_sekunder_id', 'kode', 'nama']
  * - Relasi: sekunder() -> belongsTo(KlasifikasiSekunder::class) -- BUKAN klasifikasiSekunder().
  * - unique komposit per parent: (klasifikasi_sekunder_id, kode).
  *
- * Route `show` tidak didaftarkan; admin-only mutasi (B3 [DEFAULT]) ditangani oleh
- * middleware('admin') di routes/web.php (retrofit B1, 1 Sep 2026). Daftar, redirect,
- * dan hapus-FK-restrict lewat trait `MengelolaKlasifikasi` (9 Okt 2026).
+ * Route `show` tidak didaftarkan; mutasi khusus admin ditangani oleh
+ * middleware('admin') di routes/web.php. Daftar, redirect,
+ * dan hapus-FK-restrict lewat trait `MengelolaKlasifikasi`.
  */
 class KlasifikasiTersierController extends Controller
 {

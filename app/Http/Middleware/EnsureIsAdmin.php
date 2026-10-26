@@ -8,18 +8,17 @@ use Illuminate\Support\Facades\Auth;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
- * Gerbang "hanya admin" untuk route admin (L-07 / lama B1 [LOCKED #16]).
+ * Gerbang "hanya admin" untuk route admin.
  *
  * Isinya sengaja cuma satu pengecekan biner `User::isAdmin()`, BUKAN matriks
- * per-modul×per-role: user memutuskan (3 Okt 2026) bahwa role dipangkas jadi
- * 2 tingkat — `admin` (= kepala, berhak nyata) dan `pegawai`. Karena itu juga
- * tidak ada Policy per-model: semuanya akan cuma mengulang satu cek yang sama
- * sebelas kali. `app/Policies/LampiranPolicy.php` (scaffold kosong + aturan
- * kepemilikan yang ternyata bertentangan dengan L-09/L-10) sudah dihapus 4 Okt 2026.
+ * per-modul×per-role: role dipangkas jadi 2 tingkat — `admin` (= kepala,
+ * berhak nyata) dan `pegawai`. Karena itu juga tidak ada Policy per-model:
+ * semuanya akan cuma mengulang satu cek yang sama sebelas kali.
+ * `app/Policies/LampiranPolicy.php` (scaffold kosong + aturan kepemilikan yang
+ * melarang staf membuka arsip kantor) sudah dihapus.
  *
  * Dipakai di `routes/web.php` sebagai alias `admin` (didaftarkan di
- * `app/Http/Kernel.php`, lihat catatan K3 AGENTS.md — project ini masih
- * pakai struktur bootstrap lama).
+ * `app/Http/Kernel.php`, karena project ini masih pakai struktur bootstrap lama).
  */
 class EnsureIsAdmin
 {

@@ -6,8 +6,8 @@ use App\Models\User;
 use App\Traits\LogsAktivitas;
 
 /**
- * Dibuat 1 Sep 2026, sekarang SUDAH diregistrasikan di AppServiceProvider::boot()
- * (lihat `AGENTS.md`). Aksi dicatat lewat trait LogsAktivitas → LogAktivitasEvent.
+ * Diregistrasikan di AppServiceProvider::boot(). Aksi dicatat lewat trait
+ * LogsAktivitas → LogAktivitasEvent.
  * `deleted()` di sini terpicu saat soft delete (users pakai SoftDeletes, 12.4) —
  * teks aksi disesuaikan supaya tidak menyiratkan data hilang permanen.
  */

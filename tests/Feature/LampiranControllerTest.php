@@ -11,13 +11,13 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 /**
- * Aturan akses berkas arsip (L-09 / L-10 / locked lama #9):
- * yang penting adalah "sudah login", BUKAN "milik siapa".
+ * Aturan akses berkas arsip: yang penting adalah "sudah login", BUKAN "milik
+ * siapa". Arsip kantor tidak punya sistem kepemilikan.
  *
  * Dua tes di file ini dulu mengunci perilaku yang berlawanan — staf lain diberi
- * 403 untuk file yang bukan miliknya. Perilaku itu bertentangan dengan keputusan
- * user ("tidak ada sistem kepemilikan, semua milik kantor") dan dulu lolos hanya
- * karena policy-nya memang begitu; sekarang diganti ke aturan yang benar.
+ * 403 untuk file yang bukan miliknya. Perilaku itu lolos hanya karena
+ * policy-nya memang begitu, dan bertentangan dengan cara kantor memakai
+ * aplikasinya; sekarang diganti ke aturan yang benar.
  * Yang tetap wajib: tamu (belum login) tidak boleh bisa mengunduh.
  */
 class LampiranControllerTest extends TestCase

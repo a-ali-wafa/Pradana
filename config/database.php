@@ -64,7 +64,7 @@ return [
         ],
 
         /*
-        | Connection khusus tes konkurensi penomoran surat (L-24/Q1). Dua nama
+        | Connection khusus tes konkurensi penomoran surat. Dua nama
         | karena satu tes butuh DUA koneksi terpisah ke database yang sama untuk
         | membuktikan lockForUpdate() benar-benar mengunci baris counter.
         | Pakai DB_TEST_DATABASE (default pradana_test) — jangan DB utama.

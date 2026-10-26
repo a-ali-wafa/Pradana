@@ -5,7 +5,7 @@
  * Semua yang di sini berlaku sama: JavaScript hanya MENAMBAH sesuatu ke halaman,
  * tidak pernah menjadi satu-satunya jalan untuk memakainya.
  *
- * Kenapa file ini ada (P0 di docs/daftar-peningkatan.md, 10 Okt 2026):
+ * Kenapa file ini ada:
  * sebelumnya setiap halaman menyalin `function pradanaConfirmHapus(url, pesan)`
  * TUJUH kali (arsip-aksi, 3 klasifikasi, 2 daftar surat, users). Bentuk lamanya
  * membuat tombol "Hapus" jadi `<button type="button" onclick="…">` yang
@@ -55,9 +55,9 @@
         var ya = teks(form, ATRIBUT.ya, 'Ya, lanjutkan');
         var tidak = teks(form, ATRIBUT.tidak, 'Batal');
 
-        // Guard yang sesungguhnya. Sebelumnya tidak ada, dan itu temuan #1 di
-        // daftar peningkatan: Swal undefined -> ReferenceError di dalam onclick
-        // -> tombol tampak mati tanpa pesan apa pun.
+        // Guard yang sesungguhnya. Sebelumnya tidak ada, dan akibatnya langsung:
+        // Swal undefined -> ReferenceError di dalam onclick -> tombol tampak mati
+        // tanpa pesan apa pun.
         if (typeof window.Swal === 'undefined' || typeof window.Swal.fire !== 'function') {
             var teksConfirm = judul + '\n\n' + pesan + (catatan ? '\n\n' + catatan : '');
 

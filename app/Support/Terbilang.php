@@ -12,7 +12,7 @@ namespace App\Support;
  *   huruf, bukan angka, di kantor desa/kelurahan.
  *
  * Sengaja ditulis sendiri, bukan dependency pihak ketiga: aturannya pendek,
- * stabil, dan tidak perlu ikut ter-update saat deploy ke shared hosting (K1=a).
+ * stabil, dan tidak perlu ikut ter-update saat deploy ke shared hosting.
  * Batas aman sampai miliar (kurang dari itu tidak ada di data kantor).
  */
 class Terbilang

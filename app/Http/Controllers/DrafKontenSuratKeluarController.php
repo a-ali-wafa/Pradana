@@ -9,11 +9,11 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
 
 /**
- * Isi konten surat keluar untuk generator PDF (keputusan L-16).
+ * Isi konten surat keluar untuk generator PDF.
  *
  * Sebelum controller ini ada, tidak ada satu pun tempat untuk mengisi tabel
  * `draf_konten_surat_keluar`, sedangkan CetakSuratKeluarController menolak
- * mencetak kalau drafnya kosong — fitur cetak PDF (F1, fitur inti versi lama)
+ * mencetak kalau drafnya kosong — padahal cetak PDF fitur inti
  * karena itu tidak bisa dipakai sama sekali.
  *
  * Satu surat = satu draf (relasi 1-1), jadi hanya edit/update, tanpa create/

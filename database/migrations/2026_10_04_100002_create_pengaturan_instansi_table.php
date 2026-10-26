@@ -5,11 +5,11 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * SQUASH S11. Tabelnya single-row (diedit lewat Route::singleton, B4/L-26).
+ * Satu baris untuk satu kantor (diedit lewat Route::singleton, hanya oleh admin).
  * `gdrive_root_folder_id` dibuang: folder root arsip dibaca dari `.env`
  * (`GOOGLE_DRIVE_ROOT_FOLDER_ID`), bukan dari database, dan kolomnya tidak
  * pernah ditulis `PengaturanInstansiController` (tidak ada di $fillable).
- * Logo disimpan di disk lokal (`logo_path`), bukan Drive (C7).
+ * Logo disimpan di disk lokal (`logo_path`), bukan Drive.
  */
 return new class extends Migration
 {

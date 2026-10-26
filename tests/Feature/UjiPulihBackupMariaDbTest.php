@@ -11,15 +11,15 @@ use Symfony\Component\Process\Process;
 use Tests\MariaDbHarness;
 
 /**
- * Uji pulih (X5): buktikan `arsip:backup-db` menghasilkan berkas yang BENAR-BENAR
+ * Uji pulih: buktikan `arsip:backup-db` menghasilkan berkas yang BENAR-BENAR
  * bisa membangun ulang database, bukan cuma berkas yang ukurannya kelihatan wajar.
  *
  * Kenapa kelas ini ada dan kenapa jalurnya dipotong jadi dua arah: seluruh project
  * ini belum pernah memulihkan satu pun cadangan. Cadangan yang tidak pernah
  * dicoba dipulihkan adalah asumsi — dan asumsi itu baru diuji pada hari datanya
- * hilang. Keputusan S7/X5 di AGENTS.md menyebut "tes restore wajib sebelum serah
- * terima"; tes ini yang membuatnya berarti, sekaligus jadi prosedur yang bisa
- * diulang petugas (dicatat di docs/manual-pemakaian.md Lampiran A.6).
+ * hilang. Manual pemakaian menuntut "tes restore wajib sebelum serah terima"
+ * (Lampiran A.6 `docs/manual-pemakaian.md`); tes ini yang membuatnya berarti,
+ * sekaligus jadi prosedur yang bisa diulang petugas.
  *
  * Yang dibuktikan:
  *  1. dump SUNGGUHAN dari command ini, nama skemanya diganti (prosedur pemulihan

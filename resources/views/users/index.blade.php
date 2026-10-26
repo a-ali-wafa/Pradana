@@ -53,7 +53,7 @@
                             </td>
                             <td class="text-secondary">{{ $user->email }}</td>
                             <td>
-                                {{-- L-07: 2 tingkat saja (admin = kepala, pegawai) --}}
+                                {{-- Peran hanya dua: admin = kepala, pegawai. --}}
                                 <span class="badge text-bg-{{ $user->isAdmin() ? 'danger' : 'secondary' }} rounded-pill px-3">
                                     {{ $user->labelRole() }}
                                 </span>
@@ -66,8 +66,9 @@
                                 @endif
                             </td>
                             <td class="text-center pe-4">
-                                {{-- L-12: reset PIN oleh admin (staf lupa PIN).
-                                    L-10: hapus = soft delete, admin tidak boleh hapus dirinya sendiri. --}}
+                                {{-- Reset PIN dilakukan admin kalau staf lupa PIN.
+                                   Menghapus user = soft delete, dan admin tidak boleh
+                                   menghapus dirinya sendiri. --}}
                                 <button type="button" class="btn btn-sm btn-outline-warning" title="Reset PIN"
                                         data-pengubah="#form-reset-pin-{{ $user->id }}" aria-expanded="false">
                                     <i class="fas fa-key"></i>
@@ -91,7 +92,7 @@
                                     bloknya baru disembunyikan OLEH public/js/pradana-arsip.js.
                                     Dengan bentuk lama, form reset PIN tidak bisa dibuka sama
                                     sekali saat JavaScript mati — padahal itu jalur pemulihan
-                                    kalau staf lupa PIN (L-12). --}}
+                                    kalau staf lupa PIN. --}}
                                 <div id="form-reset-pin-{{ $user->id }}" data-pradana-tertutup class="mt-2 text-start">
                                     <form method="POST" action="{{ route('users.pin.update', $user) }}" class="row g-1 align-items-end">
                                         @csrf @method('PATCH')

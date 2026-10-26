@@ -15,18 +15,16 @@ use Illuminate\Support\Facades\DB;
 /**
  * Dashboard statistik. Item roadmap Bagian 11 cuma bilang "dashboard
  * statistik" tanpa rincian widget — pilihan di bawah ini keputusan saya
- * berdasarkan skema yang tersedia (Bagian 5), BUKAN spesifikasi eksplisit
+ * berdasarkan skema yang tersedia, BUKAN spesifikasi eksplisit
  * dari user. Kalau mau widget lain/beda, gampang disesuaikan.
  *
- * Tidak ada pembatasan role: dashboard dibaca semua yang login (L-07 — dua
+ * Tidak ada pembatasan role: dashboard dibaca semua yang login (dua
  * tingkat, dan melihat statistik bukan aksi destruktif).
  *
- * Nama relasi yang dipakai (`primer`, `petugas`, `user`) SUDAH dikonfirmasi
- * benar terhadap model asli — lihat AGENTS_HISTORY.md 12.11/12.12/12.13/12.15.
- * `Aktivitas::user()` sempat jadi satu-satunya relasi belum terverifikasi
- * (ditebak `belongsTo(User::class)`, BUKAN `petugas()` seperti di
- * surat_masuk/surat_keluar) — dicek 28 Agu 2026 terhadap `Aktivitas.php`
- * asli, tebakan tepat.
+ * Relasi yang dipakai (`primer`, `petugas`, `user`) sudah dicocokkan ke model
+ * aslinya. `Aktivitas::user()` memang `belongsTo(User::class)` — BUKAN
+ * `petugas()` seperti di surat_masuk/surat_keluar, karena log aktivitas mencatat
+ * akun, bukan petugas yang mengetik surat.
  */
 class DashboardController extends Controller
 {
@@ -69,7 +67,7 @@ class DashboardController extends Controller
             ->take(10)
             ->get();
 
-        // H3: hitung surat masuk DAN keluar bersama-sama. Sebelumnya hanya
+        // Hitung surat masuk DAN keluar bersama-sama. Sebelumnya hanya
         // surat masuk, sehingga "klasifikasi terbanyak" di dashboard menyesatkan
         // (kantor yang banyak bikin surat keluar melihat grafik yang salah).
         $hitungPerPrimer = fn (string $model) => $model::query()

@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 
 /**
- * Satu tempat untuk isi kotak filter daftar arsip (L-14: filter surat masuk dan
+ * Satu tempat untuk isi kotak filter daftar arsip (filter surat masuk dan
  * surat keluar HARUS sama).
  *
  * Kenapa dipindah dari controller: `SuratMasukController::index()` dan
@@ -30,7 +30,7 @@ class FilterArsip
         $cari = $request->query('cari');
 
         // scopeCari() milik masing-masing model: multi-kata (AND), lintas kolom,
-        // termasuk isi draf surat keluar dan teks hasil baca lampiran (L-15).
+        // termasuk isi draf surat keluar dan teks hasil baca lampiran.
         if (filled($cari)) {
             /** @var Builder<SuratMasuk>|Builder<SuratKeluar> $query */
             $query->cari((string) $cari);
@@ -66,8 +66,8 @@ class FilterArsip
                 ->where('tanggal_surat', '<', sprintf('%04d-01-01', $tahun + 1));
         }
 
-        // L-04: hanya MENYEDIAKAN DAFTAR arsip lewat retensi 5 tahun; umur
-        // dihitung dari tanggal_surat untuk kedua jenis (L-21).
+        // hanya MENYEDIAKAN DAFTAR arsip lewat retensi 5 tahun; umur
+        // dihitung dari tanggal_surat untuk kedua jenis.
         if (self::usang($request)) {
             $query->where('tanggal_surat', '<', now()->subYears(5));
         }
@@ -99,8 +99,8 @@ class FilterArsip
 
     /**
      * Mode gabungan diminta? `?jenis=semua` — TIDAK ada route baru: tab ini
-     * hidup di dalam kedua halaman daftar yang sudah ada, sesuai alasan
-     * halaman `/pencarian` dihapus 5 Okt 2026 (satu kotak cari per daftar).
+     * hidup di dalam kedua halaman daftar yang sudah ada, sesuai aturan
+     * satu kotak cari per daftar.
      */
     public static function gabungan(Request $request): bool
     {

@@ -108,11 +108,11 @@
                                 @error('ringkasan') <div class="invalid-feedback">{{ $message }}</div> @enderror
 
                                 {{--
-                                    Isi yang dibaca mesin dari lampiran (fitur 5 Okt 2026).
+                                    Isi yang dibaca mesin dari lampiran.
                                     Sengaja TIDAK mengisi ringkasan otomatis: teks hasil baca
-                                    bisa salah (PDF scan, urutan sel tabel), dan user minta
-                                    hasilnya "ditampilkan untuk divalidasi". Yang ada cuma
-                                    tombol salin, jadi manusia yang memutuskan.
+                                    bisa salah (PDF scan, urutan sel tabel), jadi ia cuma
+                                    ditampilkan untuk divalidasi. Yang ada cuma tombol salin,
+                                    manusia yang memutuskan.
                                 --}}
                                 @if ($suratMasuk->isi_hasil_baca)
                                     <div class="border rounded p-3 mt-2 bg-light">
@@ -245,7 +245,7 @@
 
 @push('scripts')
 <script>
-    // Tombol "Masukkan ke Ringkasan" di blok hasil baca (5 Okt 2026). Ringkasan
+    // Tombol "Masukkan ke Ringkasan" di blok hasil baca. Ringkasan
     // yang sudah diketik orang tidak boleh hilang diam-diam, makanya ada konfirmasi.
     function pradanaSalinHasilBaca() {
         const sumber = @js($suratMasuk->isi_hasil_baca);

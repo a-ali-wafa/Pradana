@@ -6,10 +6,10 @@ use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
 /**
- * Tombol "Nyahkan" / "Aktifkan kembali" di halaman show surat (L-19, E8+E9).
+ * Tombol "Nyahkan" / "Aktifkan kembali" di halaman show surat.
  *
  * SATU request untuk kedua controller (surat masuk & surat keluar) justru karena
- * sebuah bug nyata yang ditemukan 9 Okt 2026: dulu kedua controller menulis
+ * sebuah bug nyata: dulu kedua controller menulis
  * validasi yang sama persis di dalam method-nya masing-masing, dan keduanya
  * secara identik salah memilih kunci flash — `->with('status', ...)` yang tidak
  * pernah dirender layout, jadi konfirmasi "sudah di-nyahkan" hilang dan petugas
@@ -18,8 +18,8 @@ use Illuminate\Validation\Rule;
  *
  * Nilai yang sah = enum `status_arsip` di kedua tabel surat (aktif/inaktif).
  * "Musnah" SENGAJA bukan nilai di sini: pemusnahan bukan perubahan status, tapi
- * jalur sendiri (pengajuan → approval admin → forceDelete + Berita Acara, L-06),
- * dan tes menolak nilai 'musnah' di endpoint ini.
+ * jalur sendiri (pengajuan → approval admin → forceDelete + Berita Acara), dan
+ * tes menolak nilai 'musnah' di endpoint ini.
  */
 class UpdateStatusArsipRequest extends FormRequest
 {
@@ -28,7 +28,7 @@ class UpdateStatusArsipRequest extends FormRequest
 
     public function authorize(): bool
     {
-        // Semua yang login boleh (L-08: arsip kantor, tidak ada sistem kepemilikan;
+        // Semua yang login boleh (arsip kantor, tidak ada sistem kepemilikan;
         // perubahan tercatat otomatis oleh observer). Admin-only hanya untuk
         // memulihkan dari tempat sampah & pemusnahan permanen.
         return true;

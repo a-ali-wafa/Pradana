@@ -11,7 +11,7 @@ use Illuminate\Support\Carbon;
 use Tests\TestCase;
 
 /**
- * Angka dashboard setelah statistik diringkas jadi dua query (Fase 1, 9 Okt 2026).
+ * Angka dashboard setelah statistik diringkas jadi dua query.
  *
  * Yang diuji di sini adalah KESETARAAN dengan bentuk lama (sembilan `count()`
  * terpisah + `whereMonth()/whereYear()`), bukan angka baru: refactor yang
@@ -156,7 +156,7 @@ class StatistikDashboardTest extends TestCase
 
     public function test_grafik_klasifikasi_menggabungkan_masuk_dan_keluar(): void
     {
-        // H3: dulu hanya surat masuk. Klasifikasi yang cuma dipakai surat keluar
+        // Dulu hanya surat masuk. Klasifikasi yang cuma dipakai surat keluar
         // tidak muncul sama sekali di dashboard.
         $hariIni = Carbon::now()->toDateString();
 

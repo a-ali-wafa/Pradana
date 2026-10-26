@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Facades\Hash;
 
 /**
- * SQUASH S11 (4 Okt 2026): versi sebelumnya masih milik boilerplate Laravel —
+ * Versi lama factory ini masih milik boilerplate Laravel —
  * mengisi `name` dan `password` (kolom riilnya `nama_lengkap` dan `pin`) plus
  * `email_verified_at`/`remember_token` yang sudah dibuang dari skema, jadi
  * `User::factory()->create()` akan selalu gagal. Diperbaiki supaya benar-benar

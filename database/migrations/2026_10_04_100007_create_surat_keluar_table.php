@@ -5,9 +5,9 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * SQUASH S11. Beda dengan surat_masuk: `nomor_surat` **unique** (dibuat
- * otomatis oleh NomorSuratKeluarGenerator + `surat_counters` + lockForUpdate,
- * L-20), tidak ada `tanggal_diterima`, dan nama kolomnya "tujuan/penerima".
+ * Beda dengan surat_masuk: `nomor_surat` **unique** (dibuat otomatis oleh
+ * NomorSuratKeluarGenerator + tabel `surat_counters` + `lockForUpdate`), tidak
+ * ada `tanggal_diterima`, dan nama kolomnya "tujuan/penerima".
  * Nomor yang sudah terbit tidak boleh diubah non-admin — ditegakkan di
  * `UpdateSuratKeluarRequest`, bukan di skema.
  */

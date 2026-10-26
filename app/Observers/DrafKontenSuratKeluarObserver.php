@@ -7,7 +7,7 @@ use App\Traits\LogsAktivitas;
 
 /**
  * Draf konten ikut dicatat karena isinya adalah badan surat resmi —
- * perubahan redaksional perlu bisa ditelusuri (L-22).
+ * perubahan redaksional perlu bisa ditelusuri.
  */
 class DrafKontenSuratKeluarObserver
 {

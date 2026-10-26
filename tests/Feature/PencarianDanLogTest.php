@@ -13,15 +13,13 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 /**
- * L-15/P4 (pencarian ikut menjangkau ISI), H1/L-14 (filter sama dengan daftar
- * surat), H7 (pagination), L-22 (UI log untuk admin),
- * E6 (retensi log: >2 tahun dibuang KECUALI jejak pemusnahan).
+ * Yang diuji: pencarian ikut menjangkau ISI surat, filter daftar sama dengan
+ * filter pencarian, hasil di-pagination, halaman log aktivitas untuk admin, dan
+ * retensi log (>2 tahun dibuang KECUALI jejak pemusnahan).
  *
- * CATATAN 5 Okt 2026: halaman `/pencarian` (PencarianController + view-nya) sudah
- * DIHAPUS atas permintaan user — tiap daftar surat sudah punya kotak "cari" sendiri.
- * Bagian pencarian di bawah kini menguji `?cari=` di `surat-masuk.index` dan
- * `surat-keluar.index`, karena L-15 (menggali `ringkasan` dan `isi_surat`) harus
- * tetap hidup meski halaman gabungannya hilang.
+ * Tidak ada halaman pencarian sendiri — tiap daftar surat punya kotak "cari"-nya
+ * masing-masing di `surat-masuk.index` dan `surat-keluar.index`, dan penggalian
+ * `ringkasan` serta `isi_surat` hidup di kotak itu.
  */
 class PencarianDanLogTest extends TestCase
 {
@@ -180,7 +178,7 @@ class PencarianDanLogTest extends TestCase
 
     public function test_halaman_pencarian_lama_sudah_dihapus(): void
     {
-        // 5 Okt 2026: `/pencarian` dihapus atas permintaan user. Kalau route ini
+        // Halaman `/pencarian` tidak ada. Kalau route ini
         // ternyata masih hidup, berarti ada yang mendaftarkannya lagi tanpa sengaja.
         $this->actingAs($this->pegawai)->get('/pencarian')->assertNotFound();
     }

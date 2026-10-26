@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 /**
- * L-24/Q1: tes yang berjalan di MariaDB asli (bukan SQLite in-memory), khusus
+ * Tes yang berjalan di MariaDB asli (bukan SQLite in-memory), khusus
  * untuk jalur paling kritis: nomor surat resmi tidak boleh kembar.
  *
  * Pakai database terpisah (DB_TEST_DATABASE, default `pradana_test`) supaya
@@ -97,7 +97,7 @@ class NomorSuratKeluarTest extends TestCase
     }
 
     /**
-     * Inti perbaikan 4 Okt 2026: koneksi kedua yang mencoba mengambil nomor
+     * Inti perbaikannya: koneksi kedua yang mencoba mengambil nomor
      * harus MENUNGGU transaksi pertama commit. Ini yang membuktikan
      * lockForUpdate() bekerja — sebelumnya SELECT biasa membaca snapshot dan
      * kedua request mendapat angka yang sama.

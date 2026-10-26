@@ -13,16 +13,15 @@ use Illuminate\View\View;
 /**
  * CRUD Klasifikasi Sekunder.
  *
- * Ditulis ulang 1 Sep 2026 dari spek yang sudah cross-checked 26 Agu 2026 terhadap
- * KlasifikasiSekunder.php asli (lihat AGENTS_HISTORY.md 12.11):
+ * Mengikuti skema `klasifikasi_sekunder` dan model `KlasifikasiSekunder` aslinya:
  * - $fillable: ['klasifikasi_primer_id', 'kode', 'nama']
  * - Relasi: primer() -> belongsTo(KlasifikasiPrimer::class), tersier() -> hasMany(KlasifikasiTersier::class)
  *   -- BUKAN klasifikasiPrimer()/klasifikasiTersier(), model asli pakai nama pendek tanpa prefix.
  * - unique komposit per parent: (klasifikasi_primer_id, kode).
  *
- * Route `show` tidak didaftarkan; admin-only mutasi (B3 [DEFAULT]) ditangani oleh
- * middleware('admin') di routes/web.php (retrofit B1, 1 Sep 2026). Daftar, redirect,
- * dan hapus-FK-restrict lewat trait `MengelolaKlasifikasi` (9 Okt 2026); dropdown
+ * Route `show` tidak didaftarkan; mutasi khusus admin ditangani oleh
+ * middleware('admin') di routes/web.php. Daftar, redirect,
+ * dan hapus-FK-restrict lewat trait `MengelolaKlasifikasi`; dropdown
  * induknya tetap di sini karena hanya tingkat ini yang butuh daftar primer.
  */
 class KlasifikasiSekunderController extends Controller

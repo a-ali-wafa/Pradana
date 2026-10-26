@@ -5,18 +5,18 @@ namespace App\Http\Requests;
 use Illuminate\Foundation\Http\FormRequest;
 
 /**
- * Isi konten surat keluar untuk generator PDF (keputusan L-16, F1/F3).
+ * Isi konten surat keluar untuk generator PDF.
  *
  * Kolom `lampiran` SENGAJA tidak diminta dari form: notasi jumlah berkas di
  * kop PDF dihitung otomatis dari lampiran yang benar-benar terunggah
- * (keputusan P6) supaya tidak bisa menulis "3 Berkas" padahal file-nya satu.
+ * supaya tidak bisa menulis "3 Berkas" padahal file-nya satu.
  */
 class UpdateDrafKontenSuratKeluarRequest extends FormRequest
 {
     public function authorize(): bool
     {
         // Semua user login boleh mengisi draf — arsip kantor, tanpa sistem
-        // kepemilikan (L-08), perubahannya tercatat di log aktivitas.
+        // kepemilikan, perubahannya tercatat di log aktivitas.
         return true;
     }
 

@@ -5,17 +5,17 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * Hasil baca otomatis isi lampiran surat masuk (permintaan user 5 Okt 2026).
+ * Hasil baca otomatis isi lampiran surat masuk.
  *
  * Kenapa SATU kolom teks + dua kolom catatan waktu, bukan menimpa `ringkasan`:
  * teks yang diambil mesin bisa salah (PDF hasil scan, tabel yang urutan selnya
- * acak, karakter yang hilang). Keputusan user jelas — "ditampilkan isinya di
- * dalam form untuk divalidasi" — jadi hasil mesin disimpan terpisah dan
+ * acak, karakter yang hilang). Aturannya: hasil mesin selalu bisa divalidasi
+ * orang sebelum dipakai, jadi ia disimpan terpisah dan
  * `isi_terverifikasi_pada` menandai kapan manusia memeriksa & menyimpannya.
  * Ringkasan tetap kolom buatan orang; ia hanya boleh terisi dari hasil baca
  * lewat aksi eksplisit di form.
  *
- * Hanya `surat_masuk` yang ditambah (permintaan user menyebut surat masuk).
+ * Hanya `surat_masuk` yang ditambah.
  * Surat keluar sudah punya tempat sendiri untuk isi (`draf.isi_surat`) dan
  * dibuat orang, bukan diterima.
  *

@@ -7,19 +7,19 @@ use Illuminate\Foundation\Http\FormRequest;
 /**
  * Validasi upload lampiran.
  *
- * L-13: tipe file diperluas ke dokumen kantor (doc/docx/xls/xlsx) — surat
+ * Tipe file diperluas ke dokumen kantor (doc/docx/xls/xlsx) — surat
  * dari instansi lain sering datang sebagai .docx, dan dengan daftar lama
  * file itu tidak bisa diarsipkan sama sekali.
  *
- * C2 dinaikkan 10MB -> 25MB (didelegasikan ke agent): scan berkualitas tinggi
- * sering lewat dari 10MB. Aman karena penulisan ke disk lokal memakai
- * $file->store() yang memindahkan file sementara, bukan memuat isinya ke RAM.
+ * Batas 25MB per berkas (naik dari 10MB): scan berkualitas tinggi sering lewat
+ * dari 10MB. Aman karena penulisan ke disk lokal memakai $file->store() yang
+ * memindahkan file sementara, bukan memuat isinya ke RAM.
  */
 class StoreLampiranRequest extends FormRequest
 {
     /**
      * Siapa boleh upload dicek di route (middleware auth) — semua user login
-     * boleh mengarsipkan surat untuk kantor (L-08, tanpa sistem kepemilikan).
+     * boleh mengarsipkan surat untuk kantor (tanpa sistem kepemilikan).
      */
     public function authorize(): bool
     {

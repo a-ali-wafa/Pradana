@@ -13,7 +13,7 @@ use Tests\MariaDbHarness;
 
 /**
  * Jalur pencarian yang paling rawan beda engine, dijalankan di MariaDB SUNGGUHAN
- * (bukti, bukan asumsi) — pola yang sama dengan NomorSuratKeluarTest, L-24/Q1=b.
+ * (bukti, bukan asumsi) — pola yang sama dengan NomorSuratKeluarTest.
  * Plumbing koneksi/skip/bersih-bersih ada di Tests\MariaDbHarness.
  *
  * Suite utama berjalan di SQLite in-memory, dan ada tiga hal yang TIDAK bisa

@@ -1,5 +1,5 @@
 {{--
-    Layout khusus halaman error (K16, 4 Okt 2026).
+    Layout khusus halaman error.
 
     SENGAJA berdiri sendiri, TIDAK @extends('layouts.app'):
     1. layouts.app memanggil auth()->user()->isAdmin() dan menembak query

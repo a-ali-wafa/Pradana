@@ -19,7 +19,7 @@
                 <i class="fas fa-user-plus me-2 text-primary"></i>Tambah Akun User Baru
             </div>
             <div class="card-body">
-                {{-- A3 [LOCKED]: akun dibuat langsung oleh admin, bukan self-register --}}
+                {{-- Akun dibuat langsung oleh admin, bukan self-register --}}
                 <div class="alert alert-info border-0 rounded-3 small mb-4">
                     <i class="fas fa-info-circle me-1"></i>
                     Akun baru dibuat langsung oleh admin. User dapat login menggunakan <strong>email</strong>

@@ -15,12 +15,12 @@ use Illuminate\Http\Request;
 use Tests\TestCase;
 
 /**
- * Perilaku kotak "cari" di daftar arsip — hasil Track 1a+1b (9 Okt 2026).
+ * Perilaku kotak "cari" di daftar arsip.
  *
- * L-15 (pencarian ikut menjangkau isi) tetap acuan, dan keputusan S11 SENGAJA
- * tidak disentuh: semuanya masih LIKE, tanpa index FULLTEXT. Portabilitas
- * MariaDB-nya dijaga kelas terpisah (CariArsipMariaDbTest), karena suite ini
- * berjalan di SQLite.
+ * Pencarian ikut menjangkau ISI surat, dan semuanya masih LIKE tanpa index
+ * FULLTEXT: `LIKE ? ESCAPE '!'` berperilaku identik di SQLite dan MariaDB,
+ * sedangkan portabilitas MariaDB yang lebih halus dijaga kelas terpisah
+ * (CariArsipMariaDbTest), karena suite ini berjalan di SQLite.
  *
  * Yang diuji bukan cuma "kata ketemu", tapi sifat pencarian yang dulu tidak
  * ada: tiap kata harus cocok walau terpencar (dulu harus persis beruntun), isi
@@ -187,11 +187,10 @@ class CariArsipTest extends TestCase
 
     /**
      * "Lemari B, Box 07" satu-satunya petunjuk yang diingat petugas ketika arsip
-     * sudah masuk gudang. Kolomnya direkam di form DAN sudah ikut digali sejak
-     * refactor `CariArsip` 9 Okt — tapi tidak ada satu pun tes yang membuktikannya,
-     * sehingga `docs/daftar-peningkatan.md` masih menuliskannya sebagai "tidak bisa
-     * dicari". Tes ini mengubah klaim jadi guarded: kalau seseorang nanti memangkas
-     * daftar kolom, ia yang merah, bukan petugas yang kehilangan jalur pencarian.
+     * sudah masuk gudang. Kolomnya direkam di form DAN ikut digali oleh `CariArsip`
+     * — tes ini yang mengubah perilaku itu jadi guarded: kalau seseorang nanti
+     * memangkas daftar kolom, ia yang merah, bukan petugas yang kehilangan jalur
+     * pencarian.
      */
     public function test_lokasi_fisik_ikut_digali(): void
     {
@@ -241,7 +240,7 @@ class CariArsipTest extends TestCase
     }
 
     /**
-     * Regression — dan bug ini SUDAH ada sebelum perubahan 9 Okt 2026.
+     * Regression — dan bug ini SUDAH ada sebelum perubahan ini.
      *
      * `orWhereHas('drafKonten', fn ($d) => $d->where(...)->orWhere(...))`
      * menghasilkan `WHERE fk = surat.id AND isi_surat LIKE ? OR tembusan LIKE ?`.
@@ -508,15 +507,15 @@ class CariArsipTest extends TestCase
 
     public function test_mode_gabungan_tidak_menambah_route_baru(): void
     {
-        // `/pencarian` sudah dihapus 5 Okt 2026 dan tab ini sengaja TIDAK
+        // halaman `/pencarian` tidak ada, dan tab ini sengaja TIDAK
         // menghidupkannya lagi sebagai halaman sendiri.
         $this->actingAs($this->pegawai)->get('/pencarian')->assertNotFound();
         $this->actingAs($this->pegawai)->get('/arsip')->assertNotFound();
     }
 
     /**
-     * Mode gabungan tetap ADA (L-15) tapi tidak lagi jadi tombol ketiga di kepala
-     * halaman (permintaan user 10 Okt 2026): dia muncul sebagai tautan di samping
+     * Mode gabungan tetap ADA tapi tidak lagi jadi tombol ketiga di kepala
+     * halaman: dia muncul sebagai tautan di samping
      * pemilih jenis surat, hanya saat ada kata kunci — karena justru di situ orang
      * tidak ingat suratnya masuk atau keluar. Yang diuji di sini: bantuan itu ada
      * saat dibutuhkan, hilang saat tidak, dan ada jalan keluar yang menyebut

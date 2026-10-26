@@ -6,7 +6,7 @@
 @section('content')
 @php
     /*
-     * Identitas kantor di kepala dashboard (10 Okt 2026): logo + nama instansi dari
+     * Identitas kantor di kepala dashboard: logo + nama instansi dari
      * Pengaturan Instansi, bukan lambang generik. Satu sumber yang sama dengan kop
      * PDF dan sidebar, diambil dari cache (PengaturanInstansi::untukTampilan())
      * supaya layar ini tidak bertambah query hanya untuk sebuah gambar.
@@ -125,9 +125,8 @@
 
     {{--
         Blok "Aksi Cepat" (pintasan Catat Surat Masuk / Buat Surat Keluar / Cari Arsip /
-        Pengaturan Instansi) DIHAPUS 5 Okt 2026 atas permintaan user: pintasan itu duplikat
-        dengan sidebar kiri yang sudah selalu tampil, dan tombol "Cari Arsip"-nya menunjuk
-        halaman /pencarian yang memang ikut dihapus.
+        Pengaturan Instansi) sengaja TIDAK ada: pintasan itu duplikat dengan sidebar kiri
+        yang selalu tampil, dan penggalian isi surat memang hidup di kotak cari tiap daftar.
     --}}
 
     {{-- Baris Tabel: Surat Masuk & Surat Keluar Terbaru --}}

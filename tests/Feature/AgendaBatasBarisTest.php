@@ -9,14 +9,13 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 /**
- * Plafon jumlah baris Buku Agenda PDF (temuan #3 di docs/daftar-peningkatan.md,
- * dikerjakan 10 Okt 2026).
+ * Plafon jumlah baris Buku Agenda PDF.
  *
- * Angka yang mendasarinya, diukur 9 Okt di MariaDB tanding: 1.000 baris agenda =
- * 8,36 detik dan puncak memori 52 MB. Agenda Dibuat dalam SATU permintaan (L-02
- * melarang queue), dan `max_execution_time`/`memory_limit` shared hosting kantor
- * (K1=a) tidak bisa dinaikkan dari kode ini. Tanpa plafon, permintaan agenda
- * tahunan bukan menghasilkan dokumen besar — ia mati di tengah jalan dan
+ * Angka yang mendasarinya, diukur di MariaDB tanding: 1.000 baris agenda =
+ * 8,36 detik dan puncak memori 52 MB. Agenda dibuat dalam SATU permintaan (tidak
+ * ada queue), dan `max_execution_time`/`memory_limit` hosting kantor tidak bisa
+ * dinaikkan dari kode ini. Tanpa plafon, permintaan agenda tahunan bukan
+ * menghasilkan dokumen besar — ia mati di tengah jalan dan
  * meninggalkan PDF separuh jadi yang tidak bisa dipakai siapa pun.
  *
  * Yang diuji di sini bukan hanya "ditolak", tapi juga bahwa penolakannya terjadi
@@ -93,7 +92,7 @@ class AgendaBatasBarisTest extends TestCase
         $this->assertStringContainsString('semester', $pesan, 'Pesan harus memberi jalan keluar, bukan cuma menolak.');
 
         // Kunci flash harus yang dirender layout — kelas bug yang sama dengan
-        // "Nyahkan" di Fase 6; FlashKonsistenTest menjaga ini untuk SEMUA flash,
+         // "Nyahkan"; FlashKonsistenTest menjaga ini untuk SEMUA flash,
         // tes ini memastikan pesannya benar-benar sampai ke layar berikutnya.
         $this->followingRedirects()
             ->from(route('laporan.index', ['dari' => '2026-05-01', 'sampai' => '2026-05-31']))

@@ -12,7 +12,7 @@ use Tests\TestCase;
 
 /**
  * Aksi destruktif adalah form sungguhan, JavaScript hanya menambah konfirmasi
- * (P0#1 paruh kedua di docs/daftar-peningkatan.md, 10 Okt 2026).
+ * (lahir bersama pemindahan aset dari CDN).
  *
  * Bentuk lama punya dua cacat yang tidak kelihatan sampai seseorang mencoba
  * memakai aplikasi ini saat internet kantor bermasalah:
@@ -64,7 +64,7 @@ class KonfirmasiDestruktifTest extends TestCase
     }
 
     /**
-     * Blade + HTML komentar dibuang lebih dulu — pelajaran Fase 6: guardrail teks
+     * Blade + HTML komentar dibuang lebih dulu — pelajaran yang sudah dibayar: guardrail teks
      * yang membaca komentar akan menegur dokumentasi dan melewatkan kode.
      *
      * @return array<string, string> path => isi tanpa komentar
@@ -131,8 +131,8 @@ class KonfirmasiDestruktifTest extends TestCase
         // dan konsekuensinya cuma satu: view tidak boleh menulis ulang nama `Swal.fire`
         // bahkan sebagai penjelasan historis. (Ini terjadi: komentar saya sendiri di
         // pemusnahan-arsip/create.blade.php membuat tes ini gagal, dan bentuk
-        // perbaikannya memang memindahkan penjelasannya ke AGENTS.md — tempat yang
-        // boleh membicarakan masa lalu.)
+         // perbaikannya memang memindahkan penjelasan historis itu dari view — tempat yang
+         // dibaca guardrail — ke komentar di dalam tes ini.
         $tersalah = [];
 
         foreach ($this->views() as $path => $isi) {

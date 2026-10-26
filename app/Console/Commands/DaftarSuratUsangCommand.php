@@ -8,7 +8,7 @@ use App\Support\RetensiArsip;
 use Illuminate\Console\Command;
 
 /**
- * L-04: sistem TIDAK mengubah status arsip otomatis. Perintah ini hanya
+ * sistem TIDAK mengubah status arsip otomatis. Perintah ini hanya
  * menyusun daftar surat yang sudah lewat retensi, supaya staf yang memutuskan
  * mana yang di-nyahkan.
  *
@@ -25,7 +25,7 @@ class DaftarSuratUsangCommand extends Command
     public function handle(): int
     {
         // Default = angka retensi yang berlaku; `--tahun=N` tetap boleh diisi
-        // supaya staf bisa menyaring lebih longgar (E5: keputusan di tangan staf).
+        // supaya staf bisa menyaring lebih longgar (keputusan akhir tetap di tangan staf).
         $tahun = $this->option('tahun') !== null
             ? (int) $this->option('tahun')
             : RetensiArsip::TAHUN;

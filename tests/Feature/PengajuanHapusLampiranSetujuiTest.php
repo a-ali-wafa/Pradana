@@ -16,10 +16,9 @@ use Tests\TestCase;
  * Jalur persetujuan "hapus lampiran" (`pengajuan-hapus-lampiran.setujui`).
  *
  * Ini satu-satunya tempat di aplikasi yang MENGHAPUS PERMANEN baris `lampiran`
- * (L-05 melarang hapus permanen arsip; L-06 membuat pengecualian lewat alur
- * pengajuan → approval). Sebelum tes ini dibuat (9 Okt 2026), tidak ada satu tes
- * pun yang menjalankan method itu — padahal urutannya baru saja diubah: transaksi
- * database lebih dulu, berkas fisik setelah commit.
+ * (hapus arsip biasa cuma soft delete; pengecualian ini hanya lewat alur
+ * pengajuan → approval). Urutan kerjanya penting: transaksi database lebih
+ * dulu, berkas fisik sesudah commit.
  */
 class PengajuanHapusLampiranSetujuiTest extends TestCase
 {
@@ -53,7 +52,7 @@ class PengajuanHapusLampiranSetujuiTest extends TestCase
 
         $klasifikasi = KlasifikasiPrimer::forceCreate(['kode' => '01', 'nama' => 'Umum']);
 
-        // Surat TUA: pengajuan hanya bisa dibuat kalau lewat retensi (L-04/L-21),
+        // Surat TUA: pengajuan hanya bisa dibuat kalau lewat retensi,
         // dan `setujui()` tidak memeriksa ulang umur surat — status "menunggu" yang
         // sudah divalidasi saat pengajuan itulah izinnya.
         $this->surat = SuratMasuk::forceCreate([
@@ -116,7 +115,7 @@ class PengajuanHapusLampiranSetujuiTest extends TestCase
         $this->assertSame($this->admin->id, $ini->diproses_oleh);
         $this->assertNotNull($ini->diproses_pada);
 
-        // L-23: riwayat pengajuan tidak boleh hilang dari audit — barisnya tetap
+        // riwayat pengajuan tidak boleh hilang dari audit — barisnya tetap
         // ada, `nama_file_snapshot` menyimpan jejak berkas yang sudah tidak ada.
         // `lampiran_id` ikut jadi NULL (nullOnDelete), jadi snapshot itu satu-satunya
         // yang masih menyebut berkasnya.
@@ -166,7 +165,7 @@ class PengajuanHapusLampiranSetujuiTest extends TestCase
 
     public function test_berkas_tetap_ada_kalau_penulisan_database_gagal(): void
     {
-        // Inilah alasan urutannya dibalik (Fase 3, 9 Okt 2026). Berkas fisik dihapus
+         // Inilah alasan urutannya dibalik: berkas fisik dihapus
         // SETELAH transaksi DB commit; kegagalan di tengah transaksi me-rollback
         // baris & status, dan file-nya masih utuh sehingga aksinya bisa diulang.
         // Bentuk lama: file sudah hilang duluan, `update()` gagal, pengajuan tetap

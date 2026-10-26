@@ -17,13 +17,13 @@ use Illuminate\Support\Collection;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
- * Laporan & Buku Agenda (keputusan I1=b + I2=b, 3 Okt 2026).
+ * Laporan & Buku Agenda.
  *
  * Dua keluaran, satu layar:
  *  - `rekap`  -> CSV (dibuka di Excel/LibreOffice kantor). Bukan .xlsx karena
  *    `maatwebsite/excel` butuh PhpSpreadsheet + extension yang tidak selalu ada
- *    di shared hosting pilihan kantor (K1=a), dan CSV cukup untuk rekap.
- *  - `agenda` -> PDF "Buku Agenda Surat" format cetak (dompdf, sesuai F2=a).
+ *    di shared hosting pilihan kantor, dan CSV cukup untuk rekap.
+ *  - `agenda` -> PDF "Buku Agenda Surat" format cetak (dompdf).
  *
  * Periode selalu rentang tanggal explicit (`dari`/`sampai`) — rekap tanpa batas
  * waktu akan menghasilkan dokumen yang tidak diminta siapa pun.
@@ -31,7 +31,7 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 class LaporanController extends Controller
 {
     /**
-     * Kolom yang BENAR-BENAR dibaca rekap CSV dan Buku Agenda (Fase P0, 10 Okt 2026).
+     * Kolom yang BENAR-BENAR dibaca rekap CSV dan Buku Agenda.
      *
      * Kenapa daftar eksplisit dan bukan `->get()` apa-adanya: `surat_masuk`
      * menyimpan teks hasil baca lampiran — `isi_hasil_baca` LONGTEXT bisa 20.000
@@ -39,11 +39,11 @@ class LaporanController extends Controller
      * tercetak di keluaran laporan, tapi `->get()` tetap mengangkatnya ke memori
      * dan meng-hidrasi jadi atribut model.
      *
-     * Diukur 9 Okt 2026 di MariaDB tanding berisi 16.005 surat:
+     * Diukur di MariaDB tanding berisi 16.005 surat:
      *   `->get()`          1.674 ms, puncak 56 MB
      *   `->get([kolom])`     383 ms, puncak  2 MB
      * Rekap setahun penuh kantor adalah jalur yang paling mungkin memakai angka
-     * itu, dan target deploy-nya shared hosting (K1=a) dengan `memory_limit`
+     * itu, dan target deploy-nya shared hosting dengan `memory_limit`
      * yang tidak bisa kita naikkan sendiri.
      *
      * `user_id` + `klasifikasi_primer_id` wajib ada di sini meski tidak dicetak
@@ -137,9 +137,9 @@ class LaporanController extends Controller
      * Buku Agenda Surat (PDF, A4 landscape) — dokumen cetak manual kantor.
      *
      * Ada batas jumlah baris karena dokumen ini dibuat DALAM satu permintaan HTTP
-     * (L-02: tidak ada queue, dan tidak akan ada). Terukur 9 Okt di MariaDB:
+     * (tidak ada queue, dan tidak akan ada). Terukur 9 Okt di MariaDB:
      * 1.000 baris agenda = 8,36 detik + puncak 52 MB. `max_execution_time` dan
-     * `memory_limit` shared hosting kantor (K1=a) tidak bisa dinaikkan dari kode
+     * `memory_limit` shared hosting kantor tidak bisa dinaikkan dari kode
      * ini, jadi menolak lebih awal dengan pesan yang jelas jauh lebih baik daripada
      * permintaan yang mati di tengah jalan dan meninggalkan PDF separuh jadi.
      */

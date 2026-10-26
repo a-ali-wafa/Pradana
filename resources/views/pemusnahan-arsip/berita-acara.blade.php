@@ -1,6 +1,6 @@
 {{--
     Berita Acara Pemusnahan Arsip — kop-nya ikut partial `partials.kop-pdf.blade.php`
-    sejak 5 Okt 2026 supaya identik dengan surat keluar (dulu kedua template menulis
+    supaya identik dengan surat keluar (dulu kedua template menulis
     kop masing-masing dan bentuknya beda). Blok hari/tanggal diganti ke gaya baku
     berita acara: angka tanggal & tahun ditulis dalam huruf (Terbilang), karena
     dokumen pernyataan resmi selalu begitu di kantor desa.

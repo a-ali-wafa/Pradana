@@ -10,18 +10,15 @@ use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 /**
- * Validasi + eksekusi login: email + PIN 8 digit angka (A1 + A11/L-12).
+ * Validasi + eksekusi login: email + PIN 8 digit angka.
  * Pola tetap `Auth::attempt(['email' => ..., 'password' => $pin])` — kolom
  * `pin` dipakai lewat override `User::getAuthPassword()`, bukan guard khusus.
  *
  * Ini bekerja TANPA perlu ubah config/auth.php — EloquentUserProvider selalu
  * memanggil User::getAuthPassword() untuk ambil hash pembanding, jadi cukup
- * model User yang override method itu (return $this->attributes['pin']),
- * sesuai Bagian 2 AGENTS.md [LOCKED].
- *
- * ✅ Dicek 28 Agu 2026 terhadap User.php asli: override getAuthPassword()
- * SUDAH ada dan return $this->pin, persis sesuai locked #5/Bagian 2 — kode
- * di bawah ini siap jalan tanpa perubahan apa pun di sisi model.
+ * model User yang meng-override method itu (`return $this->attributes['pin']`).
+ * Jadi kalau PIN diganti, sesi yang sudah ada ikut tidak berlaku — tidak ada jalur
+ * lupa-PIN lewat email karena kantor tidak punya SMTP.
  */
 class LoginRequest extends FormRequest
 {
@@ -59,7 +56,7 @@ class LoginRequest extends FormRequest
             'password' => $this->string('pin'), // 'pin' dari form, dicek ke getAuthPassword()
         ];
 
-        // Tidak ada "remember me" (L-11): komputer di kantor dipakai bersama,
+        // Tidak ada "remember me": komputer di kantor dipakai bersama,
         // dan sesi yang tidak pernah kedaluwarsa berarti siapa pun yang duduk
         // di kursi itu bisa membaca arsip.
         if (! Auth::attempt($credentials)) {

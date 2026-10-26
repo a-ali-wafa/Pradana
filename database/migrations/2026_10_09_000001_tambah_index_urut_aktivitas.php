@@ -5,7 +5,7 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * Fase 5 perapian (9 Okt 2026): satu index tambahan, dan hanya satu, karena
+ * Satu index tambahan, dan hanya satu, karena
  * hanya inilah yang terbukti dari pengukuran — bukan dari daftar kandidat.
  *
  * Diukur di MariaDB 10.4 sungguhan (DB tanding `pradana_test`, 40.000 baris log
@@ -21,7 +21,7 @@ use Illuminate\Support\Facades\Schema;
  *
  * 1. TABEL SURAT TIDAK PERLU INDEX BARU. `surat_masuk`/`surat_keluar` sudah punya
  *    index di `tanggal_surat`, `tanggal_diterima`, `status_arsip`, `deleted_at`
- *    (dibuat saat squash S11), dan setelah ANALYZE daftar surat memakai index
+ *    (sudah ada sejak migration awal), dan setelah ANALYZE daftar surat memakai index
  *    `tanggal_diterima` secara terbalik: 1,8–2,2 ms. Composite coba
  *    `(deleted_at, tanggal_diterima)` → 1,93 ms vs baseline 2,16 ms: di dalam
  *    noise, jadi tidak dipakai. `(status_arsip, tanggal_surat)` memang dipilih

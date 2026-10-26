@@ -5,7 +5,7 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * SQUASH S11. Pencatat nomor surat keluar otomatis (L-20/D1/D2/D3). Barisnya
+ * Pencatat nomor surat keluar otomatis. Barisnya
  * satu per (jenis surat, tahun) supaya `NomorSuratKeluarGenerator` bisa
  * `upsert` lalu `lockForUpdate()` **di dalam transaksi yang sama** — itu yang
  * menutup celah nomor kembar kalau dua staf menyimpan pada detik yang sama.

@@ -2,7 +2,7 @@
     Klasifikasi berjenjang primer -> sekunder -> tersier di form surat.
     Dipakai 4 halaman: surat-masuk/{create,edit} dan surat-keluar/{create,edit}.
 
-    Kenapa parsial (H6, 4 Okt 2026): sebelumnya ada DUA salinan file ini, satu di
+    Kenapa parsial: sebelumnya ada DUA salinan file ini, satu di
     folder surat-masuk dan satu di surat-keluar, isinya sudah melenceng (komentar
     beda, spasi beda, dan hanya tinggal waktu yang menentukan siapa yang lupa
     disinkronkan saat perilakunya diubah). Sekarang satu file untuk keduanya.

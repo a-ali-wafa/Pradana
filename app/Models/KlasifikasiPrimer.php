@@ -10,7 +10,7 @@ class KlasifikasiPrimer extends Model
     protected $table = 'klasifikasi_primer';
 
     /**
-     * SENGAJA tidak ada `$with = ['sekunder']` lagi (dibuang 9 Okt 2026).
+     * SENGAJA tidak ada `$with = ['sekunder']` lagi (dibuang).
      *
      * Eager load global itu membuat SETIAP instantiation KlasifikasiPrimer menarik
      * seluruh pohon klasifikasi: dropdown filter di daftar surat (butuh kode+nama

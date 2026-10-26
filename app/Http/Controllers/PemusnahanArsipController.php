@@ -19,16 +19,16 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 /**
- * Pemusnahan arsip SURAT + Berita Acara (keputusan L-06 / E3).
+ * Pemusnahan arsip SURAT + Berita Acara.
  *
  * Ini satu-satunya jalur yang boleh membuat berkas arsip hilang sungguhan:
  * staf mengajukan daftar arsip yang sudah lewat retensi DAN sudah dinonaktifkan,
  * admin menyetujui, lalu sistem menghapus permanen (baris + lampiran + file)
  * dan menerbitkan Berita Acara sebagai bukti.
  *
- * Dua syarat itu bukan hiasan: tanpa "harus inaktif dulu" (L-19) satu klik
+ * Dua syarat itu bukan hiasan: tanpa "harus inaktif dulu" satu klik
  * bisa langsung memusnahkan arsip yang masih dipakai; tanpa retensi 5 tahun
- * (L-04) arsip muda bisa hilang.
+ * arsip muda bisa hilang.
  */
 class PemusnahanArsipController extends Controller
 {
@@ -55,7 +55,7 @@ class PemusnahanArsipController extends Controller
     }
 
     /**
-     * Daftar arsip yang boleh diajukan musnah (L-04 + L-19).
+     * Daftar arsip yang boleh diajukan musnah.
      */
     public function create(): View
     {
@@ -244,7 +244,7 @@ class PemusnahanArsipController extends Controller
             'pemusnahan' => $pemusnahan_arsip,
             'instansi' => $instansi,
             // Logo dibaca dari disk, bukan `public_path('storage/...')` — lihat
-            // alasan di PengaturanInstansi::logoPathUntukPdf() (5 Okt 2026).
+            // alasan di PengaturanInstansi::logoPathUntukPdf().
             'logoPath' => $instansi?->logoPathUntukPdf(),
             'hari' => $pelaksanaan->translatedFormat('l'),
             'tanggalPelaksanaan' => $pelaksanaan->translatedFormat('d F Y'),
@@ -260,11 +260,11 @@ class PemusnahanArsipController extends Controller
     }
 
     /**
-     * Arsip yang boleh diajukan: lewat retensi (L-04 + L-21) DAN sudah
-     * dinonaktifkan (L-19), belum dihapus lunak, dan belum masuk pengajuan yang
+     * Arsip yang boleh diajukan: lewat retensi DAN sudah
+     * dinonaktifkan, belum dihapus lunak, dan belum masuk pengajuan yang
      * menunggu.
      *
-     * Bentuk lama (sampai 9 Okt 2026) menghitung lampiran PER BARIS
+     * Bentuk lama menghitung lampiran PER BARIS
      * (`$s->lampiran()->count()` di dalam `map`) dan memuat SELURUH item
      * pemusnahan sebagai model hanya untuk mengecek "sudah dipakai atau belum".
      * Terukur di `JumlahQueryLayarTest`: 40 arsip tua = 45 statement, dan angka

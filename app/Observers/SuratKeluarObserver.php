@@ -5,7 +5,7 @@ namespace App\Observers;
 use App\Models\SuratKeluar;
 use App\Traits\LogsAktivitas;
 
-/** Baru 1 Sep 2026; diregistrasikan di AppServiceProvider::boot(). */
+/** Diregistrasikan di AppServiceProvider::boot(). */
 class SuratKeluarObserver
 {
     use LogsAktivitas;
@@ -23,7 +23,7 @@ class SuratKeluarObserver
     public function deleting(SuratKeluar $suratKeluar): void
     {
         // Sama seperti SuratMasukObserver: berkas fisik hanya ikut hilang kalau
-        // penghapusan benar-benar permanen, bukan saat surat di-nyahkan (L-05).
+        // penghapusan benar-benar permanen, bukan saat surat di-nyahkan.
         // Pakai isForceDeleting() — `$model->forceDeleting` tidak bisa diakses
         // dari luar (protected) dan magic getter-nya salah resolve ke method statis.
         $hapusPermanen = $suratKeluar->isForceDeleting();

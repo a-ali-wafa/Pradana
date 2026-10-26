@@ -12,9 +12,8 @@ use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
 
 /**
- * L-11 (remember-me dihapus) + L-12 (PIN 8 digit; reset oleh admin DAN ganti
- * PIN sendiri) + I3 (seeder produksi tidak menanam akun; akun pertama lewat
- * perintah terminal).
+ * Ingat-sesi dihapus, PIN 8 digit dengan reset oleh admin DAN ganti PIN sendiri,
+ * dan seeder produksi yang tidak menanam akun (akun pertama lewat terminal).
  */
 class PinAkunTest extends TestCase
 {
@@ -65,13 +64,13 @@ class PinAkunTest extends TestCase
             'remember' => '1',
         ]);
 
-        // L-11: tidak ada "remember me" — komputer kantor dipakai bersama.
+        // tidak ada "remember me" — komputer kantor dipakai bersama.
         $this->assertSame([], array_values(array_filter(
             $respons->headers->getCookies(),
             fn ($c) => str_starts_with($c->getName(), 'remember')
         )));
 
-        // Kolom `remember_token` sudah dibuang dari skema (squash S11), jadi
+        // Kolom `remember_token` sudah dibuang dari skema, jadi
         // tidak ada tempat untuk menyimpan token login-teringat.
         $this->assertFalse(
             Schema::hasColumn('users', 'remember_token')
@@ -162,7 +161,7 @@ class PinAkunTest extends TestCase
 
     public function test_popup_ganti_pin_ditemukan_lewat_menu_akun(): void
     {
-        // Sejak 4 Okt 2026 tidak ada halaman /profil/pin: formnya popup di menu
+        // Tidak ada halaman /profil/pin: formnya popup di menu
         // "Akun" pada topbar, jadi markup-nya ikut dirender layouts.app di
         // halaman mana pun yang sudah login.
         $ini = $this->actingAs($this->pegawai)->get(route('dashboard'))->assertOk();
@@ -253,7 +252,7 @@ class PinAkunTest extends TestCase
 
     public function test_seeder_produksi_tidak_menanam_akun(): void
     {
-        // I3: DatabaseSeeder tidak boleh membuat user (email pribadi + PIN
+        // DatabaseSeeder tidak boleh membuat user (email pribadi + PIN
         // keras dulu ikut ter-commit ke repository).
         $sebelum = User::count();
         PengaturanInstansi::query()->delete();

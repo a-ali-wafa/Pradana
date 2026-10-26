@@ -90,7 +90,7 @@
         </div>
 
         {{--
-            HASIL BACA ISI LAMPIRAN (fitur baru 5 Okt 2026). Teks di bawah ini
+            HASIL BACA ISI LAMPIRAN. Teks di bawah ini
             diambil MESIN dari berkas lampiran dan belum tentu benar, makanya
             badge-nya "belum diverifikasi" sampai user menekan Simpan. Kartu ini
             ada di DOM sejak awal tapi tersembunyi kalau belum ada hasil baca —
@@ -235,7 +235,7 @@
                             </a>
                             {{--
                                 Tombol "Ajukan Hapus" hanya untuk surat yang sudah lewat retensi
-                                (L-04: lebih dari 5 tahun; L-21: acuannya `tanggal_surat`).
+                                (lebih dari 5 tahun; acuannya `tanggal_surat`).
                                 Dulu blok ini menghitung umurnya sendiri dari `tanggal_diterima`,
                                 jadi surat masuk bisa menampilkan tombol yang ditolak server
                                 (dan aturan 5 tahun punya dua dasar hitung di satu aplikasi).

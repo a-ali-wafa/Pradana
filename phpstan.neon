@@ -10,10 +10,9 @@ includes:
     # Regenerasi kalau file-file itu berubah: vendor/bin/phpstan --generate-baseline
     - phpstan-baseline.neon
 
-# L-24 (Q2=a): analisis statis. Level 5 dipilih sebagai titik mulai yang masih
-# masuk akal untuk kode yang ditulis cepat sepanjang Sep-Okt 2026; Naikkan ke
-# 6/7 setelah temuan di level ini habis, jangan langsung 8 (baseline-nya akan
-# jadi kuburan).
+# Analisis statis. Level 5 dipilih sebagai titik mulai yang masih masuk akal
+# untuk kode yang ditulis cepat; naikkan ke 6/7 setelah temuan di level ini
+# habis, jangan langsung 8 (baseline-nya akan jadi kuburan).
 parameters:
     paths:
         - app

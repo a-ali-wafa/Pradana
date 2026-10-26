@@ -16,11 +16,11 @@ use Tests\TestCase;
 
 /**
  * Guardrail jumlah query — dibuat untuk fase "analisis" rencana perapian kode
- * (9 Okt 2026), supaya optimasi diukur, bukan dirasakan.
+ *supaya optimasi diukur, bukan dirasakan.
  *
  * Cara kerjanya: tanam data secukupnya (200 surat), kosongkan query log, lalu
  * panggil satu layar lewat HTTP seperti user dan hitung berapa statement yang
- * benar-benar jalan. Ambang di bawah = ANGKA TERUKUR + 2 (diukur 9 Okt 2026
+ * benar-benar jalan. Ambang di bawah = ANGKA TERUKUR + 2 (diukur
  * dengan `LAPOR_QUERY=1 php artisan test --filter=JumlahQueryLayarTest`); setiap
  * optimasi yang menurunkan angkanya harus ikut MENURUNKAN ambangnya, dan kenaikan
  * di masa depan akan gagal di sini — bukan di layar petugas saat data kantor
@@ -41,7 +41,7 @@ class JumlahQueryLayarTest extends TestCase
 
     private const JUMLAH_SURAT = 200;
 
-    /** Surat lama + sudah inaktif: kandidat pemusnahan (L-04 + L-19). */
+    /** Surat lama + sudah inaktif: kandidat pemusnahan. */
     private const JUMLAH_USANG = 40;
 
     private User $admin;
@@ -211,7 +211,7 @@ class JumlahQueryLayarTest extends TestCase
         // BASELINE sebelum perapian: sembilan `count()` TERPISAH (dua di antaranya
         // `whereMonth()+whereYear()` = fungsi di atas kolom, index tidak terpakai)
         // + `KlasifikasiPrimer::all()` seisi tabel + dua agregasi klasifikasi.
-        // Sesudah Fase 1: 13 — 2 agregat + 3 daftar + 4 eager load (terduplikasi
+        // Sesudah diringkas: 13 — 2 agregat + 3 daftar + 4 eager load (terduplikasi
         // karena masuk & keluar dua koleksi terpisah) + 2 agregasi klasifikasi
         // + 1 daftar klasifikasi + 1 composer sidebar.
         $this->hitung(route('dashboard'), 15, 'dashboard');
@@ -255,7 +255,7 @@ class JumlahQueryLayarTest extends TestCase
 
     public function test_laporan_index(): void
     {
-        // 4. BASELINE sebelum Fase 1: layar yang sama MEMBACA SELURUH baris surat
+        // BASELINE sebelum diringkas: layar yang sama MEMBACA SELURUH baris surat
         // di periode itu hanya untuk menampilkan jumlahnya (200 baris = 200
         // model di memori). Sekarang dua `COUNT(*)` di database.
         $this->hitung(route('laporan.index'), 6, 'laporan index');
@@ -270,7 +270,7 @@ class JumlahQueryLayarTest extends TestCase
 
     public function test_form_pemusnahan_kandidat(): void
     {
-        // 45 -> 4 (Fase 2, 9 Okt 2026). Yang hilang: 40 `select count(*) from
+        // 45 -> 4 query. Yang hilang: 40 `select count(*) from
         // lampiran` (satu per baris kandidat) dan satu bacaan primer per kandidat
         // yang tidak pernah ditampilkan. Sisanya tetap: 1 item yang sudah
         // diantrikan + 1 surat masuk (dengan `withCount`) + 1 surat keluar + composer.

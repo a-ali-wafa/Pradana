@@ -15,7 +15,7 @@ use Illuminate\Support\HtmlString;
  * sudah melenceng (yang satu menggali `ringkasan`, yang lain menggali
  * `tembusan`).
  *
- * SENGAJA masih LIKE, bukan MATCH AGAINST (keputusan S11, 4 Okt 2026: dataset
+ * SENGAJA masih LIKE, bukan MATCH AGAINST: dataset
  * kantor masih ribuan baris dan LIKE jalan identik di MariaDB maupun SQLite
  * yang dipakai suite tes). Kalau volume ternyata bikin lambat, yang ditambah
  * itu satu migration FULLTEXT — bukan rombak kelas ini, karena model tetap

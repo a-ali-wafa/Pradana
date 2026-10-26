@@ -10,9 +10,9 @@ use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 /**
- * Pengaturan Instansi (kop surat + logo). Kelas ini dibuat 4 Okt 2026 — sebelumnya
- * halaman ini tidak punya tes sama sekali — lalu diperluas 5 Okt 2026 untuk dua hal
- * yang justru bikin user melapor: logo tidak tampil, dan kop tidak bisa bertingkat.
+ * Pengaturan Instansi (kop surat + logo). Dua hal yang paling gampang rusak
+ * dan paling cepat dilaporkan orang kantor: logo tidak tampil, dan kop yang
+ * tidak bisa bertingkat.
  *
  * Tes logo di bawah SENGAJA tidak memeriksa `Storage::url()`: akar masalahnya dulu
  * bukan kode yang salah, tapi URL publik yang bergantung symlink `public/storage`.
@@ -62,7 +62,7 @@ class PengaturanInstansiTest extends TestCase
             // Tidak boleh ada lagi `public/storage` di halaman ini: itulah
             // alamat yang dulu mati diam-diam karena symlink belum dibuat.
             ->assertDontSee('storage/logo', false)
-            // Pratinjau client-side + panel kop (dua kolom, 5 Okt 2026).
+            // Pratinjau client-side + panel kop (dua kolom).
             ->assertSee('id="logoPratinjau"', false)
             ->assertSee('name="logo"', false)
             ->assertSee('Pratinjau Kop Surat', false)

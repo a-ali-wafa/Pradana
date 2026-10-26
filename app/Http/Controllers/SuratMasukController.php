@@ -18,9 +18,9 @@ use Illuminate\View\View;
 /**
  * CRUD arsip surat masuk.
  *
- * Penghapusan = soft delete (L-05): arsip tidak bisa dimusnahkan dari layar
- * ini; pemusnahan resmi lewat modul Pemusnahan Arsip + Berita Acara (L-06).
- * Penonaktifan arsip lewat tombol "Nyahkan" / updateStatusArsip (L-19).
+ * Penghapusan = soft delete: arsip tidak bisa dimusnahkan dari layar
+ * ini; pemusnahan resmi lewat modul Pemusnahan Arsip + Berita Acara.
+ * Penonaktifan arsip lewat tombol "Nyahkan" / updateStatusArsip.
  */
 class SuratMasukController extends Controller
 {
@@ -36,10 +36,10 @@ class SuratMasukController extends Controller
     {
         $melihatSampah = $request->query('sampah') === '1';
 
-        // Hanya admin yang boleh membuka daftar arsip yang sudah dihapus lunak (L-05).
+        // Hanya admin yang boleh membuka daftar arsip yang sudah dihapus lunak.
         abort_unless(! $melihatSampah || $request->user()->isAdmin(), 403);
 
-        // Tab "Semua arsip" (`?jenis=semua`, 9 Okt 2026) — urutan gabungan surat
+        // Tab "Semua arsip" (`?jenis=semua`) — urutan gabungan surat
         // masuk + keluar TANPA route baru, sesuai alasan halaman /pencarian
         // dihapus. `?sampah=1` selalu menang: tempat sampah memang per-jenis,
         // dan mencampur surat terhapus ke daftar gabungan membuat arah tombol
@@ -56,8 +56,8 @@ class SuratMasukController extends Controller
 
         // Isi filter tidak lagi ditulis di sini: FilterArsip dipakai bersama oleh
         // daftar masuk, daftar keluar, dan mode gabungan, supaya ketiganya tidak
-        // bisa berbeda kesimpulan (L-14). Pencarian ikut menggali `ringkasan`
-        // DAN teks hasil baca lampiran (`isi_hasil_baca`) + nama berkasnya (L-15).
+        // bisa berbeda kesimpulan. Pencarian ikut menggali `ringkasan`
+        // DAN teks hasil baca lampiran (`isi_hasil_baca`) + nama berkasnya.
         FilterArsip::terapkan($arsip, $request);
 
         $cari = FilterArsip::cari($request);
@@ -86,8 +86,7 @@ class SuratMasukController extends Controller
         $data = $request->validated();
         $data['user_id'] = $request->user()->id;
         // Surat baru selalu masuk sebagai arsip aktif. Toggle ke "inaktif"
-        // adalah bagian dari fitur retensi terpisah yang belum dikerjakan
-        // (blocked by E1) — lihat AGENTS.md Bagian 10 & 11.
+        // adalah bagian dari fitur retensi yang jalurnya lewat pemusnahan arsip.
         $data['status_arsip'] = 'aktif';
 
         SuratMasuk::create($data);
@@ -128,13 +127,12 @@ class SuratMasukController extends Controller
     }
 
     /**
-     * Menyimpan hasil baca otomatis yang SUDAH diperiksa user (5 Okt 2026).
+     * Menyimpan hasil baca otomatis yang SUDAH diperiksa user.
      *
      * Kolom `isi_terverifikasi_pada` diisi di sini, bukan saat upload: teks dari
      * mesin belum boleh dianggap diverifikasi hanya karena berhasil dibaca.
-     * `ringkasan` hanya berubah kalau user mencentang "jadikan ringkasan" —
-     * permintaan user jelas bahwa hasilnya ditampilkan untuk divalidasi, bukan
-     * langsung menimpa isian orang. Batas 5.000 karakter: kolom `ringkasan`
+     * `ringkasan` hanya berubah kalau user mencentang "jadikan ringkasan":
+     * hasil mesin ditampilkan untuk divalidasi, bukan langsung menimpa isian orang. Batas 5.000 karakter: kolom `ringkasan`
      * bertipe TEXT (65.535 byte) dan isi hasil baca bisa jauh lebih panjang.
      */
     public function updateIsi(UpdateIsiSuratMasukRequest $request, SuratMasuk $surat_masuk): RedirectResponse
@@ -170,9 +168,9 @@ class SuratMasukController extends Controller
     }
 
     /**
-     * L-05: hapus = soft delete, dan hanya admin (L-07). Baris, lampiran, dan
+     * hapus = soft delete, dan hanya admin. Baris, lampiran, dan
      * file fisiknya tetap ada supaya bisa dipulihkan; pemusnahan sungguhan hanya
-     * lewat modul Pemusnahan Arsip + Berita Acara (L-06).
+     * lewat modul Pemusnahan Arsip + Berita Acara.
      */
     public function destroy(Request $request, SuratMasuk $surat_masuk): RedirectResponse
     {
@@ -186,8 +184,8 @@ class SuratMasukController extends Controller
     }
 
     /**
-     * L-19 / E8+E9: men-nyahkan arsip = status_arsip jadi "inaktif". Semua user
-     * login boleh (L-08: arsip kantor, tanpa kepemilikan) dan observer mencatat
+     * men-nyahkan arsip = status_arsip jadi "inaktif". Semua user
+     * login boleh (arsip kantor, tanpa kepemilikan) dan observer mencatat
      * perubahannya. Aturannya di `UpdateStatusArsipRequest`, kunci flash 'success'
      * — sejarah bug-nya di trait `MengelolaArsipSurat`.
      */

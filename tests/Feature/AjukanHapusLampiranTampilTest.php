@@ -13,12 +13,12 @@ use Illuminate\Support\Carbon;
 use Tests\TestCase;
 
 /**
- * Tombol "Ajukan Hapus" di halaman show surat (Fase 2 perapian, 9 Okt 2026).
+ * Tombol "Ajukan Hapus" di halaman show surat.
  *
  * View dulu menghitung umurnya SENDIRI:
- *  - surat masuk: `Carbon::parse($surat->tanggal_diterima)->diffInYears(now())`
- *    — padahal L-21 [LOCKED] menyeragamkan acuan umur arsip ke `tanggal_surat`.
- *    Akibatnya tombol bisa muncul untuk surat yang pasti ditolak server
+ *  - surat masuk: `Carbon::parse($surat->tanggal_diterima)->diffInYears(now())`,
+ *    padahal acuan umur arsip sudah diseragamkan ke `tanggal_surat`. Akibatnya
+ *    tombol bisa muncul untuk surat yang pasti ditolak server
  *    (`PengajuanHapusLampiranController::store()`), dan sebaliknya menghilang
  *    untuk surat yang sebenarnya boleh diajukan.
  *  - kedua view memanggil `$lamp->pengajuanHapus()->exists()` di dalam loop =
@@ -95,7 +95,7 @@ class AjukanHapusLampiranTampilTest extends TestCase
 
     public function test_tanggal_diterima_tidak_lagi_menentukan_tampilan(): void
     {
-        // Inti pelanggaran L-21 yang diperbaiki: surat yang DITERIMA tahun 2019
+        // Inti kesalahan yang diperbaiki: surat yang DITERIMA tahun 2019
         // tapi DIBUAT tahun 2025 belum boleh diajukan hapus. Bentuk lama
         // (menghitung dari tanggal_diterima) menampilkan tombolnya, lalu server
         // menolaknya — user lihat tombol yang tidak pernah bisa dipakai.

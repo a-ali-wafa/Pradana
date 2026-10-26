@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 
 /**
- * Membuat akun admin pertama sesudah `php artisan migrate --seed` (I3).
+ * Membuat akun admin pertama sesudah `php artisan migrate --seed`.
  *
  * Seeder produksi sengaja TIDAK menanam akun lagi — email pribadi + PIN keras
  * tidak boleh ikut ke repository. Akun pertama harus dibuat orang yang memang

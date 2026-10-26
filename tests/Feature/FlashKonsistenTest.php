@@ -18,8 +18,8 @@ use Tests\TestCase;
  * dipakai di daftar surat masuk/keluar, manajemen user, dan penolakan pemusnahan,
  * sementara `resources/views/layouts/app.blade.php` hanya merender
  * `session('success')` dan `session('error')`. Akibatnya petugas mengira aksinya
- * gagal (tidak ada konfirmasi) padahal data sudah tersimpan. AGENTS.md mencatat
- * bug yang sama untuk form Ganti PIN dan hanya memperbaikinya di satu tempat.
+ * gagal (tidak ada konfirmasi) padahal data sudah tersimpan. Bentuk yang sama
+ * juga terjadi di form Ganti PIN, dan di sana hanya diperbaiki pada satu tempat.
  *
  * Tes ini gagal lagi begitu ada yang menulis `->with('pesan', ...)` baru tanpa
  * menambah rendernya — persis tipe regresi yang diam-diam membuat aplikasi
@@ -57,7 +57,7 @@ class FlashKonsistenTest extends TestCase
             // `\s*` sebelum kutip itu BUKAN kosmetik: versi pertama pola ini hanya
             // membaca `->with(` yang kutipnya di baris yang SAMA, dan karena itu
             // meleset dari dua flash `status` di updateStatusArsip() — persis bug
-            // yang tes ini harus tangkap. 9 Okt 2026.
+            // yang tes ini harus tangkap.
             if (preg_match_all("/->with\(\s*'([a-z_]+)'\s*,/s", $this->kode($path), $hit)) {
                 foreach ($hit[1] as $kunci) {
                     if (! in_array($kunci, self::DIIZINKAN, true)) {

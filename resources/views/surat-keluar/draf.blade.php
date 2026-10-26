@@ -146,7 +146,7 @@
                 <p class="small mb-1">Baris "Lampiran" pada kop PDF ditulis otomatis:</p>
                 <div class="fs-4 fw-bold text-primary">{{ $jumlahLampiran }} Berkas</div>
                 <p class="small text-secondary mb-2">
-                    Diambil dari jumlah file yang benar-benar terunggah (keputusan P6), jadi tidak bisa
+                    Diambil dari jumlah file yang benar-benar terunggah, jadi tidak bisa
                     tertulis "3 Berkas" padahal file-nya satu.
                 </p>
                 <a href="{{ route('surat-keluar.show', $suratKeluar) }}" class="btn btn-sm btn-link text-decoration-none p-0">

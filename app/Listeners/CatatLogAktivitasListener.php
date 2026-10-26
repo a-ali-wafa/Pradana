@@ -6,7 +6,7 @@ use App\Events\LogAktivitasEvent;
 use App\Models\Aktivitas;
 
 /**
- * Pencatatan log aktivitas SENGAJA sinkron (keputusan L-22 / S4): arsip resmi
+ * Pencatatan log aktivitas SENGAJA sinkron: arsip resmi
  * harus menjamin riwayat tercatat, dan sistem ini berjalan di shared hosting
  * tanpa queue worker — lewat queue berarti log bisa hilang tanpa suara.
  */

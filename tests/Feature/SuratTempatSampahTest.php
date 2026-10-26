@@ -12,7 +12,7 @@ use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 /**
- * L-05 + E8/E9 (L-19): tidak ada penghapusan permanen dari layar arsip.
+ * Tidak ada penghapusan permanen dari layar arsip.
  * "Nyahkan" = status_arsip inaktif; tempat sampah = soft delete yang bisa
  * dipulihkan admin, berkasnya TIDAK boleh ikut hilang.
  */
@@ -75,7 +75,7 @@ class SuratTempatSampahTest extends TestCase
 
     public function test_nyahkan_mengubah_status_arsip_tanpa_menghapus_baris(): void
     {
-        // E9: staf biasa boleh menonaktifkan arsip (tidak ada konsep kepemilikan).
+        // Staf biasa boleh menonaktifkan arsip (tidak ada konsep kepemilikan).
         $this->actingAs($this->pegawai)
             ->patch(route('surat-masuk.status-arsip', $this->masuk), ['status_arsip' => 'inaktif'])
             ->assertRedirect();
@@ -99,7 +99,7 @@ class SuratTempatSampahTest extends TestCase
     public function test_surat_keluar_mengikuti_jalur_nyahkan_yang_sama_dan_memberi_konfirmasi(): void
     {
         // Trait `MengelolaArsipSurat` sekarang melayani KEDUA controller. Tanpa tes
-        // ini, jalur surat keluar cuma terverifikasi lewat browser — dan bug Fase 6
+         // ini, jalur surat keluar cuma terverifikasi lewat browser — dan bug lama
         // (flash 'status' yang tidak dirender layout) justru lahir dari salinan
         // kedua yang tidak diuji.
         $klasifikasi = KlasifikasiPrimer::forceCreate(['kode' => '07', 'nama' => 'Perencanaan']);
@@ -119,7 +119,7 @@ class SuratTempatSampahTest extends TestCase
 
         $keluar->refresh();
         $this->assertSame('inaktif', $keluar->status_arsip);
-        $this->assertNull($keluar->deleted_at, 'Men-nyahkan bukan hapus — L-05 masih berlaku untuk surat keluar.');
+        $this->assertNull($keluar->deleted_at, 'Men-nyahkan bukan hapus — masih berlaku untuk surat keluar.');
 
         $pesan = session('success');
 
@@ -156,7 +156,7 @@ class SuratTempatSampahTest extends TestCase
 
         $this->assertSoftDeleted('surat_masuk', ['id' => $this->masuk->id]);
 
-        // Ini inti L-05: baris lampiran & file fisiknya TIDAK boleh ikut hilang,
+        // Ini intinya: baris lampiran & file fisiknya TIDAK boleh ikut hilang,
         // kalau tidak "pulihkan" akan mengembalikan surat tanpa berkasnya.
         $this->assertDatabaseHas('lampiran', ['id' => $lampiran->id]);
         Storage::disk('arsip')->assertExists($lampiran->path);

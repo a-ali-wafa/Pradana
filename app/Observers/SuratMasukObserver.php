@@ -6,7 +6,7 @@ use App\Models\SuratMasuk;
 use App\Traits\LogsAktivitas;
 
 /**
- * Registrasi observer ada di AppServiceProvider::boot() — aktif sejak 1 Sep 2026.
+ * Registrasi observer ada di AppServiceProvider::boot().
  */
 class SuratMasukObserver
 {
@@ -28,8 +28,8 @@ class SuratMasukObserver
         // protected, dan lewat magic getter Laravel nama itu malah cocok dengan
         // method statis `forceDeleting($callback)` yang butuh 1 argumen — akses
         // langsung melempar Error, bukan mengembalikan null.
-        // Saat surat cuma di-nyahkan (soft delete, L-05), berkas & baris
-        // lampiran sengaja dibiarkan utuh supaya masih bisa dipulihkan.
+        // Saat surat cuma di-nyahkan (soft delete), berkas & baris lampiran
+        // sengaja dibiarkan utuh supaya masih bisa dipulihkan.
         $hapusPermanen = $suratMasuk->isForceDeleting();
 
         if (! $hapusPermanen) {

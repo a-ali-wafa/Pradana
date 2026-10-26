@@ -35,7 +35,8 @@
         </p>
     </div>
 
-    {{-- L-23: riwayat yang sudah diputuskan tetap bisa dibuka, tidak hilang dari layar. --}}
+    {{-- Riwayat pengajuan yang sudah diputuskan tetap bisa dibuka, tidak hilang
+         dari layar: jejak persetujuan itu dipakai lagi saat audit. --}}
     <div class="btn-group" role="group" aria-label="Filter status pengajuan">
         @foreach(['semua' => 'Semua', 'menunggu' => 'Menunggu', 'disetujui' => 'Disetujui', 'ditolak' => 'Ditolak'] as $nilai => $label)
             <a href="{{ route('pengajuan-hapus-lampiran.index', ['status' => $nilai]) }}"

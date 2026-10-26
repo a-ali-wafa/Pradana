@@ -13,10 +13,10 @@ use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 /**
- * L-06 / E3: pemusnahan arsip SURAT hanya boleh terjadi lewat pengajuan →
+ * Pemusnahan arsip SURAT hanya boleh terjadi lewat pengajuan →
  * persetujuan admin, dan persetujuan itu HARUS benar-benar menghapus baris,
  * lampiran, dan file fisiknya. Dua syarat kelayakan (lewat retensi 5 tahun
- * L-04/L-21 dan sudah inaktif L-19) diuji dari dua sisi: daftar kandidat
+ * dan sudah inaktif) diuji dari dua sisi: daftar kandidat
  * (sisi UI) dan validasi server (sisi pemalsuan form).
  */
 class PemusnahanArsipTest extends TestCase

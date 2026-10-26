@@ -11,7 +11,7 @@ use Illuminate\Support\Carbon;
 use Tests\TestCase;
 
 /**
- * Batas tanggal pada laporan & agenda (Fase 1 perapian, 9 Okt 2026).
+ * Batas tanggal pada laporan & agenda.
  *
  * Ini bug kelas yang sama dengan yang sudah diperbaiki di FilterArsip: Eloquent
  * menulis cast `date` sebagai `Y-m-d H:i:s`. Di MariaDB kolom DATE memotong jam

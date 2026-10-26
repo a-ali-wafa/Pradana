@@ -6,10 +6,9 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
- * Alur pengajuan-persetujuan hapus lampiran (keputusan user, 31 Agu 2026,
- * lihat AGENTS.md 12.17): staf mengajukan hapus lampiran pada surat yang
- * berumur lebih dari 5 tahun (E1 [LOCKED]), admin menyetujui/menolak
- * sebelum file benar-benar dihapus dari DB & Google Drive.
+ * Alur pengajuan-persetujuan hapus lampiran: staf mengajukan hapus lampiran pada
+ * surat yang berumur lebih dari 5 tahun, admin menyetujui/menolak sebelum baris dan
+ * file-nya benar-benar hilang.
  */
 class PengajuanHapusLampiran extends Model
 {

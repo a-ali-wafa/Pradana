@@ -14,8 +14,8 @@ use Illuminate\Support\Facades\Hash;
  * Isinya: satu admin + satu pegawai dengan PIN dari `.env` (dev PIN dipakai
  * bersama, jadi tidak keras di kode) dan beberapa baris klasifikasi contoh
  * supaya form surat bisa dicoba. Klasifikasi contoh ini BUKAN daftar resmi —
- * D4 masih dibuka (user: "asumsikan dulu, nanti diputuskan saat presentasi"),
- * jadi kantor menggantinya sendiri lewat menu Klasifikasi.
+ * daftar sebenarnya masih harus datang dari kantor, dan kantor
+ * menggantinya sendiri lewat menu Klasifikasi.
  */
 class DevSeeder extends Seeder
 {

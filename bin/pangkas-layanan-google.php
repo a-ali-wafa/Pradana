@@ -5,7 +5,7 @@
  *
  * Kenapa: `google/apiclient-services` (36.901 berkas di mesin ini, 670 entri = 335
  * layanan x {Drive.php + folder Drive/}) ikut terpasang hanya karena kita memakai
- * SATU layanan: Drive, untuk cadangan lampiran (L-01). Kode aplikasi + apiclient +
+ * SATU layanan: Drive, untuk cadangan lampiran. Kode aplikasi + apiclient +
  * auth tidak menunjuk layanan lain mana pun (dibuktikan di bawah, dan skrip ini
  * membaca ulang buktinya setiap jalan, bukan mempercayai komentar ini).
  *

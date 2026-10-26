@@ -7,9 +7,9 @@ use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Hash;
 
 /**
- * Ganti PIN dari terminal — jalan keluar kalau satu-satunya admin lupa PINnya
- * (L-12 hanya menyediakan reset lewat UI admin, yang justru tidak bisa dibuka
- * kalau tidak ada yang ingat PIN admin).
+ * Ganti PIN dari terminal — jalan keluar kalau satu-satunya admin lupa PINnya.
+ * Lewat layar, reset PIN hanya bisa dilakukan admin: jadi kalau tidak ada yang
+ * ingat PIN admin, tidak ada form yang bisa dibuka sama sekali.
  *
  * Pemakaian: `php artisan arsip:reset-pin nama@email.co`
  */

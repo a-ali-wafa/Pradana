@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\Artisan;
 use Tests\TestCase;
 
 /**
- * K16 (4 Okt 2026): halaman error 403/404/419/500/503 khusus berbahasa
+ * Halaman error 403/404/419/500/503 khusus berbahasa
  * Indonesia. Yang diuji di sini bukan cuma "isinya ada", tapi dua sifat yang
  * bikin halaman error berguna di kantor: (1) dilewati aplikasi betulan (404,
  * 403 dari middleware admin, 503 dari mode pemeliharaan), dan (2) bisa
@@ -22,7 +22,7 @@ class HalamanErrorTest extends TestCase
     public function test_halaman_tidak_dikenal_menggunakan_halaman_sendiri(): void
     {
         // Arahannya ke daftar surat, BUKAN ke /pencarian: halaman pencarian
-        // gabungan dihapus 5 Okt 2026 dan pencarian isi sekarang hidup di filter
+        // mode gabungan tidak punya halaman sendiri; pencarian isi hidup di filter
         // `cari` pada tiap daftar.
         $this->get('/Alamat-Yang-Tidak-Pernah-Ada')
             ->assertNotFound()

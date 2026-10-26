@@ -8,9 +8,9 @@ use Illuminate\Support\Facades\Config;
 use Tests\TestCase;
 
 /**
- * `arsip:backup-db` — cadangan database kantor (P1 di docs/daftar-peningkatan.md,
- * dikerjakan 10 Okt 2026, pada hari yang sama MariaDB dev di laptop ini korup dan
- * tidak ada satu pun dump yang bisa dipakai untuk memulihkan).
+ * `arsip:backup-db` — cadangan database kantor. Dibuat pada hari MariaDB dev di
+ * laptop ini korup dan terbukti tidak ada satu pun dump yang bisa dipakai untuk
+ * memulihkan.
  *
  * Yang dijaga di sini adalah lima cara perintah cadangan bisa menjadi ilusi:
  *  1. password dibocorkan lewat baris perintah (bisa dibaca siapa pun lewat Task
@@ -81,7 +81,7 @@ class BackupDatabaseTest extends TestCase
 
     public function test_flag_prosedur_dan_event_bisa_dimatikan_saat_hosting_menolak(): void
     {
-        // Shared hosting (K1=a) sering menolak `--routines`/`--events` karena dua
+        // Shared hosting sering menolak `--routines`/`--events` karena dua
         // privilege di luar database kantor. Skema PRADANA hari ini tidak punya
         // keduanya, jadi cadangan harus tetap bisa dibuat tanpa memaksa orang
         // menaikkan privilege yang memang bukan miliknya.

@@ -13,8 +13,7 @@ use Illuminate\View\View;
  *
  * Ditaruh di trait karena logikanya identik dan yang berbeda cuma nama view
  * asalnya: menyalin `if (gabungan)` ke dua controller adalah pola yang sudah
- * berkali-kali jadi sumber perbedaan perilaku di project ini (lihat catatan
- * parsial cascade JS dan keseragaman filter L-14).
+ * berkali-kali jadi sumber perbedaan perilaku di project ini.
  */
 trait MenampilkanArsipGabungan
 {

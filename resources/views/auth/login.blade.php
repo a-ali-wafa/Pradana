@@ -11,14 +11,14 @@
 
     {{--
         auth/login.blade.php — dibuat sesuai AuthController::create() & LoginRequest
-        (field: email, pin [digits:8]). `remember` sudah DIHAPUS (L-11) karena
+        (field: email, pin [digits:8]). `remember` sudah DIHAPUS karena
         komputer kantor dipakai bersama.
 
         $instansi (baris tunggal `pengaturan_instansi`, dikirim AuthController::create()
         via PengaturanInstansi::first()) dipakai untuk nama & logo di panel kiri — BISA
         null (belum di-seed / tabel kosong), jadi semua akses pakai null-safe (?->) dengan
         fallback ke branding generik "PRADANA". Logo diambil lewat `$instansi->logoUrl()`
-        (route `instansi.logo`, 5 Okt 2026) — BUKAN `Storage::url()` lagi, karena URL
+        (route `instansi.logo`) — BUKAN `Storage::url()` lagi, karena URL
         storage itu bergantung pada symlink `public/storage` yang belum/tidak selalu
         ada; route-nya memang sengaja boleh diakses guest.
 
@@ -34,7 +34,7 @@
         ditampilkan inline di bawah field-nya sendiri.
 
         Tidak ada link "lupa PIN" di halaman ini: reset PIN dilakukan admin lewat daftar user
-        (L-12), jadi staf yang lupa PIN memang harus menemui admin — bukan self-service, karena
+       , jadi staf yang lupa PIN memang harus menemui admin — bukan self-service, karena
         tidak ada SMTP kantor untuk kirim tautan reset.
     --}}
 
@@ -250,8 +250,8 @@
                         @enderror
                     </div>
 
-                    {{-- L-11: tidak ada "remember me". Komputer kantor dipakai
-                         bersama, jadi sesi tidak boleh bertahan lewat browser. --}}
+                    {{-- Tidak ada "remember me": komputer kantor dipakai bersama,
+                         jadi sesi tidak boleh bertahan lewat browser. --}}
 
                     <button type="submit" class="btn btn-login">
                         <i class="fas fa-right-to-bracket me-1"></i> Masuk

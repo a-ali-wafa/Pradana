@@ -13,7 +13,7 @@ class StoreSuratMasukRequest extends FormRequest
     /**
      * Semua user login boleh input surat masuk (bukan admin-only) —
      * middleware('auth') di controller sudah cukup. Hanya destroy() yang
-     * admin-only (keputusan default B2), dicek di controller, bukan di sini.
+     * admin-only, dicek di controller, bukan di sini.
      */
     public function authorize(): bool
     {
@@ -34,14 +34,14 @@ class StoreSuratMasukRequest extends FormRequest
             'sifat' => ['required', Rule::in(['mendesak', 'penting', 'rahasia', 'biasa'])],
 
             // Manual, BUKAN auto-generate (beda dengan surat_keluar) dan
-            // TIDAK unique — lihat AGENTS.md 12.3 & riwayat perubahan.
+            // TIDAK unique: dua surat dengan nomor yang sama boleh dicatat.
             'nomor_surat' => ['required', 'string', 'max:100'],
 
             'kota_asal' => ['nullable', 'string', 'max:255'],
             'provinsi_asal' => ['nullable', 'string', 'max:255'],
 
             'tanggal_surat' => ['required', 'date'],
-            // D5 [DEFAULT]: tanggal_diterima tidak boleh lebih awal dari tanggal_surat.
+            // tanggal_diterima tidak boleh lebih awal dari tanggal_surat.
             'tanggal_diterima' => ['required', 'date', 'after_or_equal:tanggal_surat'],
 
             'perihal' => ['required', 'string', 'max:255'],
@@ -53,14 +53,12 @@ class StoreSuratMasukRequest extends FormRequest
 
             // status_arsip SENGAJA tidak divalidasi di sini — di-hardcode
             // 'aktif' oleh controller saat create, dan belum ada jalur
-            // update-nya (fitur toggle Inaktif ada di roadmap terpisah,
-            // "Manajemen retensi/penyusutan", blocked by E1). Lihat AGENTS.md.
+            // update-nya: jalur "inaktif" dipakai lewat halaman pemusnahan arsip.
         ];
     }
 
     /**
-     * Validasi hierarki klasifikasi (pola sama seperti Surat Keluar,
-     * lihat AGENTS.md 12.6): pastikan klasifikasi_sekunder_id yang dipilih
+     * Validasi hierarki klasifikasi (pola sama seperti Surat Keluar): pastikan klasifikasi_sekunder_id yang dipilih
      * benar anak dari klasifikasi_primer_id, begitu juga tersier ke
      * sekunder — supaya dropdown cascading yang di-tamper di client tidak
      * bikin data nyasar.

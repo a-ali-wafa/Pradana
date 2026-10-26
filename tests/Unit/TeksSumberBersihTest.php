@@ -10,8 +10,8 @@ use PHPUnit\Framework\TestCase;
  * Kenapa tes sepele ini ada: PRADANA ditulis dalam bahasa Indonesia, nama domain
  * sengaja tidak diterjemahkan (`surat_masuk`), dan tidak ada satu pun teks
  * Jepang/Mandarin yang seharusnya muncul. Tapi dalam praktiknya karakter CJK
- * masuk BERULANG KALI ke komentar dan dokumentasi — empat kali hanya dalam satu
- * session (9–10 Okt 2026), selalu di tengah kalimat yang sedang ditulis cepat,
+ * masuk BERULANG KALI ke komentar dan dokumentasi — berkali-kali dalam satu
+ * sesi penulisan, selalu di tengah kalimat yang sedang ditulis cepat,
  * dan selalu lolos dari pembacaan sekilas karena bentuknya "huruf lain" saja:
  *   satu-dua karakter Han menyisip di tengah kata Indonesia — "setelah(CJK) dikerjakan",
  *   "yang(CJK)-nya", "masih(CJK) ruang", "dan(CJK) menolak". Placeholder-nya harus
@@ -75,8 +75,8 @@ class TeksSumberBersihTest extends TestCase
      *
      * `docs/` masuk sebagai DIREKTORI, bukan sebagai daftar berkas. Alasannya
      * terjadi hari ini: daftar hard-coded selalu tertinggal satu berkas —
-     * `docs/deploy.md` (ditulis 12 Okt) tidak pernah ada di dalamnya, dan karakter
-     * CJK mendarat di `docs/kesiapan-deploy.md` pada 21 Okt. Yang menangkapnya
+     * contohnya: dokumen yang ditulis 12 Okt tidak pernah terdaftar di dalamnya,
+     * dan karakter CJK mendarat di dokumen baru yang ditulis 21 Okt. Yang menangkapnya
      * waktu itu pindaian manual, bukan tes ini. Sekarang dokumen baru ikut
      * dipindai sejak pertama kali disimpan, tanpa perlu ada yang ingat mendaftarnya.
      *
@@ -102,7 +102,7 @@ class TeksSumberBersihTest extends TestCase
             }
         }
 
-        foreach (['AGENTS.md', 'AGENTS_HISTORY.md', 'README.md'] as $relatif) {
+        foreach (['AGENTS.md', 'README.md'] as $relatif) {
             if (is_file($this->root().'/'.$relatif)) {
                 yield $this->root().'/'.$relatif;
             }

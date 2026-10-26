@@ -5,9 +5,8 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * SQUASH S11. Klasifikasi 3 level primer -> sekunder -> tersier (L-26/L-08:
- * mutasinya tetap admin-only, jawaban B3 "Lanjut"). `kode` primer jadi bagian
- * nomor surat keluar (D1/L-17), jadi tidak boleh berubah semaunya.
+ * Klasifikasi 3 level primer -> sekunder -> tersier. Mutasinya admin-only.
+ * `kode` primer jadi bagian nomor surat keluar, jadi tidak boleh berubah semaunya.
  */
 return new class extends Migration
 {

@@ -12,7 +12,7 @@ use Tests\TestCase;
 /**
  * Jalur HTTP pembuatan surat keluar: memastikan controller memakai
  * NomorSuratKeluarGenerator dan urutannya naik satu per satu, dengan format
- * D1 [LOCKED] {urutan}/{kodeP.kodeS}/{bulan romawi}/{tahun}.
+ * {urutan}/{kodeP.kodeS}/{bulan romawi}/{tahun}.
  */
 class SuratKeluarNomorTest extends TestCase
 {
@@ -65,7 +65,7 @@ class SuratKeluarNomorTest extends TestCase
 
     public function test_urutan_mulai_ulang_di_tahun_berikutnya(): void
     {
-        // D2: reset tiap tahun, dihitung dari tanggal_surat (bukan tanggal server).
+        // Reset tiap tahun, dihitung dari tanggal_surat (bukan tanggal server).
         $this->actingAs($this->petugas)->post(route('surat-keluar.store'), $this->buatSurat('2026-12-30'));
         $this->actingAs($this->petugas)->post(route('surat-keluar.store'), $this->buatSurat('2027-01-04'));
 

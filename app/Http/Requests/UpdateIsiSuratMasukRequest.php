@@ -5,7 +5,7 @@ namespace App\Http\Requests;
 use Illuminate\Foundation\Http\FormRequest;
 
 /**
- * Validasi panel "Hasil baca isi lampiran" di halaman surat masuk (5 Okt 2026).
+ * Validasi panel "Hasil baca isi lampiran" di halaman surat masuk.
  *
  * Form request TERPISAH dari UpdateSuratMasukRequest dengan alasan sengaja:
  * yang diubah di sini hanya teks hasil baca (+ opsional salinan ke ringkasan),
@@ -20,7 +20,7 @@ class UpdateIsiSuratMasukRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        // Semua role yang login boleh (L-08: surat kantor boleh diubah siapa pun,
+        // Semua role yang login boleh (surat kantor boleh diubah siapa pun,
         // tercatat di log aktivitas). Route-nya sudah `middleware('auth')`.
         return true;
     }

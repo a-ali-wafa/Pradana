@@ -6,8 +6,8 @@ use App\Models\KlasifikasiSekunder;
 use App\Traits\LogsAktivitas;
 
 /**
- * Dibuat 1 Sep 2026, sekarang SUDAH diregistrasikan di AppServiceProvider::boot()
- * (lihat `AGENTS.md`). Aksi dicatat lewat trait LogsAktivitas → LogAktivitasEvent.
+ * Diregistrasikan di AppServiceProvider::boot(). Aksi dicatat lewat trait
+ * LogsAktivitas → LogAktivitasEvent.
  */
 class KlasifikasiSekunderObserver
 {

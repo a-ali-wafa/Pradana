@@ -11,8 +11,8 @@ use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 /**
- * Laporan hanya mengangkat kolom yang dibacanya (P0 di `docs/daftar-peningkatan.md`,
- * dikerjakan 10 Okt 2026).
+ * Laporan hanya mengangkat kolom yang dibacanya:
+ * tanpa daftar eksplisit, satu baris surat ikut memuat LONGTEXT hasil baca.
  *
  * Angka yang mendorong perubahan ini (diukur 9 Okt di MariaDB tanding, 16.005 surat):
  *   `->get()`           1.674 ms, puncak memori 56 MB
@@ -20,7 +20,7 @@ use Tests\TestCase;
  * Selisihnya hampir seluruhnya `isi_hasil_baca` (LONGTEXT, batas writer-nya 20.000
  * karakter) dan `ringkasan` (TEXT) — dua kolom yang TIDAK dicetak di satu pun kolom
  * rekap CSV maupun Buku Agenda. Rekap setahun penuh adalah jalur yang paling mungkin
- * memakainya, dan target deploy kantor (K1=a) tidak memberi kita `memory_limit`.
+ * memakainya, dan target deploy kantor tidak memberi kita `memory_limit`.
  *
  * Tes ini Menjaga dua arah sekaligus:
  *  1. query surat tidak lagi menyebut kolom berat (guardrail terhadap regresi
@@ -198,7 +198,7 @@ class LaporanHematKolomTest extends TestCase
     {
         // Relasi `petugas()` memakai withTrashed(): arsip kantor harus tetap
         // menyebut nama orang yang menginput, meski akunnya sudah dihapus
-        // (L-10). Eager load yang dibatasi kolom (`petugas:id,nama_lengkap`)
+        //Eager load yang dibatasi kolom (`petugas:id,nama_lengkap`)
         // adalah tempat paling mungkin untuk senyap mengubah itu jadi "-".
         $surat = $this->suratBerisiPanjang('HEMAT-003');
         $this->petugas->delete();

@@ -35,10 +35,10 @@ class SuratKeluarController extends Controller
     }
 
     /**
-     * Daftar surat keluar. Filternya identik dengan daftar surat masuk (L-14)
+     * Daftar surat keluar. Filternya identik dengan daftar surat masuk 
      * dan semuanya dikerjakan FilterArsip + SuratKeluar::scopeCari: nomor,
      * perihal, penerima/instansi, ringkasan, ISI draf konten + tembusan, dan
-     * nama berkas lampiran (L-15). `?sampah=1` (admin saja) = surat terhapus,
+     * nama berkas lampiran. `?sampah=1` (admin saja) = surat terhapus,
      * `?jenis=semua` = urutan gabungan masuk + keluar.
      */
     public function index(Request $request): View
@@ -159,7 +159,7 @@ class SuratKeluarController extends Controller
     }
 
     /**
-     * Hapus lunak (L-05): surat tidak pernah hilang sungguhan dari layar ini —
+     * Hapus lunak: surat tidak pernah hilang sungguhan dari layar ini —
      * lampiran & file fisiknya tetap utuh dan bisa dipulihkan admin. Yang berbeda
      * dari surat masuk cuma kalimat flash-nya, yang menyebut nomor surat.
      */
@@ -175,7 +175,7 @@ class SuratKeluarController extends Controller
     }
 
     /**
-     * L-19 / E8+E9: "Nyahkan" = status_arsip inaktif. Semua user login boleh,
+     * "Nyahkan" = status_arsip inaktif. Semua user login boleh,
      * perubahannya tercatat lewat observer. Aturannya di `UpdateStatusArsipRequest`,
      * flash 'success' — sejarah bug kuncinya di trait `MengelolaArsipSurat`.
      */

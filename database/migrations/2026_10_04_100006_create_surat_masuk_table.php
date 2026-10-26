@@ -5,12 +5,12 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * SQUASH S11. `file_path` (sisa satu-file-per-surat jaman Apps Script) dibuang:
- * lampiran sudah pindah ke tabel `lampiran` (polymorphic, L-01).
- * `deleted_at` = tempat sampah admin (L-05); hapus permanen hanya lewat alur
- * Pemusnahan Arsip (L-06) yang meninggalkan Berita Acara.
+ * `file_path` (sisa satu-file-per-surat jaman Apps Script) dibuang: lampiran
+ * sudah pindah ke tabel `lampiran` (polymorphic).
+ * `deleted_at` = tempat sampah admin; hapus permanen hanya lewat alur
+ * Pemusnahan Arsip yang meninggalkan Berita Acara.
  * `nomor_surat` sengaja TIDAK unique di sini: satu surat bisa dicatat lebih dari
- * sekali kalau dikirim ke beberapa instansi (D9=a).
+ * sekali kalau dikirim ke beberapa instansi.
  */
 return new class extends Migration
 {

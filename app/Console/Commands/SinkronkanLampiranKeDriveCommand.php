@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 /**
- * Salinan arsip ke Google Drive (keputusan L-01): Drive bukan lagi tempat
+ * Salinan arsip ke Google Drive: Drive bukan lagi tempat
  * pencatatan utama, hanya backup terjadwal. Perintah ini menaikkan file lokal
  * yang belum punya salinan Drive, dengan struktur folder lama:
  * {root} / Surat Masuk|Keluar / {kode - nama primer} / file.
@@ -91,7 +91,7 @@ class SinkronkanLampiranKeDriveCommand extends Command
 
     /**
      * Resolusi + cache folder Drive per (jenis surat, klasifikasi primer).
-     * Level primer saja, sesuai keputusan C6.
+     * Cuma level primer: satu subfolder per klasifikasi primer.
      */
     private function folderTujuan(
         GoogleDriveService $drive,

@@ -5,14 +5,14 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * SQUASH S11 (4 Okt 2026) — semua migration lama (20 file, termasuk ALTER dan
+ * Semua migration lama (20 file, termasuk ALTER dan
  * tabel peninggalan queue/Sanctum) diringkas jadi satu set bersih. Skema di
  * bawah adalah hasil akhir yang sudah dipakai berjalan, BUKAN tebakan.
  *
  * Yang sengaja TIDAK ada di tabel ini:
- * - `remember_token` — login tinggal email+PIN tanpa "ingat saya" (L-11).
- * - `email_verified_at` — tidak ada verifikasi email; kantor tanpa SMTP (A4/L-12).
- * - `role` enum hanya 2 nilai (L-07): `admin` = kepala dengan hak nyata,
+ * - `remember_token` — login tinggal email+PIN tanpa "ingat saya".
+ * - `email_verified_at` — tidak ada verifikasi email; kantor tanpa SMTP.
+ * - `role` enum hanya 2 nilai: `admin` = kepala dengan hak nyata,
  *   `pegawai` = staf. Kalau kantor mau memisahkan "kepala" lagi, itu keputusan
  *   baru — jangan diam-diam mengembalikan enum 3 nilai.
  */

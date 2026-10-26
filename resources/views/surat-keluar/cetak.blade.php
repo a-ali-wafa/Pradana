@@ -1,12 +1,12 @@
 {{--
-    Template cetak Surat Keluar — DITULIS ULANG 5 Okt 2026 mengikuti struktur naskah
+    Template cetak Surat Keluar, mengikuti struktur naskah
     dinas desa/kelurahan pada umumnya (rujukan: Permendagri 1/2023 tentang Tata Naskah
     Dinas, contoh kop pemerintah desa, dan pedoman tata naskah dinas instansi).
 
     Yang dulu belum sesuai dan sekarang dibenahi:
     - Kop satu baris + "jenis instansi" di bawah alamat → kop bertingkat
       (Kabupaten → Kecamatan → Desa) lewat partial `partials/kop-pdf.blade.php`,
-      dengan baris alamat + kode pos + kontak yang benar (kolom baru 5 Okt 2026).
+      dengan baris alamat + kode pos + kontak yang benar.
     - Tanggal surat tanpa nama tempat → "Urek-Urek, 5 Oktober 2026" (kanan, sejajar
       baris Nomor), sesuai kebiasaan kantor.
     - Blok Nomor/Lampiran/Perihal → tabel dengan titik dua sejajar, ditambah baris
@@ -20,7 +20,7 @@
       boleh terpotong halaman (`page-break-inside: avoid`).
     - Tembusan bernomor 1..n kalau lebih dari satu baris.
 
-    MASIH DITUNGGU (F3=b): kop RESMI dari desa. Selama contoh kop asli belum
+    MASIH DITUNGGU: kop RESMI dari desa. Selama contoh kop asli belum
     diberikan, template umum ini yang dipakai — ukuran font & margin sengaja
     mendekati ukuran yang lazim supaya tinggal digeser kalau nanti dicocokkan.
 --}}

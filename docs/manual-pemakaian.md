@@ -107,11 +107,11 @@ Yang perlu diketahui pemakai:
 
 ## 7. Mencari arsip
 
-Menu **Pencarian Arsip** sudah tidak ada sejak 5 Okt 2026 — pencariannya pindah ke tempat orang memang mencarinya: kotak **Cari** di halaman **Surat Masuk** dan di halaman **Surat Keluar**.
+Menu **Pencarian Arsip** sudah tidak ada — pencariannya pindah ke tempat orang memang mencarinya: kotak **Cari** di halaman **Surat Masuk** dan di halaman **Surat Keluar**.
 
 Kotak itu menggali **nomor surat, perihal, pengirim atau penerima, instansi, kota, lokasi berkas fisik, ringkasan, isi draf surat keluar beserta tembusannya, teks hasil baca lampiran, dan nama berkas lampiran**. Jadi cukup mengetik potongan kata, misalnya `irigasi`, tanpa perlu hafal nomornya.
 
-Sejak 9 Okt 2026, mengetik **beberapa kata sekaligus** juga berfungsi: setiap kata harus ditemukan, tapi **tidak harus berurutan dan boleh berada di kolom berbeda**. Contohnya `koperasi 2026` tetap menemukan surat yang perihalnya menyebut "koperasi" dan ringkasannya menyebut "2026". Sebelum ini kalimat semacam itu harus ada persis utuh, jadi sering memberi hasil kosong.
+Mengetik **beberapa kata sekaligus** juga berfungsi: setiap kata harus ditemukan, tapi **tidak harus berurutan dan boleh berada di kolom berbeda**. Contohnya `koperasi 2026` tetap menemukan surat yang perihalnya menyebut "koperasi" dan ringkasannya menyebut "2026". Sebelum ini kalimat semacam itu harus ada persis utuh, jadi sering memberi hasil kosong.
 
 Dua hal lain yang perlu diketahui:
 
@@ -315,7 +315,7 @@ Dua hal yang dicadangkan, dan keduanya otomatis:
 | Apa | Perintah | Hasil |
 |---|---|---|
 | Isi database (surat, klasifikasi, log, Berita Acara) | `arsip:backup-db` (harian 02:10) | `storage/app/private/db-backup/prd-<tanggal>.sql`, rotasi 30 hari |
-| Berkas lampiran | `arsip:sinkron-ke-drive` (harian 00:00) | folder Drive (L-01: Drive itu cadangan, bukan tempat utama) |
+| Berkas lampiran | `arsip:sinkron-ke-drive` (harian 00:00) | folder Drive (Drive itu cadangan, bukan tempat utama) |
 
 **Perintah cadangan tidak pernah mengaku berhasil begitu saja.** Setelah `mysqldump` selesai, is diperiksa: ukuran minimal, ada baris `CREATE DATABASE` untuk database yang benar, jumlah `CREATE TABLE` tidak kurang dari jumlah tabel sungguhan di server, dan footer `-- Dump completed` ada. Kalau salah satu gagal, berkasnya **dibuang** dan perintah keluar dengan status gagal — lebih baik tidak punya cadangan yang diketahui buruk daripada punya yang disangka baik.
 

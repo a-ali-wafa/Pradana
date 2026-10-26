@@ -1,11 +1,11 @@
 {{--
     Form unggah lampiran, dipakai halaman show surat masuk & keluar.
-    Satu salinan untuk keduanya (keputusan H6: dulu dua file yang isinya
-    mulai melenceng).
+    Satu salinan untuk keduanya — dulu ada dua file yang isinya mulai
+    melenceng.
 
     Butuh variabel: $action (URL store), $suratId.
 
-    Upload berjalan sinkron di server (L-02), tapi dikirim lewat AJAX supaya
+    Upload berjalan sinkron di server, tapi dikirim lewat AJAX supaya
     ada floating progress bar di pojok kanan bawah dan layar tidak membeku
     (permintaan eksplisit user). Tanpa JavaScript, form tetap submit biasa.
 --}}
@@ -165,7 +165,7 @@
                         (hasil.duplikat || []).forEach(function (nama) { duplikatTerlewat.push(nama); });
 
                         // Server mencoba membaca isi berkas surat masuk dalam request
-                        // yang sama (L-02: tanpa queue). Hasilnya dikumpulkan dulu,
+                        // yang sama (tanpa queue). Hasilnya dikumpulkan dulu,
                         // lalu diserahkan sekali ke halaman show di akhir.
                         if (hasil.baca) {
                             (hasil.baca.catatan || []).forEach(function (c) { catatanBaca.push(c); });

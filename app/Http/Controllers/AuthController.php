@@ -10,21 +10,20 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
 /**
- * Login & logout — email + PIN 8 digit, BUKAN password konvensional (L-11).
+ * Login & logout — email + PIN 8 digit, BUKAN password konvensional.
  * `User::getAuthPassword()` di-override ke kolom `pin`, jadi `Auth::attempt()`
- * tetap pakai kredensial biasa (dicek ke `User.php` asli 28 Agu 2026).
+ * tetap pakai kredensial biasa Laravel.
  *
- * Tanpa "ingat saya": computer kantor dipakai bersama, dan kolom
- * `remember_token` sudah dibuang dari skema (L-11 + squash S11).
+ * Tanpa "ingat saya": komputer kantor dipakai bersama, dan kolom
+ * `remember_token` sudah dibuang dari skema.
  *
  * Pembuatan akun SENGAJA tidak di sini: admin yang membuatkan akun lewat
- * `UserController@store` (L-10/A3 sudah final 28 Agu 2026, bukan self-register).
+ * `UserController@store`, bukan pendaftaran mandiri lewat halaman login.
  *
  * View `auth.login` berdiri sendiri (tidak pakai `layouts.app`) supaya halaman
  * login bisa dibuka tanpa sesi. `$instansi` (baris tunggal `pengaturan_instansi`)
  * dikirim ke view untuk nama + logo instansi — pola akses baris tunggal yang sama
- * dengan `PengaturanInstansiController` (`first()`/`firstOrFail()`, sudah
- * di-cross-check 31 Agu 2026).
+ * dengan `PengaturanInstansiController` (`first()`/`firstOrFail()).
  */
 class AuthController extends Controller
 {
@@ -44,7 +43,7 @@ class AuthController extends Controller
 
         $request->session()->regenerate();
 
-        // Route 'dashboard' sudah ada per 28 Agu 2026 (DashboardController), lihat AGENTS_HISTORY.md 12.15
+        // Route 'dashboard' sudah ada (DashboardController)
         return redirect()->intended(route('dashboard'));
     }
 

@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Plumbing untuk tes yang harus jalan di MariaDB SUNGGUHAN (L-24 / Q1=b).
+ * Plumbing untuk tes yang harus jalan di MariaDB SUNGGUHAN.
  *
  * Kenapa kelas ini ada: suite utama berjalan di SQLite in-memory, dan ada bentuk
  * SQL yang TIDAK bisa dibuktikan dari sana — `LIKE ? ESCAPE '!'`, `CASE` di
@@ -49,7 +49,7 @@ abstract class MariaDbHarness extends TestCase
      * dipindah ke `mysql_test_a` — tetapi PHPUnit tetap memanggil `tearDown()`.
      * Tanpa flag ini, jalur "XAMPP mati" justru bersih-bersih di connection
      * default (SQLite in-memory yang belum dimigrasi) dan meledak dengan
-     * `no such table: surat_masuk`. Persis itulah yang terjadi 10 Okt 2026: 13
+     * `no such table: surat_masuk`. Persis itulah yang terjadi: 13
      * tes yang HARUS-nya skip jadi FAILED, dan suite merah karena alasan yang
      * tidak ada hubungannya dengan kode. Skip yang tidak diuji saat server mati
      * sama butanya dengan tes yang tidak diuji saat kodenya salah.

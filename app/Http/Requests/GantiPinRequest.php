@@ -7,7 +7,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Validator;
 
 /**
- * User mengganti PIN miliknya sendiri (L-12 / A5=a).
+ * User mengganti PIN miliknya sendiri.
  *
  * PIN lama WAJIB diisi dan dicocokkan: tanpa itu, sesi yang ditinggal terbuka
  * di komputer kantor cukup satu kali klik untuk mengambil alih akun.

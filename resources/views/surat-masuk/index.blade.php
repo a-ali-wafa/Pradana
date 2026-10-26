@@ -243,7 +243,7 @@
                                            class="btn btn-sm btn-outline-primary" title="Edit">
                                             <i class="fas fa-pen"></i>
                                         </a>
-                                        {{-- E8/E9 "Nyahkan" = nonaktifkan arsip, bukan hapus --}}
+                                        {{-- "Nyahkan" = nonaktifkan arsip, bukan hapus --}}
                                         <form method="POST"
                                               action="{{ route('surat-masuk.status-arsip', $surat) }}"
                                               class="d-inline">

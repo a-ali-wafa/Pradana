@@ -5,12 +5,12 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * SQUASH S11. Kolom `lampiran` (string 100) dibuang: isinya notasi teks formal
+ * Kolom `lampiran` (string 100) dibuang: isinya notasi teks formal
  * surat ("1 Berkas") yang sekarang dihitung OTOMATIS dari jumlah baris tabel
- * `lampiran` (P6=a). History 2026_09_04_174904 sebenarnya berniat membuang
- * kolom ini tapi salah sasaran — di-ALTER ke tabel surat_masuk/surat_keluar,
- * sehingga kolomnya tetap ada sampai sekarang. Tidak ada kode yang membacanya
- * lagi sejak P6, jadi hilangnya tidak mengubah perilaku apa pun.
+ * `lampiran`. Migration lama yang berniat membuangnya salah sasaran — di-ALTER
+ * ke tabel surat_masuk/surat_keluar, sehingga kolom ini tetap ada sampai
+ * sekarang. Tidak ada kode yang membacanya lagi, jadi hilangnya tidak mengubah
+ * perilaku apa pun.
  */
 return new class extends Migration
 {

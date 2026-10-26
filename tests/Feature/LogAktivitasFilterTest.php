@@ -9,7 +9,7 @@ use Illuminate\Support\Carbon;
 use Tests\TestCase;
 
 /**
- * Filter halaman log aktivitas setelah dirapikan (Fase 1, 9 Okt 2026).
+ * Filter halaman log aktivitas setelah dirapikan.
  *
  * Dua hal yang berubah di `AktivitasController`:
  * 1. `whereDate('created_at', …)` dibuang — fungsinya di atas kolom membuat

@@ -8,13 +8,13 @@ use Illuminate\Validation\Rule;
 /**
  * klasifikasi_tersier: klasifikasi_sekunder_id FK wajib, kode+nama unique KOMPOSIT per
  * sekunder (bukan unique global). Panjang kolom kode(5)/nama(100) BELUM diverifikasi ke
- * migration asli — diasumsikan sama seperti klasifikasi_primer, lihat AGENTS_HISTORY.md 12.11.
+ * migration asli — diasumsikan sama seperti `klasifikasi_primer`.
  */
 class StoreKlasifikasiTersierRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        // Pengecekan admin dilakukan manual di controller (ensureAdmin()), lihat 12.11.
+        // Pengecekan admin dilakukan manual di controller (ensureAdmin()).
         return true;
     }
 

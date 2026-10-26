@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Deploy PRADANA ke hosting kantor (shared hosting PHP + Apache, K1=a).
+# Deploy PRADANA ke hosting kantor (shared hosting PHP + Apache).
 #
 # Kenapa ada skrip: isinya sudah lama diketahui (Lampiran A manual pemakaian), tapi
 # "salin-tempel langkah" adalah sumber kegagalan yang senyap — langkah yang kelewat
@@ -14,8 +14,8 @@
 # Skrip ini TIDAK menyalin kode. Branch/zip diunggah lewat mekanisme hosting atau
 # `rsync` terpisah — supaya yang diuji di bawah adalah hasil salinan yang sama.
 #
-# Di Windows (laptop pengembang) skrip ini tidak dipakai; lihat docs/deploy.md
-# bagian "kalau tidak ada SSH".
+# Di Windows (laptop pengembang) skrip ini tidak dipakai — di sana langkah yang
+# sama dikerjakan manual lewat terminal, bukan lewat SSH.
 
 set -euo pipefail
 
@@ -129,8 +129,8 @@ foreach ([["upload_max_filesize", 26], ["post_max_size", 26]] as $s) {
 
     # ── 4. Pangkas stub Google yang tidak dipakai ─────────────────────────────
     # Dari 43.561 berkas vendor produksi, 36.901 di antaranya stub layanan Google
-    # yang tidak pernah disentuh aplikasi ini (kita cuma pakai Drive untuk cadangan
-    # lampiran, L-01). Angka itu bukan soal estetika: hosting dengan batas inode
+    # yang tidak pernah disentuh aplikasi ini (Drive dipakai cuma untuk cadangan
+    # lampiran). Angka itu bukan soal estetika: hosting dengan batas inode
     # 30.000 berkas menolak akun yang melewatinya, dan gejalanya "upload gagal",
     # bukan pesan yang menyebut penyebabnya. Skripnya menghitung sendiri daftar yang
     # dipertahankan dari kode (bukan daftar hard-coded yang bisa basi) dan berhenti
@@ -139,7 +139,7 @@ foreach ([["upload_max_filesize", 26], ["post_max_size", 26]] as $s) {
     php bin/pangkas-layanan-google.php
 
     # ── 5. Struktur folder + izin tulis ───────────────────────────────────────
-    # Lampiran hidup di storage/app/private/arsip — DI LUAR public/ (L-01), jadi
+    # Lampiran hidup di storage/app/private/arsip — DI LUAR public/, jadi
     # tidak ada symlink yang perlu dibuat dan tidak ada jalur publik ke berkas kantor.
     # Justru karena perlindungannya "di luar public/", satu-satunya penjaga adalah
     # permission: folder ini harus bisa ditulis user PHP web, dan isi db-backup/
@@ -218,7 +218,7 @@ echo "  3. cron tiap menit: * * * * * cd $AKAR && php artisan schedule:run >> /d
 echo "     Tanpa ini tidak ada backup DB 02:10, tidak ada sinkron Drive, tidak ada daftar"
 echo "     arsip usang, dan log tidak pernah dibersihkan. Semuanya hidup di Kernel.php."
 echo "  4. SESSION_SECURE_COOKIE=true dan TRUSTED_PROXIES baru dinyalakan setelah HTTPS"
-echo "     benar-benar terpasang (keputusan S14). Kalau ada proxy/tunnel tapi daftar"
+echo "     benar-benar terpasang. Kalau ada proxy/tunnel tapi daftar"
 echo "     proxy kosong, semua petugas tampak memakai satu IP: lima salah ketik PIN oleh"
 echo "     satu orang mengunci seluruh kantor, karena kunci throttle login = email+IP."
 echo "  5. Sekali, SEBELUM data kantor masuk: php artisan arsip:backup-db, lalu pulihkan"

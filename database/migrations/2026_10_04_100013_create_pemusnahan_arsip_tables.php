@@ -5,7 +5,7 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * SQUASH S11. Modul pemusnahan arsip (L-06): pengajuan -> approval admin ->
+ * Modul pemusnahan arsip: pengajuan -> approval admin ->
  * `forceDelete()` baris surat + file fisiknya, lalu Berita Acara PDF
  * (`BA-003/X/2026`). Syarat diajukan: umur >5 tahun, sudah inaktif, dan belum
  * ada pengajuan menunggu (divalidasi ulang di server, bukan cuma di form).

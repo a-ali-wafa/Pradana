@@ -13,13 +13,14 @@ use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 /**
- * L-07/L-10/L-20: dua tingkat role dan batas nyata antaranya.
+ * Dua tingkat role dan batas nyata antaranya.
  *
  * Tes ini juga menutup dua bug yang selama ini TERSEMBUNYI karena semua uji
  * manual sebelumnya dijalankan sebagai admin:
- * - LampiranPolicy lama melarang staf mengunduh file yang bukan miliknya
- *   (bertentangan dengan L-09/L-10: arsip kantor, tidak ada kepemilikan);
- * - pegawai bisa mengoreksi nomor surat keluar lewat form edit (L-20 melarang).
+ * - `LampiranPolicy` lama melarang staf mengunduh file yang bukan miliknya
+ *   (arsip kantor tidak punya sistem kepemilikan);
+ * - pegawai bisa mengoreksi nomor surat keluar lewat form edit (nomor yang
+ *   sudah terbit hanya boleh diubah admin).
  */
 class OtorisasiDuaTingkatTest extends TestCase
 {
@@ -119,7 +120,7 @@ class OtorisasiDuaTingkatTest extends TestCase
 
         $this->assertSame('pegawai', User::where('email', 'staf2@example.test')->value('role'));
 
-        // Route users.* memang admin-only (L-07).
+        // Route users.* memang admin-only.
         $this->actingAs($this->pegawai)
             ->get(route('users.index'))
             ->assertForbidden();
@@ -217,7 +218,7 @@ class OtorisasiDuaTingkatTest extends TestCase
 
     public function test_dashboard_menggabungkan_surat_masuk_dan_keluar(): void
     {
-        // H3: primer 01 = 1 surat masuk + 1 surat keluar = 2;
+        // Primer 01 = 1 surat masuk + 1 surat keluar = 2;
         // primer 02 = 3 surat masuk. Kalau hanya surat masuk yang dihitung
         // (perilaku lama), urutannya jadi 02 (3) lalu 01 (1).
         $lain = KlasifikasiPrimer::forceCreate(['kode' => '02', 'nama' => 'Perencanaan']);

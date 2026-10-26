@@ -9,7 +9,7 @@ use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Retensi log aktivitas (E6=b): catatan lebih dari 2 tahun boleh dibuang,
+ * Retensi log aktivitas: catatan lebih dari 2 tahun boleh dibuang,
  * TAPI jejak pemusnahan arsip dikecualikan selamanya.
  *
  * Kenapa dikecualikan: Berita Acara pemusnahan bisa diminta diperiksa bertahun
@@ -27,7 +27,7 @@ class BersihkanLogLama extends Command
                             {--tahun=2 : Buang catatan yang lebih lama dari ini (tahun)}
                             {--dry-run : Hitung saja, jangan hapus}';
 
-    protected $description = 'Buang log aktivitas lama, kecuali jejak pemusnahan arsip (E6)';
+    protected $description = 'Buang log aktivitas lama, kecuali jejak pemusnahan arsip';
 
     public function handle(): int
     {

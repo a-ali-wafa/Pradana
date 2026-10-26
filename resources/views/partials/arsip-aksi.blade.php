@@ -1,15 +1,15 @@
 {{--
-    Tombol aksi arsip di halaman show surat masuk/keluar (parsial bersama, 4 Okt 2026).
+    Tombol aksi arsip di halaman show surat masuk/keluar (parsial bersama).
 
-    "Nyahkan" (E8/E9) = mengubah status_arsip jadi inaktif, BUKAN menghapus.
-    Tombol sampah (L-05) = soft delete: baris & lampiran tetap ada, admin bisa
+    "Nyahkan" = mengubah status_arsip jadi inaktif, BUKAN menghapus.
+    Tombol sampah = soft delete: baris & lampiran tetap ada, admin bisa
     memulihkan. Pemusnahan sungguhan tidak ada di layar ini — hanya lewat modul
-    Pemusnahan Arsip yang menerbitkan Berita Acara (L-06).
+    Pemusnahan Arsip yang menerbitkan Berita Acara.
 
     Parameter: $surat (model), $jenis ('masuk' | 'keluar').
     Dipakai oleh surat-masuk/show.blade.php dan surat-keluar/show.blade.php
-    supaya kedua halaman tidak punya salinan logika yang bisa lari sendiri
-    (masalah H6: uploader dulu duplikat dan salah nama field).
+    supaya kedua halaman tidak punya salinan logika yang bisa lari sendiri —
+    uploader yang dulu dobel pernah sampai salah nama field.
 --}}
 
 @php
@@ -17,7 +17,7 @@
     $inaktif = $surat->status_arsip === 'inaktif';
 @endphp
 
-{{-- E8/E9: tombol "Nyahkan" / "Aktifkan Kembali" --}}
+{{-- Tombol "Nyahkan" / "Aktifkan Kembali" --}}
 <form method="POST" action="{{ route("surat-{$jenis}.status-arsip", $surat) }}">
     @csrf @method('PATCH')
     <input type="hidden" name="status_arsip" value="{{ $inaktif ? 'aktif' : 'inaktif' }}">
