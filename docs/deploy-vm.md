@@ -144,7 +144,9 @@ hidup di server", jawabannya ada di `git log`, bukan di ingatan.
 
 Kloning **sebelum** skrip provisi (urutan di atas), karena skrip itu hanya menyetel
 kepemilikan folder dan tidak menghapus isinya — dan `git` menolak kloning ke folder yang
-sudah berisi.
+sudah berisi. Skripnya sendiri menolak folder yang berisi **sesuatu yang bukan** checkout
+PRADANA (dikenali dari adanya `artisan` + `composer.json`), supaya tidak ada kerja orang
+lain yang tertimpa.
 
 ## 5. Provisi server, lalu pasang aplikasinya
 
@@ -175,7 +177,7 @@ dan Composer menulis ke `$HOME`.
 P='sudo -u www-data env HOME=/tmp bash -c'   # dipanggil di bawah, tinggal salin
 
 $P 'cd /var/www/pradana && cp .env.example .env && php artisan key:generate'
-sudo -u www-data nano /var/www/pradana/.env  # isi nilai di bawah, lalu simpan
+sudo -u www-data env HOME=/tmp nano /var/www/pradana/.env  # isi nilai di bawah, lalu simpan
 $P 'cd /var/www/pradana && bash bin/deploy.sh'
 ```
 
@@ -266,3 +268,115 @@ dilewat orang dan paling mahal:
    bandingkan jumlah baris per tabel (Lampiran A.6 `docs/manual-pemakaian.md`).
 5. `grep CRON /var/log/syslog | tail` dan `tail /var/log/pradana-cron.log` besok pagi —
    membuktikan `schedule:run` benar-benar dijalankan, bukan hanya dipasang.
+
+## 9. Urutan kerja untuk user (yang bisa dikerjakan cuma kamu)
+
+Bagian 0–8 di atas adalah *penjelasan*; ini daftar yang tinggal dicentang, berurutan, dengan
+perkiraan waktu. Kolom "kalau macet" menunjuk bagian yang menyimpan alasannya — jangan
+mencoba menebak di portal.
+
+### Tahap 0 — enam keputusan (±15 menit, tidak perlu portal)
+
+| # | Keputusan | Pilihanku (default kalau kamu hanya bilang "jalan") | Kalau kamu pilih lain |
+|---|---|---|---|
+| D1 | Penyedia | **Azure for Students** (tanpa kartu). Oracle cuma kalau nanti ada kartu | Oracle → bagian 1B; PC kantor + Tunnel → `docs/kesiapan-deploy.md` §5.B |
+| D2 | Region + ukuran VM | `Central US` atau `East US 2`, `Standard_B1s` (1 GB). `B2s` (4 GB) kalau kuota memberi — dan kalau B2s tidak ada, B1s + swap tetap jalan | Region jauh = latensi demo lebih lambat; bukan kegagalan |
+| D3 | HTTPS untuk demo | **Tidak dulu** — `http://<IP>` dengan data contoh, dinyatakan apa adanya di laporan | Butuh domain (bagian 7); domain kantor = keputusan S14 yang bisa menyusul |
+| D4 | Isi database demo | **3–5 surat diketik lewat UI saat demo**, bukan dump dari laptop | Dump dev berisi akun dev ber-PIN `12345678` (dokumen ini menyebutnya) — itu tidak boleh berdiri di IP publik |
+| D5 | Email + PIN akun admin | Email yang kamu pegang sendiri; PIN 8 digit baru, bukan nilai dev | Kalau kamu nanti serahkan ke desa, PIN itu harus di-`arsip:reset-pin` — jangan pakai PIN yang pernah dikirim di chat |
+| D6 | Cadangan keluar VM | **`scp` dump ke laptop** setiap habis demo (Rp 0, tidak perlu apa-apa lagi) | Google Drive = butuh Service Account JSON + folder yang di-share (10 menit, dan itu pekerjaan tambahan yang tidak menahan demo) |
+
+Dua hal yang **tidak** perlu kamu putuskan sekarang dan jangan menahan deploy: kop resmi desa
+(F3) dan klasifikasi resmi kantor (D4 register) — keduanya isi, bukan pemasangan.
+
+### Tahap 1 — akun Azure (±10 menit + menunggu verifikasi)
+
+- [ ] Buka `https://azure.microsoft.com/free/students`, masuk dengan akun Microsoft-mu (buat
+      satu kalau belum punya; **jangan** pakai akun kampus yang nanti kamu tinggalkan kalau
+      kamu masih bisa pegang akun pribadi).
+- [ ] Verifikasi status mahasiswa: email kampus (`@student.um.ac.id`) paling cepat; alternatifnya
+      unggah surat keterangan aktif kuliah / KTM.
+- [ ] **Jangan** lewat halaman "Azure free account" biasa — di situ kartu ditanya.
+- [ ] Setelah aktif: **Cost Management + Billing → Credits** → catat sisa kredit + tanggal
+      kedaluwarsa. Kalau angka ini tidak pernah dilihat, kamu akan mengira VM mati karena aplikasi.
+- [ ] Buat resource group, region sama dengan yang kamu pakai untuk VM nanti.
+
+Kalau verifikasi ditolak: itu bukan soal aplikasinya; ulangi dengan dokumen (surat keterangan
+aktif), jangan buat akun kedua.
+
+### Tahap 2 — buat VM (±15 menit klik + 5 menit provisioning)
+
+Di portal, Virtual Machines → Create. Nilai yang harus kamu **ubah** dari default, sisanya biarkan:
+
+- [ ] Image: **Ubuntu Server 24.04 LTS** (bukan 22.04, bukan "minimal").
+- [ ] Size: `Standard_B1s` — kalau daftar kosong atau muncul `NotAvailableForSubscription`,
+      lihat bagian 1A: **Security type = Standard** (default-nya Trusted Launch, dan itu yang
+      menyembunyikan size kecil), availability **zones mati**, ganti region.
+- [ ] Username: `ubuntu`, Authentication type: **SSH public key**, "SSH key source: Generate new"
+      → **Download private key file** sebelum menekan Create. File itu tidak bisa diunduh dua kali.
+- [ ] Inbound rules: aktifkan **HTTP (80)** dan **HTTPS (443)** selain SSH 22.
+- [ ] OS disk: 30 GB cukup. Public IP: biarkan default (catat alamatnya sesudah jadi).
+- [ ] Review + create. Tunggu sampai "Deployment completed".
+
+### Tahap 3 — masuk dan siapkan mesin (±10 menit)
+
+- [ ] `ssh -i <kunci>.pem ubuntu@<IP>` — kalau timeout, cek **NSG inbound** (lapis luar) dulu,
+      baru `ufw` (bagian 3). Dua lapis ini menghasilkan error yang sama.
+- [ ] `free -h` → kalau 1 GB, jalankan tiga baris swap di bagian 3 (jangan dilewati; composer
+      dan dompdf adalah pemakan RAM).
+- [ ] `timedatectl` → zona bukan UTC juga tidak apa untuk cron, tapi `APP_TIMEZONE` di `.env`
+      **wajib** `Asia/Jakarta` (berkas itu yang menentukan nomor Berita Acara).
+
+### Tahap 4 — kodenya masuk (±5 menit)
+
+- [ ] `sudo mkdir -p /var/www/pradana && sudo chown -R $USER:www-data /var/www/pradana && sudo chmod 775 /var/www/pradana`
+- [ ] `cd /var/www/pradana && git clone https://github.com/a-ali-wafa/Pradana.git .`
+- [ ] `sudo bash bin/sediakan-server.sh --cek` → **baca dulu**, harus mengeluarkan ±23 tindakan
+      bertanda `[cek]` dan tidak ada satu pun berkas yang ditulis.
+
+### Tahap 5 — provisi + pasang aplikasinya (±25 menit, sebagian besar menunggu apt)
+
+- [ ] `sudo bash bin/sediakan-server.sh` → di akhir ia mencetak kredensial DB ada di
+      `/root/pradana-db-kredensial.txt` (0600, milik root). Baca dengan
+      `sudo cat /root/pradana-db-kredensial.txt`; **jangan** salin isinya ke chat, repo, atau laporan.
+- [ ] `.env` (bagian 5): `sudo -u www-data env HOME=/tmp bash -c 'cd /var/www/pradana && cp .env.example .env && php artisan key:generate'`
+      lalu `sudo -u www-data env HOME=/tmp nano /var/www/pradana/.env` — isi `APP_ENV=production`,
+      `APP_DEBUG=false`, `APP_URL=http://<IP>`, `APP_TIMEZONE=Asia/Jakarta`, DB dari berkas tadi,
+      `MYSQLDUMP_PATH=/usr/bin/mysqldump`, `AGENDA_BATAS_BARIS=800`, `TRUSTED_PROXIES` **kosong**.
+- [ ] `sudo -u www-data env HOME=/tmp bash -c 'cd /var/www/pradana && bash bin/deploy.sh'`
+- [ ] `sudo -u www-data env HOME=/tmp bash -c 'cd /var/www/pradana && php artisan arsip:akun-pertama <email> --nama="<nama>"'`
+      → PIN 8 digit diminta di terminal (D5).
+
+Semua perintah artisan sebagai `www-data` — bukan selera, alasannya bagian 5. Menjalankan
+`migrate` sebagai user SSH mati dengan "Permission denied".
+
+### Tahap 6 — bukti (±20 menit) — jangan lanjut ke demo sebelum lima ini lewat
+
+Jalankan bagian 8. Tambah dua langkah yang khusus untuk demo:
+
+- [ ] Buka `http://<IP>/login` dari **HP-mu** (jaringan lain, bukan laptop) → form muncul,
+      CSS terpasang, Console browser tidak merah.
+- [ ] Isi 3–5 surat lewat UI + unggah satu lampiran ±20 MB (D4 + bukti nomor 3).
+
+### Tahap 7 — sesudah demo (±5 menit, jangan dilewat)
+
+- [ ] `sudo -u www-data env HOME=/tmp bash -c 'cd /var/www/pradana && php artisan arsip:backup-db'`
+      lalu `scp ubuntu@<IP>:/var/www/pradana/storage/app/private/db-backup/*.sql ./` (D6).
+- [ ] Kalau VM akan dibiarkan menganggur >1 minggu: matikan saja (`deallocate`) dan catat IP-nya —
+      public IP dasar ikut lepas saat deallocate, jadi IP demo bisa berubah saat dinyalakan lagi.
+- [ ] Simpan catatan kecil di `docs/` (atau laporan tugas akhir): tanggal, IP, versi commit
+      (`git rev-parse --short HEAD`), dan apa yang kamu ubah. Ini yang membuat cerita "sistem ini
+      pernah jalan di server" bisa dipertanggungjawabkan, bukan cuma diklaim.
+
+### Kalau macet
+
+| Gejala | Penyebab yang paling mungkin | Baca |
+|---|---|---|
+| Semua size VM `NotAvailableForSubscription` | Trusted Launch / zones / kuota regional | 1A |
+| `ssh` timeout | NSG (lapis luar) atau `ufw` | 3 |
+| Halaman tidak terbuka, padahal SSH bisa | cuma satu lapis firewall yang dibuka | 3 |
+| Layar login muncul tapi tanpa gaya | `TRUSTED_PROXIES` kosong di belakang proxy — atau memang belum ada HTTPS | 7 |
+| Tombol Unggah diam | `post_max_size` di sisi web belum 26M+ | 5 |
+| `migrate` → Permission denied | artisan dijalankan sebagai user SSH, bukan `www-data` | 5 |
+| 500 saat deploy di Apache | `.htaccess` + modul `filter` tidak ada | 5 |
+| Aplikasi mati total, DB tidak bisa dibuat | kredensial DB belum dibaca dari `/root/pradana-db-kredensial.txt` | 5 |

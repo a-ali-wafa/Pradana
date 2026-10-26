@@ -292,6 +292,8 @@ untuk provisi Apache/PHP 8.2/MariaDB/cron/Composer,
 isi `.env`, `bash bin/deploy.sh` (semua perintah sisi server berjalan sebagai `www-data`,
 dan alasannya ditulis di sana), sampai lima bukti yang menandakan deploy-nya benar-benar
 hidup. Jangan menyalin langkah itu ke tempat lain: yang disalin selalu melenceng.
+**Bagian 9 di halaman itu adalah daftar yang dicentang satu-satu** — enam keputusan yang
+menunggu user (Tahap 0) + tujuh tahap kerja dengan perintah yang siap ditempel.
 
 ### B. PC/mini-PC kantor + Cloudflare Tunnel
 

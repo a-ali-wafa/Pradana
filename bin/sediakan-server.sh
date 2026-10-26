@@ -92,10 +92,20 @@ tulis() {
 }
 
 # ── 1. Jangan menimpa kerja orang ───────────────────────────────────────────────────
+# Urutan yang dipakai docs/deploy-vm.md: `git clone` DULU, baru skrip ini — karena
+# kepemilikan folder disetel di langkah 4/6, kloning belakangan akan meninggalkan berkas
+# milik user SSH dan Apache (www-data) tidak bisa menulis `storage/`. Jadi folder yang
+# berisi HASIL CHECKOUT PRADANA bukan alasan untuk berhenti; yang harus ditolak adalah
+# folder berisi sesuatu yang bukan aplikasi ini.
 if [ -e "$APP_DIR" ] && [ "$(ls -A "$APP_DIR" 2>/dev/null)" != "" ]; then
-    echo "GAGAL: $APP_DIR sudah berisi sesuatu." >&2
-    echo "       Skrip ini tidak akan menimpanya. Pindahkan dulu, atau pakai --app-dir= lain." >&2
-    exit 1
+    if [ -f "$APP_DIR/artisan" ] && [ -f "$APP_DIR/composer.json" ]; then
+        echo "   $APP_DIR berisi checkout PRADANA (ada artisan + composer.json) — lanjut,"
+        echo "   kepemilikan foldernya nanti disetel ke www-data di langkah 4/6."
+    else
+        echo "GAGAL: $APP_DIR sudah berisi sesuatu yang bukan checkout PRADANA." >&2
+        echo "       Skrip ini tidak akan menimpanya. Pindahkan dulu, atau pakai --app-dir= lain." >&2
+        exit 1
+    fi
 fi
 
 # ── 2. Paket dasar ──────────────────────────────────────────────────────────────────
@@ -330,17 +340,21 @@ jalan systemctl reload apache2
 echo
 echo "Server siap. Yang BELUM (dan memang tidak boleh dikerjakan skrip ini):"
 echo
-echo "  1. Kodenya harus ADA di $APP_DIR. Dua urutan yang sah:"
-echo "       a) kloning dulu, baru skrip ini (dipakai di docs/deploy-vm.md), atau"
-echo "       b) skrip ini dulu, lalu: sudo -u www-data git clone https://github.com/a-ali-wafa/Pradana.git $APP_DIR"
-echo "     \"b\" hanya jalan kalau $APP_DIR masih kosong — git menolak kloning ke folder berisi."
+echo "  1. Kodenya harus ADA di $APP_DIR. Dua cara yang benar:"
+echo "       a) SEBELUM skrip ini (urutan di docs/deploy-vm.md bagian 4): kloning ke folder"
+echo "          kosong sebagai user SSH, lalu skrip menyetel kepemilikannya ke www-data;"
+echo "       b) SESUDAH skrip ini: kloning sebagai user PHP, jadi pemiliknya langsung benar:"
+echo "            sudo -u www-data git clone https://github.com/a-ali-wafa/Pradana.git $APP_DIR"
+echo "     Yang salah: kloning sebagai user SSH sesudah skrip jalan — foldernya sudah"
+echo "     dimiliki www-data, dan berkas baru milik user SSH membuat Apache tidak bisa"
+echo "     menulis storage/. Perbaikinya: sudo chown -R www-data:www-data $APP_DIR"
 echo "     (repo ini publik; kalau nanti pindah ke repo privat, pakai kunci milik"
 echo "      www-data — bukan kredensial pribadimu)"
 echo
 echo "  2. Buat .env — JANGAN disalin dari laptop. Semua perintah artisan di bawah"
 echo "     berjalan sebagai www-data (lihat alasan kepemilikan di langkah 4/6):"
 echo "       sudo -u www-data env HOME=/tmp bash -c 'cd $APP_DIR && cp .env.example .env && php artisan key:generate'"
-echo "       sudo -u www-data nano $APP_DIR/.env"
+echo "       sudo -u www-data env HOME=/tmp nano $APP_DIR/.env"
 echo "     lalu isi dari $KREDENSIAL :"
 echo "       APP_ENV=production  APP_DEBUG=false  APP_TIMEZONE=$ZONA"
 echo "       DB_HOST=127.0.0.1  DB_DATABASE=$DB_NAMA  DB_USERNAME=$DB_USER  DB_PASSWORD=<di berkas itu>"
