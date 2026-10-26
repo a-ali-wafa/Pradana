@@ -27,6 +27,17 @@ keberatan "surat kantor nyangkut di server luar negeri" belum berlaku di tahap i
 itu alasan kenapa VM gratis naik peringkat, dan sekaligus alasan kenapa dia tidak boleh
 dipakai untuk data kantor sebelum S14 + cadangan keluar selesai.
 
+**Susulan 26 Okt — satu syarat gugur, dan rekomendasinya pindah penyedia.** User tidak
+punya kartu kredit/debit. Karena yang ditolak Oracle bukan aplikasinya tapi formulir
+pendaftarannya, jalurnya tetap **satu VM Ubuntu dengan SSH + cron + MySQL/MariaDB**,
+hanya pendaftarannya lewat **Azure for Students**: tanpa kartu, verifikasinya status
+mahasiswa, $100 kredit untuk 12 bulan, dan langganan tidak naik ke berbayar otomatis —
+kalau habis, yang mati adalah VM-nya, bukan dompetmu. Oracle Always Free tetap didokumentasikan
+(§1B di runbook) sebagai yang paling murah dalam uang permanen kalau nanti ada kartu.
+Database **tidak** dipindah ke Supabase/Postgres: itu ganti mesin, bukan ganti host —
+ukurannya ada di 3.4, dan pasangan "hosting gratis + Supabase" bahkan tidak bisa koneksi
+keluar di port 5432 (3.3). Tidak ada satu baris pun di `app/` yang ikut berubah.
+
 ## 1. Yang dibuktikan hari ini (dijalankan, bukan dibaca)
 
 | Gerbang | Perintah | Hasil |
@@ -96,20 +107,21 @@ Dua jalur ini tidak melanggar satu pun syarat keras. Perbandingannya sengaja sat
 saja (kalau tabel kembar, yang berubah nanti cuma salah satunya — pelajaran yang sudah
 dibayar di `docs/deploy.md`):
 
-| | **A. Oracle Cloud Always Free (VM)** | **B. PC/mini-PC kantor + Cloudflare Tunnel** |
+| | **A. VM Ubuntu gratis — Azure for Students / Oracle Always Free** | **B. PC/mini-PC kantor + Cloudflare Tunnel** |
 |---|---|---|
 | Untuk apa | server yang tetap jalan setelah sidang, dan bentuknya sama dengan yang nanti dipakai kantor | kantor pakai sungguhan tanpa surat keluar dari gedung |
-| Biaya | Rp 0 permanen (dengan syarat) | Rp 0 + listrik |
-| Waktu setup | 2–4 jam (install sendiri; `bin/sediakan-server.sh` + `docs/deploy-oracle.md`) | 1–2 jam |
+| Biaya | Rp 0 (Azure: $100 kredit untuk 12 bulan, bisa diperpanjang selama masih mahasiswa; Oracle: Always Free permanen dengan syarat) | Rp 0 + listrik |
+| Perlu kartu kredit? | **Azure for Students: tidak.** Oracle: ya, untuk verifikasi identitas | tidak |
+| Waktu setup | 2–4 jam (install sendiri; `bin/sediakan-server.sh` + `docs/deploy-vm.md`) | 1–2 jam |
 | URL untuk penguji | IP publik sendiri, atau domain kantor kalau sudah ada | nama tetap di domain kantor |
 | Hidup 24 jam? | **ya** | ya, selama UPS-nya hidup |
 | 25 MB lampiran (L-13) | terpenuhi (php.ini sendiri) | terpenuhi (di laptop ini terukur 40M) |
 | Cron `schedule:run` | ada (SSH + cron asli) | Windows Task Scheduler tiap menit |
 | SSH + composer + `migrate` | ada | perlu diatur per mesin |
 | Docroot `public/` | diatur sendiri → `.env`/`storage` aman | conf Apache terukur: `/.env` 404 (5.1) |
-| Batas/risiko | 2 OCPU / 12 GB / 200 GB (Always Free; dipangkas dari 4/24 pertengahan 2026), **butuh kartu kredit** untuk daftar, kapasitas `VM.Standard.A1.Flex` bisa penuh, dan **reklamasi idle**: >7 hari CPU<20% p95 + network<20% + memory<20% boleh dihapus | listrik mati paksa = **InnoDB korup** — sudah terjadi di laptop ini 10 Okt dan nyaris memakan `pradana_test`; tanpa UPS itu jadwal, bukan kemungkinan |
-| Region / latensi | `ap-batam-1` (Indonesia North, Batam); Oracle tidak punya region Jakarta | di kantor, 1–5 ms |
-| Catatan HTTPS | tanpa domain: sertifikat tidak wajar → http polos (demos) atau beli domain; jangan klaim "aman" tanpa sertifikat | HTTPS + domain kantor (S14) — dan **`TRUSTED_PROXIES` wajib diisi**, lihat 5.1 |
+| Batas/risiko | **Azure:** ukuran VM sering ditolak kuota di akun mahasiswa (semua size `NotAvailableForSubscription`) — jalan keluarnya di `docs/deploy-vm.md` 1A; kredit habis = VM berhenti; B1s cuma 1 GB (swap wajib). **Oracle:** 2 OCPU / 12 GB / 200 GB (dipangkas dari 4/24 pertengahan 2026), kapasitas `VM.Standard.A1.Flex` bisa penuh, dan **reklamasi idle**: >7 hari CPU<20% p95 + network<20% + memory<20% boleh dihapus | listrik mati paksa = **InnoDB korup** — sudah terjadi di laptop ini 10 Okt dan nyaris memakan `pradana_test`; tanpa UPS itu jadwal, bukan kemungkinan |
+| Region / latensi | Azure: `Southeast Asia` (Singapura) atau `Central US`/`East US 2` (kuota size hampir selalu ada). Oracle: `ap-batam-1`, tidak ada Jakarta | di kantor, 1–5 ms |
+| Catatan HTTPS | tanpa domain: sertifikat tidak wajar → http polos (demos) atau beli domain; jangan klaim "aman" tanpa sertifikat. Di Azure: public IP dasar ikut lepas saat VM di-deallocate | HTTPS + domain kantor (S14) — dan **`TRUSTED_PROXIES` wajib diisi**, lihat 5.1 |
 
 Jalur ketiga (Quick Tunnel tanpa akun dari laptop) sengaja TIDAK dihitung sebagai opsi
 deploy: ia hanya menyalurkan Apache yang sama ke internet, URL-nya acak dan mati bersama
@@ -143,9 +155,44 @@ Mereka gagal di angka, bukan di kesan. Semua batasnya pernyataan staf mereka sen
 Juga disingkirkan dengan alasan yang sama: PaaS/serverless tier gratis (Render —
 sleep 15 menit + disk persisten berbayar; Koyeb — 2 GB ephemeral; Fly.io — tidak ada
 lagi tier gratis; Railway — kredit trial saja; Vercel/Netlify/Cloudflare Workers —
-filesystem read-only, butuh rombak total). **Supabase/Neon tidak membantu**:
-komputenya tetap harus dicari dan basis datanya Postgres, sementara SQL aplikasi ini
-dites di MySQL/MariaDB. 000webhost tutup Oktober 2024.
+filesystem read-only, butuh rombak total). 000webhost tutup Oktober 2024.
+
+**Dan satu yang harus saya sebut karena ditanyakan: hosting gratis itu juga tidak bisa
+dipasangkan dengan Supabase.** Bukan soal fiturnya, tapi soal port: staf InfinityFree
+menyatakan koneksi keluar hanya dibuka pada **port 3306**, dan ada thread forum September
+2026 berjudul "pdo_pgsql outbound connection to external PostgreSQL database fails" —
+5432/6554 diblok. Jadi "aplikasi di hosting gratis + database di Supabase" tidak pernah
+menjadi kombinasi yang jalan, dan Supabase kehilangan satu-satunya alasan yang membuatnya
+terlihat menarik di daftar ini.
+
+### 3.4 Kenapa database tidak saya pindahkan ke Postgres (Supabase)
+
+Supabase secara teknis bisa dipakai Laravel (`config/database.php` sudah punya blok `pgsql`),
+tapi "bisa tersambung" bukan "bisa dipakai dengan bukti yang kita punya hari ini". Angkanya
+dari repo ini, bukan dari kesan:
+
+| Yang harus dikerjakan ulang | Ukuran hari ini |
+|---|---|
+| Titik SQL mentah di luar tes | **7 tempat** (`DashboardController` 76 & 136, `AppServiceProvider` 94 & 98, `DaftarArsipGabungan` 92, `NomorSuratKeluarGenerator` 55, `CariArsip` 186). Mayoritas selamat di Postgres, tapi tiap satu adalah tempat perilaku bisa berbeda diam-diam — `count(*) as total` bertemu aturan Postgres yang melipat alias tak berikutip jadi huruf kecil |
+| Pencarian | `LIKE ? ESCAPE '!'` di dua jalur (`CariArsip` 203 & 259, dipakai juga oleh filter `/aktivitas`). LIKE di Postgres **peka huruf**; hari ini kasus-tidak-peka datang dari collation `utf8mb4_unicode_ci` dan itu **dikunci tes** (`CariArsipMariaDbTest:110`). Perlu `ILIKE`, dan seluruh L-15 + peringkat relevansi + `<mark>` harus diuji lagi |
+| Penomoran surat keluar (L-20) | `upsert` + `lockForUpdate()` di `surat_counters`. Bukti balapnya dulu dibuat dengan **dua koneksi MariaDB nyata**; di Postgres kuncian baris yang belum ada berperilaku berbeda, jadi bukti itu harus diulang |
+| Skema | **11 konstruksi** yang Postgres maknai lain: `unsigned*` (tidak ada UNSIGNED di PG), `->after()` (posisi kolom tidak berarti), `longText` (→ `text`, aman), `enum()` (→ varchar + CHECK), dan `restrictOnDelete()` yang justru **bekerja sungguh-sungguh** di PG sementara AGENTS.md Bagian 2 mencatat MariaDB memperlakukannya sebagai `NO ACTION` — asumsi yang tertulis di dokumen akan berbalik |
+| Cadangan & uji pulih (X5) | `arsip:backup-db` 100% rasa MySQL: `mysqldump` + `--defaults-extra-file` + pemeriksaan `CREATE DATABASE /*!32312 IF NOT EXISTS*/` + jumlah tabel lewat `information_schema`. Perlu implementasi `pg_dump`, dan `UjiPulihBackupMariaDbTest` dibangun ulang. Di Supabase, `pg_dump` harus versi mayor yang sama dengan server (galat klasik "version mismatch") dan plan gratis tidak menyediakan backup otomatis |
+| Mesin tempat tes berjalan | Laptop ini hanya punya `pdo_mysql`; **tidak ada `pdo_pgsql`, tidak ada `psql`/`pg_dump`**. Artinya 16 tes engine-asli (MariaDB) jadi skip dan klaim "275 tes dijalankan di engine produksi" (Q1=b) hilang — di sidang, itu klaim yang mahal |
+
+Ditambah empat batas plan gratis Supabase yang menabrak tujuan "demonstrasi tugas akhir":
+**project gratis di-pause setelah 1 minggu tanpa aktivitas** (arsip yang desa belum pakai
+justru definisi dari "tidak aktif" — penguji membuka halaman, aplikasi mati 500),
+**500 MB database** dan **1 GB file storage** dengan cadangan 7 hari, **maksimal 2 project
+aktif**, dan koneksi langsung hanya IPv6 — dari IPv4 harus lewat pooler (port 6554) yang mode
+*transaction*-nya memecah prepared statement, jadi Laravel perlu mode session atau
+emulated prepares. Untuk aplikasi yang tidak memakai RLS/Auth Supabase sama sekali (kita
+login pakai PIN sendiri), semua itu dibayar tanpa mengambil satu pun fitur yang bikin
+Supabase berguna.
+
+Kesimpulannya: Supabase bukan pintu keluar dari masalah kartu kredit. Masalahnya ada di
+**host aplikasi**, dan solusinya Azure for Students (§4) — yang membuat database tetap di
+MariaDB, di mesin yang sama dengan 275 tes ini.
 
 Kalau "gratis" boleh digeser jadi "murah": shared hosting Indonesia berbayar
 (±Rp 12.500–25.000/bulan) biasanya sudah memenuhi docroot, cron, PHP 8.2, dan backup
@@ -162,17 +209,27 @@ kantor". Jadi urutannya: pilih yang paling murah dalam uang DAN waktu setup DAN 
 bentuknya seperti produksi sungguhan, sambil menjaga pintu pindah tetap terbuka (4.4).
 Perbandingan tiga jalurnya sudah ada di satu tempat — **bagian 3.2** — jadi tidak diulang di sini.
 
-**Rekomendasi saya: A, Oracle Always Free VM.** Itu satu-satunya yang benar-benar gratis
-DAN tetap hidup saat penguji membukanya sendiri, DAN bentuknya sama dengan yang nanti
-dipakai kantor (Linux + Apache + MariaDB + SSH + cron + `bin/deploy.sh`), DAN yang paling
-penting untuk aturan "jangan bikin sulit dipindah" (4.4): tidak perlu satu pun trik di kode.
-Langkah-langkahnya sudah disiapkan di **`docs/deploy-oracle.md`** + `bin/sediakan-server.sh`.
+**Rekomendasi saya (26 Okt): A, VM Ubuntu gratis — jalur pendaftarannya Azure for Students.**
+Alasannya tetap sama seperti 21 Okt: VM adalah satu-satunya bentuk yang benar-benar gratis
+DAN tetap hidup saat penguji membukanya sendiri DAN bentuknya identik dengan yang nanti dipakai
+kantor (Linux + Apache + MariaDB + SSH + cron + `bin/deploy.sh`) — dan yang paling penting untuk
+aturan "jangan bikin sulit dipindah" (4.4): **tidak perlu satu pun trik di kode**. Yang berubah
+hanya penyedianya, karena satu-satunya syarat Oracle yang tidak bisa kamu penuhi adalah kartu
+kredit/debit: **Azure for Students tidak menuntut kartu** (verifikasinya status mahasiswa:
+email kampus atau surat keterangan aktif kuliah), memberi $100 kredit untuk 12 bulan, dan
+karena langganannya tidak naik ke berbayar secara otomatis, kegagalan keuangannya "VM berhenti",
+bukan "tagihan datang". Oracle Always Free (bagian 1B) tetap terdokumentasi dan tetap lebih
+murah dalam uang permanen — aktifkan itu kalau nanti ada kartu (punya sendiri atau kantor).
 
-Yang perlu kamu sediakan untuk jalur ini cuma dua: **kartu kredit untuk pendaftaran**
-(tidak ditagih selama Always Free) dan keputusan **home region** — `ap-batam-1`, karena
-region tidak bisa diganti setelah akun dibuat. Kalau pendaftaran tersendat (kartu ditolak
-atau kapasitas `VM.Standard.A1.Flex` penuh, dua-duanya sering menimpa akun mahasiswa),
-B di 3.2 tetap bisa dipakai dan tidak mengubah apa pun di aplikasi.
+Langkah-langkahnya ada di satu halaman: **`docs/deploy-vm.md`** + `bin/sediakan-server.sh`.
+
+Dua hal yang perlu kamu sediakan untuk jalur ini: verifikasi status mahasiswa, dan kesabaran
+pada kuota VM. Akun mahasiswa terkenal sulit membuat VM (semua ukuran tampil
+`NotAvailableForSubscription`); jalan keluarnya sudah dicatat di `docs/deploy-vm.md` bagian 1A
+— security type **Standard** (bukan Trusted Launch), availability zones mati, region
+`Central US`/`East US 2`, dan kalau tetap nol: ajukan kenaikan kuota, jangan buat langganan
+kedua. Kalau semua itu gagal, B di 3.2 (PC kantor + Tunnel) tetap bisa dipakai dan tidak
+mengubah apa pun di aplikasi.
 
 **Jangan** shared hosting gratis (InfinityFree/ProFreeHost/ByetHost). Alasannya bukan
 "gratis jadi jelek" — batas 30.000 berkasnya sudah dilewati sejak pemangkasan hari ini —
@@ -193,6 +250,7 @@ Ditulis apa adanya supaya tidak ada yang mengira ini kondisi siap-pakai-kantor:
 | kredensial di VM pihak ketiga | isinya belum ada yang punya nilai hukum | user DB khusus (bukan root), `DB_PASSWORD` hanya di `.env` (di-`.gitignore`), `mysqldump` pakai `--defaults-extra-file` 0600 yang dihapus di `finally` — kredensial tidak pernah masuk baris perintah |
 | HTTP polos kalau belum ada sertifikat | login demo di mesin sendiri | begitu ada akses luar kantor: HTTPS + `SESSION_SECURE_COOKIE=true` + `TRUSTED_PROXIES` (bagian 6 sudah menyiapkan kuncinya, dan alasannya tertulis di sana) |
 | Arsip di server luar negeri | tidak ada arsip nyata | `robots.txt` `Disallow: /` + `X-Robots-Tag: noindex` tetap terpasang, lampiran hanya lewat controller `middleware('auth')` (L-01), tidak ada satu pun tautan publik |
+| **Harga yang dibayar karena tidak punya kartu** | Azure for Students adalah kredit pelajar, bukan Always Free permanen | VM-nya `Standard_B1s` (1 vCPU / 1 GB): swap wajib, `AGENDA_BATAS_BARIS` diturunkan jadi 800 (9 Okt terukur: 1.000 baris agenda = 8,36 s + 52 MB dalam satu request), dan kredit 12 bulan berarti **cadangan keluar VM** (`scp` dump + Drive) jadi syarat, bukan saran. Build ulang tetap murah karena tidak ada yang diikat ke Azure: Ubuntu 24.04 + `bin/sediakan-server.sh` + `.env` di tempat aman |
 
 Praktik dasar yang **tidak** ikut dikompromikan: `.env` tidak di-commit, `APP_DEBUG=false`
 di server (dijaga gerbang `bin/deploy.sh`), halaman error tidak mencetak `$exception`,
@@ -208,11 +266,14 @@ dan lampiran di luar `public/`.
    menyesuaikannya — bentuk itu gampang dibuat tapi membuat `.env` dan arsip bisa
    terbaca, dan tidak ada tes yang menjaganya.
 3. **Engine database tetap MySQL/MariaDB** (idealnya MariaDB, sama dengan 275 tes ini
-   jalankan). Kalau suatu hari pindah Postgres, itu pekerjaan baru (`LIKE ? ESCAPE '!'`,
-   `CASE` di `ORDER BY`, `restrictOnDelete`), bukan sekadar ganti driver.
+   jalankan). Kalau suatu hari pindah Postgres, itu pekerjaan baru — ukurannya ada di 3.4:
+   7 titik SQL mentah, `LIKE ? ESCAPE '!'` yang di Postgres jadi peka huruf, `CASE` di
+   `ORDER BY`, `restrictOnDelete`, `upsert`/`lockForUpdate` untuk penomoran (L-20), dan
+   `arsip:backup-db` yang hari ini 100% rasa MySQL. Bukan sekadar ganti driver, dan tidak
+   ada `pdo_pgsql` di mesin ini untuk membuktikannya.
 4. **Cadangan harus bisa dipulihkan di mesin lain.** `arsip:backup-db` sudah begitu —
-   dan itu satu-satunya alasan reklamasi instance Oracle bukan bencana: `git clone` +
-   `.env` + pulihkan dump = kantor lagi, di mana pun.
+   dan itu satu-satunya alasan matinya VM (reklamasi idle di Oracle, kredit habis di Azure)
+   bukan bencana: `git clone` + `.env` + pulihkan dump = kantor lagi, di mana pun.
 5. **Semua langkah deploy tetap ada di `bin/deploy.sh`.** Kalau suatu hari terpaksa
    melakukan sesuatu "manual di cPanel", tuliskan apa yang dilakukan dan kenapa — kalau
    tidak, enam bulan lagi langkah itu hilang dan deploy berikutnya cacat diam-diam.
@@ -222,11 +283,12 @@ dan lampiran di luar `public/`.
 
 ## 5. Runbook
 
-### A. Oracle Cloud VM
+### A. VM Ubuntu (Azure for Students / Oracle Always Free)
 
-Satu sumber untuk langkahnya: **`docs/deploy-oracle.md`** — dari pendaftaran akun
-(kartu kredit, home region tidak bisa diganti), bikin instance, dua lapis firewall,
-`sudo bash bin/sediakan-server.sh` untuk provisi Apache/PHP 8.2/MariaDB/cron/Composer,
+Satu sumber untuk langkahnya: **`docs/deploy-vm.md`** — dari pendaftaran akun (Azure:
+verifikasi status mahasiswa tanpa kartu; Oracle: kartu + home region yang tidak bisa diganti),
+buat VM, dua lapis firewall (NSG / security list + `ufw`), `sudo bash bin/sediakan-server.sh`
+untuk provisi Apache/PHP 8.2/MariaDB/cron/Composer,
 isi `.env`, `bash bin/deploy.sh` (semua perintah sisi server berjalan sebagai `www-data`,
 dan alasannya ditulis di sana), sampai lima bukti yang menandakan deploy-nya benar-benar
 hidup. Jangan menyalin langkah itu ke tempat lain: yang disalin selalu melenceng.
@@ -308,7 +370,7 @@ QUEUE_CONNECTION=sync         # L-02: tidak ada worker di server kantor
 SESSION_DRIVER=file
 SESSION_LIFETIME=120
 SECURITY_CSP=true
-AGENDA_BATAS_BARIS=2000       # naikkan hanya sesudah servernya diukur
+AGENDA_BATAS_BARIS=2000       # naikkan hanya sesudah servernya diukur; di B1s 1 GB: 800
 MYSQLDUMP_PATH=mysqldump
 BACKUP_SIMPAN_HARI=30
 
@@ -348,14 +410,15 @@ Dijalankan satu per satu, dan yang dicatat adalah hasilnya, bukan niatnya:
 
 ## 8. Yang butuh keputusan user (bukan kerja agent)
 
-1. **Pendaftaran Oracle itu sendiri** — `docs/deploy-oracle.md` bagian 0–2. Butuh kartu
-   kredit/debit untuk verifikasi dan satu keputusan yang tidak bisa dibatalkan:
-   **home region** (`ap-batam-1`, tidak bisa diganti setelah akun jadi). Setelah instance
-   hidup dan SSH-nya ada di tanganmu, sisanya tinggal dijalankan:
-   `bin/sediakan-server.sh` → `.env` → `bin/deploy.sh`.
+1. **Pendaftaran Azure for Students itu sendiri** — `docs/deploy-vm.md` bagian 0–3. Tidak
+   butuh kartu, tapi butuh dua hal yang tidak bisa saya sediakan: **bukti status mahasiswa**
+   (email kampus / surat keterangan aktif) dan keputusan region. Setelah VM hidup dan SSH-nya
+   ada di tanganmu, sisanya tinggal dijalankan: `git clone` → `bin/sediakan-server.sh` →
+   `.env` → `bin/deploy.sh`. Kalau semua ukuran VM ditolak kuota dan permintaan kuota tidak
+   diterima, kembali ke Oracle (1B, butuh kartu) atau ke opsi B di 3.2.
 2. Domain + HTTPS (S14). Tanpa domain, demo di VM berjalan di http dan itu harus dinyatakan
    apa adanya di laporan, bukan ditutupi.
-3. Google Drive untuk cadangan keluar (L-01 + bagian 6 `docs/deploy-oracle.md`): butuh
+3. Google Drive untuk cadangan keluar (L-01 + bagian 6 `docs/deploy-vm.md`): butuh
    Service Account JSON yang tidak boleh di-commit dan folder Drive yang sudah di-share.
    Ini yang membuat reklamasi instance bukan kehilangan data.
 4. F3: kop/template resmi desa. D4: klasifikasi resmi kantor. L-19: nilai N auto-lock.

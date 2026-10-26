@@ -1630,7 +1630,8 @@ membantu deploy di oracle nanti gapapa. kalau tidak ya jangan". Tunnel tetap dip
 sebagai tempat demo, jadi `bin/demo-terbuka.sh` dihapus dan `docs/kesiapan-deploy.md` §3.2 kini
 hanya punya dua jalur deploy: **A. Oracle Always Free VM** dan **B. PC kantor + Cloudflare
 Tunnel** (Zero Trust, bukan quick tunnel). Butir 8(b) di atas ("provisi server butuh akun/kartu")
-sejak itu **dikerjakan sebagian**: `bin/sediakan-server.sh` + `docs/deploy-oracle.md` ada dan
+sejak itu **dikerjakan sebagian**: `bin/sediakan-server.sh` + `docs/deploy-vm.md` (26 Okt:
+nama berkasnya masih `docs/deploy-oracle.md`) ada dan
 siap dipakai, tapi pemasangannya sendiri tetap butuh user — akun Oracle + kartu verifikasi +
 keputusan home region yang tidak bisa dibatalkan.
 Status jujur skripnya: **belum pernah jalan di Linux**. Yang terbukti di Windows: `bash -n`
@@ -1648,6 +1649,52 @@ di sisi server dijalankan `sudo -u www-data env HOME=/tmp bash -c '…'` (`env H
 `UMask=0002` untuk Apache. Alasannya bukan performa: di mesin yang tidak bisa saya uji, model
 dengan bagian bergerak lebih sedikit lebih mudah dipercaya, dan cron `schedule:run` memang sudah
 berjalan sebagai `www-data`, jadi ketiga jalur penulis itu satu user.
+
+**11. 26 Okt — tidak ada Mastercard, dan apa yang sebenarnya gugur karenanya.**
+User: "carikan lagi opsi lainnya yang pendaftarannya tidak terlalu ribet (aku tidak ada
+mastercard). bisa di ubah juga strukturnya untuk menyesuaikan tujuan deploy" — lalu,
+setelah daftar opsi ditampilkan, "kalau db nya di supabase bisa ga? keterbatasannya apa".
+Dua hal dipisah tegas di sini. **Yang gugur cuma formulir pendaftaran Oracle** — bukan
+arsitektur, bukan engine, bukan kebutuhan akan SSH/cron/docroot. Karena itu jalurnya tetap
+**VM Ubuntu dengan MariaDB**, hanya pendaftarannya pindah ke **Azure for Students**: tanpa
+kartu, verifikasinya status mahasiswa (email kampus atau surat keterangan aktif), $100 kredit
+untuk 12 bulan, dan langganan tidak naik ke berbayar otomatis — kegagalan keuangannya "VM
+berhenti", bukan "tagihan datang". Yang harus ditulis apa adanya: banyak akun mahasiswa
+ditolak kuota VM (`NotAvailableForSubscription` di semua size); solusi yang tercatat di
+thread-thread 2026 adalah security type **Standard** (bukan Trusted Launch), availability
+zones mati, region `Central US`/`East US 2` untuk `Standard_B1s`, atau Request quota — bukan
+membuat langganan kedua. Dan B1s = 1 GB: swap wajib, `AGENDA_BATAS_BARIS` turun ke 800.
+`docs/deploy-oracle.md` dinamai ulang jadi **`docs/deploy-vm.md`** dengan bagian 0 sebagai
+tabel dua penyedia dan 1A/1B untuk pendaftaran — langkah setelah SSH memang identik, dan
+dua dokumen akan berarti dua salinan yang bisa melenceng.
+
+**12. Supabase diuji ke kode, bukan ke brosur — dan jawabannya "bisa, tapi itu ganti mesin".**
+Yang bikin pertanyaan ini masuk akal: Supabase daftar pakai email, tanpa kartu, dan memberi
+Postgres gratis 500 MB. Yang membuatnya tidak dipakai untuk PRADANA, semuanya terukur di
+repo ini: **7** titik SQL mentah di luar tes (`DashboardController` 76 & 136,
+`AppServiceProvider` 94 & 98, `DaftarArsipGabungan` 92, `NomorSuratKeluarGenerator` 55,
+`CariArsip` 186); pencarian bertumpu pada `LIKE ? ESCAPE '!'` di dua tempat yang di Postgres
+**jadi peka huruf** — hari ini kasus-tidak-peka datang dari collation `utf8mb4_unicode_ci`
+dan itu **dikunci tes** (`CariArsipMariaDbTest:110`), jadi L-15 + peringkat relevansi +
+`<mark>` harus diuji ulang; `restrictOnDelete()` justru bekerja sungguh-sungguh di PG
+sementara AGENTS.md Bagian 2 mencatat MariaDB memperlakukannya sebagai `NO ACTION` (asumsi
+dokumen berbalik); `upsert` + `lockForUpdate()` untuk penomoran L-20 dulu dibuktikan dengan
+dua koneksi MariaDB nyata dan buktinya harus dibuat ulang; `arsip:backup-db` 100% rasa MySQL
+(`mysqldump`, `--defaults-extra-file`, parser `CREATE DATABASE /*!32312 ...*/`, jumlah tabel
+lewat `information_schema`) sehingga X5 harus dibangun ulang dengan `pg_dump`; dan di mesin
+ini **tidak ada `pdo_pgsql`, tidak ada `psql`/`pg_dump`** — artinya 16 tes engine-asli jadi
+skip dan klaim "275 tes dijalankan di engine produksi" (Q1=b) hilang tepat sebelum sidang.
+Ditambah tiga batas plan gratis yang menabrak tujuan demonstrasi: **project di-pause setelah
+1 minggu tanpa aktivitas** (arsip yang desa belum pakai = definisi "tidak aktif"; penguji
+membuka halaman, aplikasi 500), koneksi langsung IPv6-only sehingga IPv4 harus lewat pooler
+6554 yang mode *transaction*-nya memecah prepared statement, dan 1 GB storage untuk lampiran
+yang batasnya 25 MB. **Dan satu yang mematikan kombinasi yang paling menggiurkan:**
+"aplikasi di hosting gratis + DB di Supabase" tidak pernah bisa jalan — staf InfinityFree
+menyatakan koneksi keluar hanya dibuka pada port 3306, dan ada thread September 2026
+"pdo_pgsql outbound connection to external PostgreSQL database fails". Supabase tidak
+membuka pintu hosting gratis; dia menutupnya. Rinciannya jadi **§3.4** di
+`docs/kesiapan-deploy.md` supaya angka ini tidak perlu digali ulang oleh session berikutnya.
+Yang **tidak** ikut berubah: satu baris pun di `app/`.
 
 ### Catatan lingkungan (terakhir diperbarui 10 Okt malam, sesudah pass UI)
 
