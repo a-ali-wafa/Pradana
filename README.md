@@ -7,8 +7,7 @@ Acara pemusnahan arsip yang diminta saat audit.
 
 - **Manual pemakaian (untuk staf & kepala desa):** [`docs/manual-pemakaian.md`](docs/manual-pemakaian.md)
 - **Pasang & pelihara (untuk petugas IT):** Lampiran A di manual yang sama
-- **Konteks teknis untuk AI agent / programmer yang melanjutkan:** [`AGENTS.md`](AGENTS.md)
-  (riwayat keputusan panjang: `AGENTS_HISTORY.md`)
+- **Konteks teknis untuk programmer/agent yang melanjutkan:** [`AGENTS.md`](AGENTS.md)
 
 ## Yang bisa dilakukan aplikasi
 
