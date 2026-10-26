@@ -22,7 +22,7 @@
 #     yang mengarang `.env` akan menghasilkan server yang "kelihatan" jalan dengan isi
 #     yang salah (APP_KEY daur ulang, zona waktu bawaan, DB root).
 #   - Tidak menghapus apa pun. Kalau `$APP_DIR` sudah berisi — dan urutan di
-#     docs/deploy-oracle.md memang `git clone` dulu, baru skrip ini — isinya dibiarkan,
+#     docs/deploy-vm.md memang `git clone` dulu, baru skrip ini — isinya dibiarkan,
 #     hanya kepemilikannya disetel ke `www-data:www-data`.
 #   - Tidak menghapus dump/arsip yang sudah ada di `storage/app/private/`.
 
@@ -331,7 +331,7 @@ echo
 echo "Server siap. Yang BELUM (dan memang tidak boleh dikerjakan skrip ini):"
 echo
 echo "  1. Kodenya harus ADA di $APP_DIR. Dua urutan yang sah:"
-echo "       a) kloning dulu, baru skrip ini (dipakai di docs/deploy-oracle.md), atau"
+echo "       a) kloning dulu, baru skrip ini (dipakai di docs/deploy-vm.md), atau"
 echo "       b) skrip ini dulu, lalu: sudo -u www-data git clone https://github.com/a-ali-wafa/Pradana.git $APP_DIR"
 echo "     \"b\" hanya jalan kalau $APP_DIR masih kosong — git menolak kloning ke folder berisi."
 echo "     (repo ini publik; kalau nanti pindah ke repo privat, pakai kunci milik"
