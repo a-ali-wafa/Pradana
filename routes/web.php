@@ -77,7 +77,7 @@ Route::middleware('auth')->group(function () {
     Route::patch('profil/pin', [ProfilController::class, 'updatePin'])->name('profil.pin.update');
 
     // Klasifikasi: index() terbuka untuk semua role yang login;
-    // create/store/edit/update/destroy hanya admin 
+    // create/store/edit/update/destroy hanya admin
     Route::resource('klasifikasi-primer', KlasifikasiPrimerController::class)->only(['index']);
     Route::resource('klasifikasi-primer', KlasifikasiPrimerController::class)->except(['show', 'index'])->middleware('admin');
 
@@ -152,7 +152,7 @@ Route::middleware('auth')->group(function () {
 
     // Pengajuan hapus lampiran (lihat catatan #5 di atas) —
     // store() terbuka untuk semua role yang login (siapa saja boleh ajukan);
-    // index/setujui/tolak admin-only 
+    // index/setujui/tolak admin-only
     Route::post('lampiran/{lampiran}/pengajuan-hapus', [PengajuanHapusLampiranController::class, 'store'])
         ->name('lampiran.pengajuan-hapus.store');
     Route::get('pengajuan-hapus-lampiran', [PengajuanHapusLampiranController::class, 'index'])

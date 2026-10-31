@@ -99,7 +99,7 @@ class SuratTempatSampahTest extends TestCase
     public function test_surat_keluar_mengikuti_jalur_nyahkan_yang_sama_dan_memberi_konfirmasi(): void
     {
         // Trait `MengelolaArsipSurat` sekarang melayani KEDUA controller. Tanpa tes
-         // ini, jalur surat keluar cuma terverifikasi lewat browser — dan bug lama
+        // ini, jalur surat keluar cuma terverifikasi lewat browser — dan bug lama
         // (flash 'status' yang tidak dirender layout) justru lahir dari salinan
         // kedua yang tidak diuji.
         $klasifikasi = KlasifikasiPrimer::forceCreate(['kode' => '07', 'nama' => 'Perencanaan']);

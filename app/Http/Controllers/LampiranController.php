@@ -55,15 +55,15 @@ class LampiranController extends Controller
     }
 
     /**
- * Stream file ke browser. Default inline (pratinjau), `?mode=unduh` memaksa
- * attachment — dua-duanya dipakai kantor, jadi keduanya harus tetap ada.
- *
- * Tidak ada cek kepemilikan di sini: route ini sudah `middleware('auth')`, dan
- * arsip kantor boleh dibaca serta diunduh siapa pun yang login, tanpa regard
- * siapa pengunggahnya. `LampiranPolicy` lama — yang melarang staf membuka file
- * milik staf lain — dihapus karena menabrak aturan itu. Bug-nya baru kelihatan
- * setelah ada yang menguji sebagai pegawai; sebelumnya semua uji manual
- * dijalankan sebagai admin.
+     * Stream file ke browser. Default inline (pratinjau), `?mode=unduh` memaksa
+     * attachment — dua-duanya dipakai kantor, jadi keduanya harus tetap ada.
+     *
+     * Tidak ada cek kepemilikan di sini: route ini sudah `middleware('auth')`, dan
+     * arsip kantor boleh dibaca serta diunduh siapa pun yang login, tanpa regard
+     * siapa pengunggahnya. `LampiranPolicy` lama — yang melarang staf membuka file
+     * milik staf lain — dihapus karena menabrak aturan itu. Bug-nya baru kelihatan
+     * setelah ada yang menguji sebagai pegawai; sebelumnya semua uji manual
+     * dijalankan sebagai admin.
      */
     public function download(Request $request, Lampiran $lampiran): Response
     {

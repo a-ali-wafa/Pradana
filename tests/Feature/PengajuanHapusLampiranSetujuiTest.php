@@ -165,7 +165,7 @@ class PengajuanHapusLampiranSetujuiTest extends TestCase
 
     public function test_berkas_tetap_ada_kalau_penulisan_database_gagal(): void
     {
-         // Inilah alasan urutannya dibalik: berkas fisik dihapus
+        // Inilah alasan urutannya dibalik: berkas fisik dihapus
         // SETELAH transaksi DB commit; kegagalan di tengah transaksi me-rollback
         // baris & status, dan file-nya masih utuh sehingga aksinya bisa diulang.
         // Bentuk lama: file sudah hilang duluan, `update()` gagal, pengajuan tetap

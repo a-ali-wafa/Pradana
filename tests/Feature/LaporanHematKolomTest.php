@@ -198,7 +198,7 @@ class LaporanHematKolomTest extends TestCase
     {
         // Relasi `petugas()` memakai withTrashed(): arsip kantor harus tetap
         // menyebut nama orang yang menginput, meski akunnya sudah dihapus
-        //Eager load yang dibatasi kolom (`petugas:id,nama_lengkap`)
+        // Eager load yang dibatasi kolom (`petugas:id,nama_lengkap`)
         // adalah tempat paling mungkin untuk senyap mengubah itu jadi "-".
         $surat = $this->suratBerisiPanjang('HEMAT-003');
         $this->petugas->delete();

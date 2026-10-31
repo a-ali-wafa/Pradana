@@ -35,7 +35,7 @@ class SuratKeluarController extends Controller
     }
 
     /**
-     * Daftar surat keluar. Filternya identik dengan daftar surat masuk 
+     * Daftar surat keluar. Filternya identik dengan daftar surat masuk
      * dan semuanya dikerjakan FilterArsip + SuratKeluar::scopeCari: nomor,
      * perihal, penerima/instansi, ringkasan, ISI draf konten + tembusan, dan
      * nama berkas lampiran. `?sampah=1` (admin saja) = surat terhapus,

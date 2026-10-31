@@ -92,7 +92,7 @@ class AgendaBatasBarisTest extends TestCase
         $this->assertStringContainsString('semester', $pesan, 'Pesan harus memberi jalan keluar, bukan cuma menolak.');
 
         // Kunci flash harus yang dirender layout — kelas bug yang sama dengan
-         // "Nyahkan"; FlashKonsistenTest menjaga ini untuk SEMUA flash,
+        // "Nyahkan"; FlashKonsistenTest menjaga ini untuk SEMUA flash,
         // tes ini memastikan pesannya benar-benar sampai ke layar berikutnya.
         $this->followingRedirects()
             ->from(route('laporan.index', ['dari' => '2026-05-01', 'sampai' => '2026-05-31']))

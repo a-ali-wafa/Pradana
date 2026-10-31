@@ -131,8 +131,8 @@ class KonfirmasiDestruktifTest extends TestCase
         // dan konsekuensinya cuma satu: view tidak boleh menulis ulang nama `Swal.fire`
         // bahkan sebagai penjelasan historis. (Ini terjadi: komentar saya sendiri di
         // pemusnahan-arsip/create.blade.php membuat tes ini gagal, dan bentuk
-         // perbaikannya memang memindahkan penjelasan historis itu dari view — tempat yang
-         // dibaca guardrail — ke komentar di dalam tes ini.
+        // perbaikannya memang memindahkan penjelasan historis itu dari view — tempat yang
+        // dibaca guardrail — ke komentar di dalam tes ini.
         $tersalah = [];
 
         foreach ($this->views() as $path => $isi) {
