@@ -5,8 +5,9 @@
 #
 # Kenapa skrip terpisah dari bin/deploy.sh: deploy.sh memasang APLIKASI (composer,
 # migrasi, cache) dan sengaja menolak jalan kalau servernya belum benar. Skrip ini
-# menyiapkan SERVER-nya: Apache dengan DocumentRoot `public/`, PHP + ekstensi + batas
-# unggah, MariaDB + user database khusus, cron untuk `schedule:run`, dan Composer.
+# menyiapkan SERVER-nya: swap untuk VM ber-RAM 1 GB, Apache dengan DocumentRoot
+# `public/`, PHP + ekstensi + batas unggah, MariaDB + user database khusus, cron
+# untuk `schedule:run`, dan Composer.
 #
 # Jujur tentang statusnya: skrip ini TIDAK PERNAH dijalankan di Linux. Yang bisa diuji
 # di mesin pengembang sudah (sintaks bash, bentuk konfigurasi, urutan paket), sisanya
@@ -35,6 +36,13 @@
 
 set -euo pipefail
 
+# Skrip ini panjang, jalan di mesin orang, dan berhenti di tengah tanpa pesan adalah
+# kegagalan yang mahal. `set -e` sudah menghentikan, tapi tidak memberi tahu di mana —
+# kegagalan SIGPIPE di pembuatan kredensial DB contohnya: server berhenti di langkah
+# MariaDB dan log-nya berakhir dengan kalimat "Executing: ... enable mariadb" yang
+# terlihat seperti langkah yang berhasil.
+trap 'echo "GAGAL: skrip berhenti di baris ${LINENO}. Perbaiki lalu jalankan ulang skrip yang sama — langkah-langkahnya dibuat bisa diulang." >&2' ERR
+
 AKAR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 APP_DIR="${APP_DIR:-/var/www/pradana}"
@@ -44,13 +52,15 @@ DB_USER="${DB_USER:-pradana}"
 ZONA="${ZONA:-Asia/Jakarta}"
 PORT_SSH_TETAP=22
 CEK=0
+BUKA_80=0
 for arg in "$@"; do
     case "$arg" in
         --cek) CEK=1 ;;
         --php83) PHP_VERSI="8.3" ;;
+        --buka-80) BUKA_80=1 ;;
         --app-dir=*) APP_DIR="${arg#--app-dir=}" ;;
         --zona=*) ZONA="${arg#--zona=}" ;;
-        *) echo "Argumen tidak dikenal: $arg (yang ada: --cek --php83 --app-dir= --zona=)" >&2; exit 2 ;;
+        *) echo "Argumen tidak dikenal: $arg (yang ada: --cek --php83 --buka-80 --app-dir= --zona=)" >&2; exit 2 ;;
     esac
 done
 
@@ -100,14 +110,14 @@ tulis() {
 
 # ── 1. Jangan menimpa kerja orang ───────────────────────────────────────────────────
 # Urutan yang dipakai: `git clone` DULU, baru skrip ini — karena
-# kepemilikan folder disetel di langkah 4/6, kloning belakangan akan meninggalkan berkas
+# kepemilikan folder disetel di langkah 5/8, kloning belakangan akan meninggalkan berkas
 # milik user SSH dan Apache (www-data) tidak bisa menulis `storage/`. Jadi folder yang
 # berisi HASIL CHECKOUT PRADANA bukan alasan untuk berhenti; yang harus ditolak adalah
 # folder berisi sesuatu yang bukan aplikasi ini.
 if [ -e "$APP_DIR" ] && [ "$(ls -A "$APP_DIR" 2>/dev/null)" != "" ]; then
     if [ -f "$APP_DIR/artisan" ] && [ -f "$APP_DIR/composer.json" ]; then
         echo "   $APP_DIR berisi checkout PRADANA (ada artisan + composer.json) — lanjut,"
-        echo "   kepemilikan foldernya nanti disetel ke www-data di langkah 4/6."
+        echo "   kepemilikan foldernya nanti disetel ke www-data di langkah 5/8."
     else
         echo "GAGAL: $APP_DIR sudah berisi sesuatu yang bukan checkout PRADANA." >&2
         echo "       Skrip ini tidak akan menimpanya. Pindahkan dulu, atau pakai --app-dir= lain." >&2
@@ -115,20 +125,51 @@ if [ -e "$APP_DIR" ] && [ "$(ls -A "$APP_DIR" 2>/dev/null)" != "" ]; then
     fi
 fi
 
-# ── 2. Paket dasar ──────────────────────────────────────────────────────────────────
-echo "-- 1/6 paket dasar"
+# ── 2. Swap untuk RAM kecil ─────────────────────────────────────────────────────────
+# VM 1 GB kehabisan memori di tengah `composer install` — project ini masih membawa
+# google/apiclient dan Composer memuat seluruh graph-nya. Gejalanya bukan pesan
+# "Out of memory" yang jelas: prosesnya berhenti begitu saja, lalu orang menyalahkan
+# skripnya. Swap dipasang HANYA kalau RAM di bawah 2 GB dan belum ada swap aktif,
+# jadi mesin yang sudah benar tidak disentuh sama sekali.
+RAM_MB="$(awk '/MemTotal/ {print int($2/1024)}' /proc/meminfo 2>/dev/null || true)"
+ADA_SWAP="$(swapon --show=NAME --noheadings 2>/dev/null || true)"
+if [ -n "$RAM_MB" ] && [ "$RAM_MB" -lt 2048 ] && [ -z "$ADA_SWAP" ]; then
+    echo "-- 1/8 swap (RAM ${RAM_MB} MB)"
+    if [ "$CEK" -eq 1 ]; then
+        echo "   [cek] buat /swapfile 2G (fallocate; dd sebagai fallback kalau filesystemnya tidak mendukung)"
+        echo "   [cek] chmod 600 + mkswap + swapon"
+        echo "   [cek] tambahkan baris /swapfile ke /etc/fstab kalau belum ada"
+        echo "   [cek] tulis vm.swappiness=10 ke /etc/sysctl.d/99-pradana-swap.conf"
+    else
+        if [ ! -f /swapfile ]; then
+            fallocate -l 2G /swapfile 2>/dev/null \
+                || dd if=/dev/zero of=/swapfile bs=1M count=2048 status=none
+            chmod 600 /swapfile
+            mkswap /swapfile >/dev/null
+        fi
+        swapon /swapfile
+        grep -q '^/swapfile' /etc/fstab || echo '/swapfile none swap sw,pri=1 0 0' >> /etc/fstab
+        tulis 'vm.swappiness=10' /etc/sysctl.d/99-pradana-swap.conf
+        sysctl --quiet --load >/dev/null 2>&1 || true
+        echo "   swap aktif: $(free -m | awk '/^Swap:/ {print $2}') MB"
+    fi
+else
+    echo "-- 1/8 swap: dilewati (RAM ${RAM_MB:-tidak terbaca} MB; swap aktif: ${ADA_SWAP:-tidak ada})"
+fi
+# ── 3. Paket dasar ──────────────────────────────────────────────────────────────────
+echo "-- 2/8 paket dasar"
 DEBIAN_FRONTEND=noninteractive jalan apt-get update -qq
 # software-properties-common: perlu untuk add-apt-repository (PPA PHP).
 DEBIAN_FRONTEND=noninteractive jalan apt-get install -y -qq \
     ca-certificates curl unzip git software-properties-common
 
-# ── 3. PHP 8.2 ──────────────────────────────────────────────────────────────────────
+# ── 4. PHP 8.2 ──────────────────────────────────────────────────────────────────────
 # Kenapa 8.2 dan bukan 8.3 bawaan Ubuntu 24.04: 8.2.12 adalah versi yang diuji di mesin
 # pengembang (XAMPP) dan di CI (shivammathur/setup-php php-version 8.2). Menaiki ke 8.3
 # bukan masalah yang diketahui, tapi juga bukan sesuatu yang sudah dibuktikan — dan
 # perbedaan versi PHP paling sering muncul sebagai error yang baru kelihatan saat ada
 # orang menekan tombol. Pakai `--php83` kalau memang mau ikut bawaan distribusi.
-echo "-- 2/6 PHP $PHP_VERSI"
+echo "-- 3/8 PHP $PHP_VERSI"
 if [ "$PHP_VERSI" = "8.2" ]; then
     if ! apt-cache policy "php${PHP_VERSI}-cli" 2>/dev/null | grep -q "Candidate: 8.2"; then
         jalan add-apt-repository -y ppa:ondrej/php
@@ -141,12 +182,12 @@ DEBIAN_FRONTEND=noninteractive jalan apt-get install -y -qq \
     "php${PHP_VERSI}-mbstring" "php${PHP_VERSI}-zip" "php${PHP_VERSI}-gd" \
     "php${PHP_VERSI}-intl" "php${PHP_VERSI}-bcmath" "php${PHP_VERSI}-opcache"
 
-# ── 4. MariaDB ──────────────────────────────────────────────────────────────────────
+# ── 5. MariaDB ──────────────────────────────────────────────────────────────────────
 # engine-nya sengaja SAMA dengan mesin pengembang (MariaDB, bukan MySQL 8): SQL yang
 # dipakai aplikasi ini (`LIKE ? ESCAPE '!'`, `CASE` di ORDER BY, dan perilaku
 # restrictOnDelete yang di MariaDB jadi NO ACTION) sudah diuji di MariaDB sungguhan,
 # bukan di SQLite saja — itu alasan engine-nya tidak boleh ditukar diam-diam.
-echo "-- 3/6 MariaDB"
+echo "-- 4/8 MariaDB"
 DEBIAN_FRONTEND=noninteractive jalan apt-get install -y -qq mariadb-server mariadb-client
 jalan systemctl enable --now mariadb
 
@@ -158,7 +199,14 @@ if [ "$CEK" -eq 0 ]; then
     if [ -f "$KREDENSIAL" ]; then
         echo "   kredensial lama sudah ada di $KREDENSIAL — tidak ditimpa (user DB tidak dibuat ulang)"
     else
-        DB_PASS="$(tr -dc 'A-Za-z0-9' < /dev/urandom | head -c 28)"
+        # `tr ... < /dev/urandom | head -c 28` adalah bentuk yang terbunuh oleh skripnya
+        # sendiri: head berhenti baca sesudah 28 byte, tr kena SIGPIPE (141), dan karena
+        # pipeline ini diambil lewat assignment di dalam `set -euo pipefail`, skripnya
+        # keluar DI TENGGAN provisi tanpa pesan — server berhenti di langkah MariaDB.
+        # Bentuk di bawah memakai input yang berhenti sendiri (head -c ke urandom), lalu
+        # memotong di bash, jadi tidak ada proses yang dimatikan lebih awal.
+        RAW_PASS="$(head -c 512 /dev/urandom | base64 | tr -dc 'A-Za-z0-9')"
+        DB_PASS="${RAW_PASS:0:28}"
         umask 077
         {
             echo "# Dipakai di .env server PRADANA. Jangan salin ke repo, chat, atau laporan."
@@ -185,11 +233,11 @@ else
     echo "   [cek] kredensial acak ditulis ke $KREDENSIAL (0600) — tidak lewat baris perintah"
 fi
 
-# ── 5. Apache: DocumentRoot harus public/ ───────────────────────────────────────────
+# ── 6. Apache: DocumentRoot harus public/ ───────────────────────────────────────────
 # Ini bukan selera. Kalau DocumentRoot menunjuk akar aplikasi, maka `.env`,
 # `storage/app/private/arsip` (lampiran kantor) dan `storage/app/private/db-backup`
 # (isi database) menjadi berkas web yang bisa diambil siapa pun yang menebak jalurnya.
-echo "-- 4/6 Apache"
+echo "-- 5/8 Apache"
 DEBIAN_FRONTEND=noninteractive jalan apt-get install -y -qq apache2
 # Modul ini yang dipakai public/.htaccess. `filter` bukan hiasan: AddOutputFilterByType
 # dimiliki mod_filter, dan tanpa modul itu blok kompresi membuat SELURUH situs 500
@@ -243,11 +291,21 @@ else
     echo "   [cek] a2dissite 000-default && a2ensite pradana"
 fi
 
-# ── 6. php.ini: batas unggah + zona waktu + OPcache ─────────────────────────────────
+# ── 7. php.ini: batas unggah + zona waktu + OPcache ─────────────────────────────────
+# Jam OS disetel lebih dulu, dan alasannya bukan kerapihan. Aplikasi sudah benar soal
+# waktu (APP_TIMEZONE + date.timezone di bawah), tapi JADWAL dibaca cron dari jam OS, dan
+# image cloud Ubuntu default-nya UTC. Hasil tanpa baris ini: "cadangan harian 02:10" yang
+# tertulis di app/Console/Kernel.php benar-benar jatuh pukul 09:10 WIB — jam kantor, bukan
+# malam sepi — dan pekerjaan yang seharusnya jalan tengah malam ikut bergeser.
+echo "-- 6/8 jam sistem"
+jalan timedatectl set-timezone "$ZONA"
+jalan ln -sf "/usr/share/zoneinfo/$ZONA" /etc/localtime
+echo "   OS: $(date '+%Z %H:%M')"
+
 # Dua file, bukan satu: mod_php membaca `.../apache2/php.ini`, `php artisan` membaca
 # `.../cli/php.ini`. Mengedit yang CLI saja membuat unggah tetap ditolak di web — dan
 # gejalanya "tombol Unggah diam" (lampiran sampai 25 MB, jadi 26 M+ dua-duanya).
-echo "-- 5/6 php.ini ($PHP_VERSI)"
+echo "-- 7/8 php.ini ($PHP_VERSI)"
 for SAPI in apache2 cli; do
     INI="/etc/php/${PHP_VERSI}/${SAPI}/php.ini"
     if [ "$CEK" -eq 1 ]; then
@@ -283,8 +341,8 @@ done
 # mahal untuk orang yang tidak tahu. Penghematannya kecil (terukur 12 Okt: cache build
 # tidak mengubah waktu steady di mesin ini), risikonya tidak sebanding.
 
-# ── 7. Composer ─────────────────────────────────────────────────────────────────────
-echo "-- 6/6 Composer + cron"
+# ── 8. Composer ─────────────────────────────────────────────────────────────────────
+echo "-- 8/8 Composer + cron"
 if command -v composer >/dev/null 2>&1; then
     echo "   sudah ada: $(composer --version 2>/dev/null | head -1)"
 elif [ "$CEK" -eq 1 ]; then
@@ -307,6 +365,15 @@ fi
 # arsip usang, pembersih log). Tanpa baris ini tidak satu pun jalan, dan tidak ada yang
 # sadar sampai cadangan dibutuhkan. Format /etc/cron.d menuntut KOLOM USER — www-data,
 # karena itu pemilik file di storage/.
+#
+# Berkas lognya DIBUKA DULU, bukan dibiarkan dibuat oleh cron. Ini bukan kerapian:
+# www-data tidak boleh menulis di /var/log, jadi `>> /var/log/pradana-cron.log` gagal di
+# depan shell-nya sendiri — `schedule:run` tidak pernah dijalankan sama sekali, cron
+# mencoba tiap menit dan tiap percobaan mati sebelum perintahnya sendiri, tanpa jejak.
+# Ketahuan di VM sungguhan 31 Okt, tidak bisa ketahuan dari `bash -n` maupun `--cek`.
+jalan touch /var/log/pradana-cron.log
+jalan chown www-data:adm /var/log/pradana-cron.log
+jalan chmod 640 /var/log/pradana-cron.log
 tulis "# PRADANA — Laravel scheduler. Satu menit sekali; isi jadwalnya ada di
 # app/Console/Kernel.php. Log di /var/log/pradana-cron.log supaya kegagalannya
 # kelihatan, bukan hilang ke /dev/null.
@@ -316,22 +383,35 @@ jalan chmod 644 /etc/cron.d/pradana
 DEBIAN_FRONTEND=noninteractive jalan apt-get install -y -qq cron
 jalan systemctl enable --now cron
 
-# ── 8. Firewall ─────────────────────────────────────────────────────────────────────
+# ── 9. Firewall ─────────────────────────────────────────────────────────────────────
 # Urutan penting: allow SSH SEBELUM enable. `ufw enable` dengan aturan default menolak
 # semua input = kunci diri sendiri di luar VM, dan itu tidak bisa diperbaiki tanpa
-# konsol Oracle. Di Oracle juga masih ada security list di level VCN yang harus
-# mengizinkan 80/443 — ufw bukan satu-satunya pintu.
+# konsol penyedia. Di cloud masih ada satu lapis di luar VM (NSG Azure, security list
+# Oracle) — ufw bukan satu-satunya pintu, dan keduanya harus setuju.
+#
+# 80/443 TIDAK dibuka kecuali diminta. Alasannya bukan kiasan: docroot yang salah
+# menyajikan `.env`, `storage/app/private/arsip`, dan `db-backup/` sebagai berkas web,
+# dan satu jam di internet cukup untuk menemukannya. Semua langkah setelah ini bisa
+# dikerjakan dan diuji lewat SSH — tunnel di bawah memberi alamat uji yang sama tanpa
+# membuka apa pun ke dunia.
 echo "-- firewall"
 jalan ufw allow "${PORT_SSH_TETAP}/tcp"
-jalan ufw allow 'Apache Full'
+if [ "$BUKA_80" -eq 1 ]; then
+    jalan ufw allow 'Apache Full'
+else
+    echo "   80/443 sengaja belum dibuka. Uji lewat tunnel dari mesin pengembang:"
+    echo "     ssh -N -L 8080:127.0.0.1:80 <user-vm>@<alamat-vm>"
+    echo "   lalu curl http://127.0.0.1:8080/.env harus kosong/404. Baru setelah itu:"
+    echo "     sudo ufw allow 'Apache Full'"
+fi
 if [ "$CEK" -eq 1 ]; then
     echo "   [cek] ufw --force enable"
 else
     if ufw --force enable; then
-        echo "   ufw aktif (22 + 80/443)"
+        echo "   ufw aktif (22$([ "$BUKA_80" -eq 1 ] && echo ' + 80/443' || echo '; 80/443 masih tertutup'))"
     else
         echo "   ufw tidak tersedia — tidak berbahaya, tapi berarti satu-satunya penjaga"
-        echo "   adalah security list Oracle. Cek manual."
+        echo "   adalah firewall di luar VM. Cek manual."
     fi
 fi
 
@@ -341,7 +421,7 @@ if [ "$CEK" -eq 1 ]; then
     exit 0
 fi
 
-# ── 9. Reload + pesan lanjutan ──────────────────────────────────────────────────────
+# ── 10. Reload + pesan lanjutan ──────────────────────────────────────────────────────
 jalan systemctl reload apache2
 
 echo
@@ -359,7 +439,7 @@ echo "     (repo ini publik; kalau nanti pindah ke repo privat, pakai kunci mili
 echo "      www-data — bukan kredensial pribadimu)"
 echo
 echo "  2. Buat .env — JANGAN disalin dari laptop. Semua perintah artisan di bawah"
-echo "     berjalan sebagai www-data (lihat alasan kepemilikan di langkah 4/6):"
+echo "     berjalan sebagai www-data (lihat alasan kepemilikan di langkah 5/8):"
 echo "       sudo -u www-data env HOME=/tmp bash -c 'cd $APP_DIR && cp .env.example .env && php artisan key:generate'"
 echo "       sudo -u www-data env HOME=/tmp nano $APP_DIR/.env"
 echo "     lalu isi dari $KREDENSIAL :"
