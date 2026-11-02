@@ -57,7 +57,7 @@ composer install
 cp .env.example .env && php artisan key:generate   # lalu isi DB_* dan DEV_PIN
 php artisan migrate --seed
 php artisan db:seed --class=DevSeeder              # data contoh, hanya di APP_ENV=local
-php artisan arsip:akun-pertama admin@kantor.desa --nama="Kepala Desa"
+php artisan arsip:akun-pertama admin@kantor.desa "Kepala Desa"
 php artisan serve
 php artisan test
 ```

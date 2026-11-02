@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Console\Concerns\MintaPin;
 use App\Models\User;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Hash;
@@ -15,6 +16,8 @@ use Illuminate\Support\Facades\Hash;
  */
 class ResetPinPengguna extends Command
 {
+    use MintaPin;
+
     protected $signature = 'arsip:reset-pin
                             {email : Email akun yang mau direset}
                             {--pin= : PIN 8 digit (kalau kosong, ditanya aman di terminal)}';
@@ -31,7 +34,9 @@ class ResetPinPengguna extends Command
             return self::FAILURE;
         }
 
-        $pin = (string) ($this->option('pin') ?? $this->secret("PIN baru untuk {$user->nama_lengkap} (8 digit)"));
+        // `?:` supaya `--pin=` kosong jatuh ke prompt, bukan menyimpan PIN kosong.
+        $pin = (string) ($this->option('pin')
+            ?: $this->mintaPin("PIN baru untuk {$user->nama_lengkap} (8 digit)"));
 
         if (! preg_match('/^\d{8}$/', $pin)) {
             $this->error('PIN harus tepat 8 digit angka. Tidak ada yang diubah.');

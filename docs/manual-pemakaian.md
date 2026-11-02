@@ -278,11 +278,27 @@ php artisan key:generate
 #           APP_TIMEZONE=Asia/Jakarta (WIB; ganti ke Asia/Makassar / Asia/Jayapura
 #           kalau kantormu bukan WIB)
 php artisan migrate --seed
-php artisan arsip:akun-pertama admin@kantor.desa --nama="Kepala Desa"
+php artisan arsip:akun-pertama admin@kantor.desa "Kepala Desa"
 php artisan config:cache && php artisan route:cache && php artisan view:cache
 ```
 `APP_TIMEZONE` menentukan tanggal yang tercetak di dokumen. Nomor Berita Acara (`BA-###/romawi/tahun`) dan tanggal pelaksanaannya dihitung dari jam server, dan Indonesia tidak punya perubahan waktu — jadi kalau nilainya masih `UTC` bawaan Laravel, semua kejadian antara pukul 00:00 dan 07:00 waktu setempat tercatat sebagai hari sebelumnya. Cek setelah pasang: `php artisan tinker --execute="echo now();"` harus menampilkan jam dinding kantor, bukan jam tujuh lebih awal.
 `--seed` hanya menanam satu baris pengaturan instansi kosong — **sengaja**. Akun contoh & klasifikasi contoh ada di `DevSeeder` yang menolak jalan di server produksi.
+
+**Kalimat "PIN harus 8 digit angka" padahal PIN-nya sudah diketik** artinya bukan kamu
+salah ketik. Di server, perintah artisan biasanya jalan sebagai user web
+(`sudo -u www-data ...`), sementara terminal yang kamu pakai masih milik user login;
+pertanyaan tersembunyi butuh mengendalikannya, dan user lain tidak boleh. Isinya terbaca
+kosong. Masukkan PIN lewat shell-mu sendiri supaya nilainya tidak masuk baris perintah,
+tidak masuk riwayat, dan tidak masuk `ps`:
+
+```bash
+read -s "P?PIN 8 digit: "
+sudo -u www-data env HOME=/tmp PRADANA_PIN="$P" php artisan arsip:akun-pertama admin@kantor.desa "Kepala Desa"
+unset P
+```
+
+Cara yang sama berlaku untuk `arsip:reset-pin`. `--pin=` juga diterima, tapi itu menulis
+PIN ke baris perintah — hindari kecuali darurat.
 
 **Tidak perlu `php artisan storage:link`.** Logo instansi dilayani lewat route `/instansi/logo` yang membaca disk `public` langsung, jadi logo tetap tampil di shared hosting tempat symlink tidak bisa (atau belum) dibuat. Kalau suatu saat pindah ke setup yang menyediakan symlink, route ini tetap jalan — tidak ada yang perlu diubah.
 

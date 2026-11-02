@@ -454,10 +454,16 @@ echo "     (env HOME=/tmp bukan hiasan: composer menulis ke \$HOME, dan www-data
 echo "      punya folder home — tanpa ini composer install buang peringatan dan cache-nya"
 echo "      tidak ke mana-mana)"
 echo
-echo "  4. Akun pertama (satu-satunya jalan membuat admin setelah seeder dilucuti):"
-echo "       sudo -u www-data env HOME=/tmp bash -c 'cd $APP_DIR && php artisan arsip:akun-pertama <email> --nama=\"<nama>\"'"
-echo "     PIN-nya 8 digit dan diminta di terminal. Kalau ini VM demo, jangan pakai"
-echo "     PIN yang tertulis di dokumen (nilai dev) karena VM ini punya IP publik."
+echo "  4. Akun pertama (satu-satunya jalan membuat admin setelah seeder dilucuti)."
+echo "     PIN jangan ditulis di baris perintah dan jangan ditanya lewat prompt:"
+echo "     pertanyaan tersembunyi tidak bisa dipakai user www-data pada terminal milik"
+echo "     user login, jadi isinya terbaca kosong dan perintahnya menyangkal PIN-mu."
+echo "     Ketik ini apa adanya di VM — nilainya tidak masuk argv, riwayat, atau ps:"
+echo '       read -s "P?PIN 8 digit: "'
+echo "       sudo -u www-data env HOME=/tmp PRADANA_PIN=\"\$P\" bash -c 'cd $APP_DIR && php artisan arsip:akun-pertama <email> \"<nama>\"'"
+echo '       unset P'
+echo "     Nama adalah argumen posisi, bukan opsi --nama (opsi itu tidak ada). Kalau ini"
+echo "     VM demo, jangan pakai PIN yang tertulis di dokumen — VM ini punya IP publik."
 echo
 echo "  5. Bukti, bukan perasaan — lima hal di kepala file ini harus terlihat nyata."
 echo "     Termasuk: buka http://<IP>/.env dan harus 404, lalu"

@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Console\Concerns\MintaPin;
 use App\Models\User;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Hash;
@@ -14,10 +15,15 @@ use Illuminate\Support\Facades\Validator;
  * tidak boleh ikut ke repository. Akun pertama harus dibuat orang yang memang
  * memegang kantor, di terminalnya sendiri, lewat perintah ini.
  *
+ * Pemakaian: `php artisan arsip:akun-pertama nama@email.co "Nama Lengkap"` —
+ * `nama` adalah argumen, BUKAN opsi `--nama`.
+ *
  * Kalau semua admin sudah terkunci (lupa PIN semua), pakai `arsip:reset-pin`.
  */
 class BuatAkunPertama extends Command
 {
+    use MintaPin;
+
     protected $signature = 'arsip:akun-pertama
                             {email : Email untuk login}
                             {nama? : Nama lengkap}
@@ -73,6 +79,8 @@ class BuatAkunPertama extends Command
 
     private function ambilPin(): string
     {
-        return (string) ($this->option('pin') ?? $this->secret('PIN 8 digit'));
+        // `?:` dan bukan `??`: `--pin=` tanpa nilai menghasilkan string kosong, dan
+        // itu harus jatuh ke prompt, bukan lolos jadi PIN kosong.
+        return (string) ($this->option('pin') ?: $this->mintaPin());
     }
 }

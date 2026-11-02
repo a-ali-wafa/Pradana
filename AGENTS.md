@@ -92,7 +92,7 @@ Yang biasanya perlu diketahui dari peta itu:
 composer install
 cp .env.example .env && php artisan key:generate     # lalu isi DB_*, DEV_PIN, GOOGLE_*
 php artisan migrate                                  # seeder produksi hanya baris pengaturan instansi
-php artisan arsip:akun-pertama email@kantor.desa --nama="Kepala Desa"   # akun admin pertama
+php artisan arsip:akun-pertama email@kantor.desa "Kepala Desa"          # akun admin pertama
 php artisan serve                                    # http://127.0.0.1:8000
 
 php artisan db:seed --class=DevSeeder                # data contoh; menolak jalan kalau APP_ENV bukan local
