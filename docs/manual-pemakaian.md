@@ -367,7 +367,7 @@ Simpan salinan cadangan di luar computer server (flashdisk/Drive) — kalau satu
 
 ### A.7 Setelah memasang
 ```bash
-php artisan test          # 245 tes; 18 di antaranya butuh MariaDB hidup (DB_TEST_DATABASE):
+php artisan test          # 275 tes; 18 di antaranya butuh MariaDB hidup (DB_TEST_DATABASE):
                           # 3 penomoran surat + 10 portabilitas pencarian + 2 agregat dashboard
                           # + 1 index aktivitas + 1 dump sungguhan + 1 uji pulih cadangan.
                           # Kalau MariaDB mati, ke-18 tes itu DI-SKIP dengan pesan — bukan lulus.
@@ -383,7 +383,35 @@ Kalau baris itu kosong, berarti `public/robots.txt` tertimpa versi bawaan Larave
 
 Kalau tampilan aplikasi tiba-tiba rusak setelah suatu perubahan (misalnya pratinjau logo tidak muncul lagi), sementara matikan kebijakan kontennya untuk memastikan penyebabnya: `SECURITY_CSP=false` di `.env` lalu `php artisan config:clear`. Setelah terbukti bukan CSP, kembalikan `true` — jangan dibiarkan mati.
 
-### A.8 Batasan yang belum dibuat (diketahui, bukan kelupaan)
+### A.8 HTTPS
+
+```bash
+sudo bash bin/pasang-https.sh <nama-host-publik>
+```
+
+Sertifikatnya dari Let's Encrypt dan **tidak perlu membeli domain**: yang dibutuhkan hanya nama host yang mengarah ke server dan port 80 yang terbuka dari internet, karena validasinya (HTTP-01) adalah server Let's Encrypt yang mengunjungi port 80 kamu. Di Azure, IP tipe Standard yang diberi label DNS sudah menghasilkan nama seperti `pradana-demo.indiasouthcentral.cloudapp.azure.com` — tinggal dibuka port 443 juga di NSG-nya.
+
+Kenapa tidak lewat layanan domain gratis (DuckDNS dan sejenisnya): dua-duanya pernah mematikan rencana. Situs mereka bisa tidak terjangkau dari jaringan tempat kantor berada (tanpa itu nama host-nya tidak bisa diperbarui), dan nama yang mereka bagikan duduk di satu registered domain yang sama dengan seluruh penggunanya di dunia — kuota sertifikat Let's Encrypt dihitung per registered domain, jadi antreannya bisa habis sebelum giliran kantor.
+
+Sesudah sertifikat terpasang, dua baris di `.env` ikut berubah dan cache-nya harus dibangun ulang:
+
+```bash
+# .env
+APP_URL=https://<nama-host-publik>
+SESSION_SECURE_COOKIE=true
+php artisan config:cache
+```
+
+Perpanjangan berjalan otomatis (`certbot.timer`, dua kali sehari; sertifikat berlaku 90 hari) dan hook di `/etc/letsencrypt/renewal-hooks/deploy/` memuat ulang Apache setiap ada sertifikat baru. Buktinya bukan perasaan:
+
+```bash
+sudo certbot renew --dry-run        # harus "pending", bukan "failed"
+curl -sI http://<nama-host>/login | head -1    # harus 301 ke https
+```
+
+Port 80 sengaja tetap hidup: hanya jalur `/.well-known/acme-challenge/` yang dilayani di HTTP, sisanya dinaikkan ke HTTPS. Menutup port 80 sepenuhnya membuat perpanjangan sertifikat gagal dalam tiga bulan.
+
+### A.9 Batasan yang belum dibuat (diketahui, bukan kelupaan)
 - **Template PDF masih satu bentuk umum.** Multi-template sesuai kop resmi desa menunggu contoh kop dari kantor.
 - **Kunci otomatis arsip setelah N hari** belum diaktifkan — nilai N belum diputuskan.
 - **Pembaca isi lampiran bukan OCR.** PDF hasil scan (gambarnya saja), JPG/PNG, dan DOC/XLS format lama tidak terbaca; sistem selalu menyebutkan alasannya di kartu hasil baca, tidak pernah diam-diam.

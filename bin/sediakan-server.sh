@@ -469,3 +469,9 @@ echo "  5. Bukti, bukan perasaan — lima hal di kepala file ini harus terlihat 
 echo "     Termasuk: buka http://<IP>/.env dan harus 404, lalu"
 echo "       sudo -u www-data env HOME=/tmp bash -c 'cd $APP_DIR && php artisan arsip:backup-db'"
 echo "     dan uji pulih sekali SEBELUM ada data yang disayangi."
+echo
+echo "  6. HTTPS tanpa membeli domain: bin/pasang-https.sh <nama-host-publik>."
+echo "     Syaratnya nama host yang mengarah ke server + port 80 terbuka dari internet;"
+echo "     port 443 harus dibuka juga di firewall cloud (ufw 'Apache Full' saja tidak cukup)."
+echo "     Sesudahnya: APP_URL=https://<nama-host> dan SESSION_SECURE_COOKIE=true di .env,"
+echo "     php artisan config:cache, lalu 'sudo certbot renew --dry-run' harus pending."
