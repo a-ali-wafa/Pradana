@@ -171,7 +171,11 @@ DEBIAN_FRONTEND=noninteractive jalan apt-get install -y -qq \
 # orang menekan tombol. Pakai `--php83` kalau memang mau ikut bawaan distribusi.
 echo "-- 3/8 PHP $PHP_VERSI"
 if [ "$PHP_VERSI" = "8.2" ]; then
-    if ! apt-cache policy "php${PHP_VERSI}-cli" 2>/dev/null | grep -q "Candidate: 8.2"; then
+    # `grep -q` sengaja tidak dipakai di ujung pipa: ia berhenti begitu cocok,
+    # menutup pipa, dan `apt-cache` mati kena SIGPIPE — dengan `pipefail` hasil
+    # pipeline-nya jadi gagal walaupun teksnya ketemu, dan skrip lalu menambahkan
+    # PPA yang sebenarnya tidak diperlukan.
+    if ! apt-cache policy "php${PHP_VERSI}-cli" 2>/dev/null | grep "Candidate: 8.2" >/dev/null; then
         jalan add-apt-repository -y ppa:ondrej/php
         DEBIAN_FRONTEND=noninteractive jalan apt-get update -qq
     fi
@@ -474,4 +478,6 @@ echo "  6. HTTPS tanpa membeli domain: bin/pasang-https.sh <nama-host-publik>."
 echo "     Syaratnya nama host yang mengarah ke server + port 80 terbuka dari internet;"
 echo "     port 443 harus dibuka juga di firewall cloud (ufw 'Apache Full' saja tidak cukup)."
 echo "     Sesudahnya: APP_URL=https://<nama-host> dan SESSION_SECURE_COOKIE=true di .env,"
-echo "     php artisan config:cache, lalu 'sudo certbot renew --dry-run' harus pending."
+echo "     php artisan config:cache, lalu sekali sebulan 'sudo certbot certificates'"
+echo "     (perpanjangan otomatis sudah dijadwalkan; --dry-run tidak menguji sertifikat"
+echo "     yang umurnya belum lewat 30 hari, jadi 'pending' di awal siklus bukan bukti)."

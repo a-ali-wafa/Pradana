@@ -402,12 +402,16 @@ SESSION_SECURE_COOKIE=true
 php artisan config:cache
 ```
 
-Perpanjangan berjalan otomatis (`certbot.timer`, dua kali sehari; sertifikat berlaku 90 hari) dan hook di `/etc/letsencrypt/renewal-hooks/deploy/` memuat ulang Apache setiap ada sertifikat baru. Buktinya bukan perasaan:
+Perpanjangan berjalan otomatis (`certbot.timer`, diperiksa dua kali sehari; sertifikat berlaku 90 hari) dan hook di `/etc/letsencrypt/renewal-hooks/deploy/` memuat ulang Apache setiap ada sertifikat baru. Soal bukti perpanjangan, dua hal yang mudah salah baca:
 
 ```bash
-sudo certbot renew --dry-run        # harus "pending", bukan "failed"
-curl -sI http://<nama-host>/login | head -1    # harus 301 ke https
+sudo certbot certificates       # sekali sebulan: lihat "Expiry Date"
+sudo certbot renew --dry-run    # melewati sertifikat yang belum mendekati kedaluwarsa
 ```
+
+`--dry-run` tidak menguji sertifikat yang umurnya belum lewat 30 hari — ia melaporkannya sebagai "pending", jadi "0 failure" di awal siklus bukan bukti apa pun. Yang menguji jalur penerbitan secara nyata adalah `sudo certbot renew --force-renewal`, tapi itu memakai kuota terbit Let's Encrypt (dihitung per registered domain), jadi jalankan hanya ketika memang perlu bukti, bukan sebagai rutinitas.
+
+Alamat email di akun Let's Encrypt **tidak lagi menjadi kanal peringatan**: layanan surat kedaluwarsa ditutup 4 Juni 2025 dan `contact` yang dikirim ke akun sekarang diabaikan CA (percobaan 2 Nov: POST `{"contact":["mailto:…"]}` dibalas 200 tanpa field contact). Yang menjaga sertifikat tetap hidup hanyalah timer di atas dan pemeriksaan bulanan.
 
 Port 80 sengaja tetap hidup: hanya jalur `/.well-known/acme-challenge/` yang dilayani di HTTP, sisanya dinaikkan ke HTTPS. Menutup port 80 sepenuhnya membuat perpanjangan sertifikat gagal dalam tiga bulan.
 

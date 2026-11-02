@@ -21,7 +21,7 @@
 #
 # Cara pakai (root, di server, dari akar aplikasi):
 #   bash bin/pasang-https.sh pradana-demo.indiasouthcentral.cloudapp.azure.com
-#   EMAIL=petugas@kantor.desa bash bin/pasang-https.sh <nama-host>   # surat peringatan kedaluwarsa
+# EMAIL=... diterima tapi tidak berarti apa-apa lagi — lihat catatan di langkah 1.
 #
 # Skrip ini idempoten: dijalankan ulang pada server yang sudah HTTPS tidak mengubah
 # apa pun selain memeriksa ulang.
@@ -89,10 +89,13 @@ fi
 # Apache melayaninya sebagai berkas asli — .htaccess Laravel hanya menuliskan
 # permintaan yang BUKAN berkas, jadi jalur ini tetap lolos tanpa menyentuh kode.
 #
-# Tanpa EMAIL: akun Let's Encrypt didaftarkan tanpa alamat, jadi tidak ada surat
-# peringatan sebelum kedaluwarsa. Perpanjangan otomatis (certbot.timer) biasanya
-# menutup itu, tapi kalau suatu saat perpanjangan gagal diam-diam, yang tahu
-# pertama kali adalah browser petugas. Isi EMAIL= untuk menghindari itu.
+# Tanpa EMAIL juga tidak apa-apa: Let's Encrypt SUDAH TIDAK MENGIRIM surat
+# peringatan kedaluwarsa — layanan itu ditutup 4 Juni 2025, dan `contact` yang
+# dikirim ke akun sekarang diabaikan CA (buktinya: POST {"contact":[...]} dibalas
+# 200 tanpa field contact sama sekali). Jadi jangan menaruh rasa aman pada alamat
+# email di akun ACME. Yang menahan sertifikat supaya tidak kedaluwarsa adalah
+# certbot.timer (dibahas di langkah 3) dan satu pemeriksaan sebulan:
+#   sudo certbot certificates
 if [ -d "/etc/letsencrypt/live/$FQDN" ]; then
     echo "-- sertifikat untuk $FQDN sudah ada, dilewati"
 else
@@ -101,7 +104,6 @@ else
         EMAIL_ARG=(--email "$EMAIL" --no-eff-email)
     else
         EMAIL_ARG=(--register-unsafely-without-email)
-        echo "   catatan: tanpa EMAIL=..., tidak ada surat peringatan kedaluwarsa dari Let's Encrypt."
     fi
 
     certbot certonly --webroot -w "$DOKROOT" -d "$FQDN" \
@@ -202,6 +204,29 @@ echo "-- periksa sendiri (dari server):"
 curl -s -o /dev/null -w "   http  /login            = %{http_code} -> %{redirect_url}\n" http://127.0.0.1/login
 # Tanpa -k: kalau rantai sertifikat tidak dipercaya, baris ini yang memberitahu.
 curl -s -o /dev/null -w "   https /login            = %{http_code}\n" --max-time 30 "https://$FQDN/login"
+# Perpanjangan tidak bisa diuji dengan `--dry-run` pada sertifikat yang USIA-nya
+# belum lewat 30 hari: certbot melewatinya dengan "Certificate not due for renewal,
+# skipping" dan tetap melaporkan "pending" — angka nol kegagalan dari sana bukan
+# bukti apa pun. `--force-renewal` memang menguji jalur penuh, tapi itu MEMAKAI
+# kuota penerbitan (per registered domain, dan nama cloudapp.azure.com dihitung di
+# bawah azure.com bersama seluruh pelanggan Azure lain), jadi jalankan hanya kalau
+# memang perlu bukti. Yang diuji di sini: timer-nya ada, dan hook reload-nya bisa dieksekusi.
+echo "-- perpanjangan:"
+# `grep -q` di ujung pipeline TIDAK dipakai di sini: ia berhenti begitu ketemu,
+# menutup pipa, dan systemctl mati kena SIGPIPE — dengan `pipefail` itu membuat
+# pemeriksaan jadi benar-salah tergantung kecepatan tulis (gejalanya "timer tidak
+# terlihat" padahal ada). `grep` biasa membaca sampai habis.
+if systemctl list-timers --all 2>/dev/null | grep certbot.timer >/dev/null; then
+    echo "   certbot.timer terjadwal (cek dua kali sehari)"
+else
+    echo "   PERINGATAN: certbot.timer tidak terlihat — perpanjangan tidak akan jalan sendiri."
+fi
+if [ -x /etc/letsencrypt/renewal-hooks/deploy/reload-apache.sh ]; then
+    /etc/letsencrypt/renewal-hooks/deploy/reload-apache.sh
+    echo "   hook reload Apache dijalankan sendiri di sini dan tidak gagal"
+else
+    echo "   PERINGATAN: hook reload Apache tidak ada — sertifikat baru tidak dipakai sampai Apache dimuat ulang."
+fi
 echo
 echo "-- yang masih harus dikerjakan di luar server ini:"
 echo "   1. Buka port $PORT di firewall cloud (Azure: NSG rule, priority di bawah 65000"
