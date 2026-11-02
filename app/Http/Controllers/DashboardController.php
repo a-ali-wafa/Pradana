@@ -2,29 +2,21 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Aktivitas;
-use App\Models\KlasifikasiPrimer;
 use App\Models\SuratKeluar;
 use App\Models\SuratMasuk;
 use App\Support\RentangTanggal;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Facades\DB;
 
 /**
- * Dashboard statistik. Item roadmap Bagian 11 cuma bilang "dashboard
- * statistik" tanpa rincian widget — pilihan di bawah ini keputusan saya
- * berdasarkan skema yang tersedia, BUKAN spesifikasi eksplisit
- * dari user. Kalau mau widget lain/beda, gampang disesuaikan.
+ * Dashboard: identitas kantor, angka agregat surat, dan lima surat terakhir di
+ * kedua arah. Yang boleh tampil di sini hanya angka yang dibaca orang kantor
+ * sambil bekerja — log aktivitas dan sebaran klasifikasi punya halamannya sendiri
+ * (`/aktivitas`, `/laporan`) dan tidak perlu menumpuk di layar pertama.
  *
- * Tidak ada pembatasan role: dashboard dibaca semua yang login (dua
- * tingkat, dan melihat statistik bukan aksi destruktif).
- *
- * Relasi yang dipakai (`primer`, `petugas`, `user`) sudah dicocokkan ke model
- * aslinya. `Aktivitas::user()` memang `belongsTo(User::class)` — BUKAN
- * `petugas()` seperti di surat_masuk/surat_keluar, karena log aktivitas mencatat
- * akun, bukan petugas yang mengetik surat.
+ * Tidak ada pembatasan role: dashboard dibaca semua yang login (dua tingkat, dan
+ * melihat statistik bukan aksi destruktif).
  */
 class DashboardController extends Controller
 {
@@ -38,6 +30,9 @@ class DashboardController extends Controller
         $keluar = $this->agregat(SuratKeluar::query(), 'tanggal_surat');
 
         $stats = [
+            // Angka status arsip diambil dari pemindaian yang sama dengan total,
+            // jadi `inaktif` tetap ikut terbawa walau layarnya sekarang hanya
+            // menampilkan yang aktif.
             'total_surat_masuk' => $masuk['total'],
             'total_surat_keluar' => $keluar['total'],
             'surat_masuk_bulan_ini' => $masuk['bulan_ini'],
@@ -61,45 +56,10 @@ class DashboardController extends Controller
             ->take(5)
             ->get();
 
-        $aktivitasTerbaru = Aktivitas::with('user')
-            ->latest('created_at')
-            ->latest('id')
-            ->take(10)
-            ->get();
-
-        // Hitung surat masuk DAN keluar bersama-sama. Sebelumnya hanya
-        // surat masuk, sehingga "klasifikasi terbanyak" di dashboard menyesatkan
-        // (kantor yang banyak bikin surat keluar melihat grafik yang salah).
-        $hitungPerPrimer = fn (string $model) => $model::query()
-            ->select('klasifikasi_primer_id', DB::raw('count(*) as total'))
-            ->groupBy('klasifikasi_primer_id')
-            ->get();
-
-        // Kolom yang dipilih cuma yang dibaca view (kode + nama): `all()` mengambil
-        // seluruh baris dengan SELURUH kolomnya sekali per muat dashboard.
-        $primerById = KlasifikasiPrimer::query()->get(['id', 'kode', 'nama'])->keyBy('id');
-
-        $klasifikasiTerpopuler = $hitungPerPrimer(SuratMasuk::class)
-            ->concat($hitungPerPrimer(SuratKeluar::class))
-            ->groupBy('klasifikasi_primer_id')
-            ->map(fn ($kelompok) => (object) [
-                'primer' => $primerById->get($kelompok->first()->klasifikasi_primer_id),
-                'total' => $kelompok->sum('total'),
-            ])
-            ->sortByDesc('total')
-            ->take(5)
-            ->values();
-
         return view('dashboard.index', [
             'stats' => $stats,
             'suratMasukTerbaru' => $suratMasukTerbaru,
             'suratKeluarTerbaru' => $suratKeluarTerbaru,
-            'aktivitasTerbaru' => $aktivitasTerbaru,
-            'klasifikasiTerpopuler' => $klasifikasiTerpopuler,
-            // Panjang batang grafik relatif terhadap nilai terbesar. Dulu
-            // dihitung di view dalam sebuah blok @php yang dijalankan ulang
-            // untuk tiap baris.
-            'maksTotalKlasifikasi' => $klasifikasiTerpopuler->first()->total ?? 1,
         ]);
     }
 

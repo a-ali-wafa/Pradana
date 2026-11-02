@@ -5,7 +5,6 @@ namespace Tests\Feature;
 use App\Models\KlasifikasiPrimer;
 use App\Models\Lampiran;
 use App\Models\SuratKeluar;
-use App\Models\SuratMasuk;
 use App\Models\User;
 use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -214,41 +213,6 @@ class OtorisasiDuaTingkatTest extends TestCase
             ->assertSee('Pegawai')
             ->assertDontSee('>Perangkat<', false)
             ->assertDontSee('>Kepala<', false);
-    }
-
-    public function test_dashboard_menggabungkan_surat_masuk_dan_keluar(): void
-    {
-        // Primer 01 = 1 surat masuk + 1 surat keluar = 2;
-        // primer 02 = 3 surat masuk. Kalau hanya surat masuk yang dihitung
-        // (perilaku lama), urutannya jadi 02 (3) lalu 01 (1).
-        $lain = KlasifikasiPrimer::forceCreate(['kode' => '02', 'nama' => 'Perencanaan']);
-
-        SuratKeluar::forceCreate([
-            'user_id' => $this->pegawai->id,
-            'penerima' => 'Warga',
-            'klasifikasi_primer_id' => $this->klasifikasi->id,
-            'nomor_surat' => '001/01/I/2026',
-            'perihal' => 'Keluar satu',
-            'tanggal_surat' => '2026-01-05',
-        ]);
-
-        foreach (range(1, 3) as $i) {
-            SuratMasuk::forceCreate([
-                'user_id' => $this->pegawai->id,
-                'pengirim' => 'Kecamatan',
-                'klasifikasi_primer_id' => $lain->id,
-                'nomor_surat' => 'MSK-'.$i,
-                'perihal' => 'Masuk '.$i,
-                'tanggal_surat' => '2026-01-0'.$i,
-                'tanggal_diterima' => '2026-01-0'.$i,
-            ]);
-        }
-
-        $this->actingAs($this->pegawai)
-            ->get(route('dashboard'))
-            ->assertOk()
-            ->assertSee('02 - Perencanaan')
-            ->assertSee('3 surat');
     }
 
     /**

@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\Aktivitas;
 use App\Models\KlasifikasiPrimer;
 use App\Models\SuratKeluar;
 use App\Models\SuratMasuk;
@@ -154,27 +155,22 @@ class StatistikDashboardTest extends TestCase
         $this->assertSame(1, $stats['surat_masuk_aktif']);
     }
 
-    public function test_grafik_klasifikasi_menggabungkan_masuk_dan_keluar(): void
+    /**
+     * Tiga blok itu dihapus dari dashboard atas permintaan pemakai: informasinya
+     * tidak dibaca orang kantor sambil bekerja, dan dua di antaranya sudah punya
+     * halaman sendiri. Query-nya ikut hilang — bukan cuma display `none`.
+     */
+    public function test_log_aktivitas_klasifikasi_terbanyak_dan_arsip_inaktif_tidak_lagi_di_dashboard(): void
     {
-        // Dulu hanya surat masuk. Klasifikasi yang cuma dipakai surat keluar
-        // tidak muncul sama sekali di dashboard.
         $hariIni = Carbon::now()->toDateString();
+        $this->masuk($hariIni, 'inaktif');
+        Aktivitas::create(['user_id' => $this->pegawai->id, 'aksi' => 'Membuka daftar surat masuk']);
 
-        $keuangan = KlasifikasiPrimer::forceCreate(['kode' => '02', 'nama' => 'Keuangan']);
-
-        $suratKeluar = $this->keluar($hariIni);
-        $suratKeluar->klasifikasi_primer_id = $keuangan->id;
-        $suratKeluar->save();
-
-        $respons = $this->actingAs($this->pegawai)->get(route('dashboard'))->assertOk();
-
-        $populer = $respons->viewData('klasifikasiTerpopuler');
-
-        $this->assertCount(1, $populer);
-        $this->assertSame('Keuangan', $populer[0]->primer->nama);
-        $this->assertSame(1, (int) $populer[0]->total);
-
-        // Panjang batang dihitung di controller sekarang, bukan di dalam loop view.
-        $this->assertSame(1, (int) $respons->viewData('maksTotalKlasifikasi'));
+        $this->actingAs($this->pegawai)
+            ->get(route('dashboard'))
+            ->assertOk()
+            ->assertDontSee('Log Aktivitas Terbaru')
+            ->assertDontSee('Klasifikasi Surat Terbanyak')
+            ->assertDontSee('Arsip Inaktif');
     }
 }

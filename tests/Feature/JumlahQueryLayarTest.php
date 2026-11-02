@@ -211,10 +211,11 @@ class JumlahQueryLayarTest extends TestCase
         // BASELINE sebelum perapian: sembilan `count()` TERPISAH (dua di antaranya
         // `whereMonth()+whereYear()` = fungsi di atas kolom, index tidak terpakai)
         // + `KlasifikasiPrimer::all()` seisi tabel + dua agregasi klasifikasi.
-        // Sesudah diringkas: 13 — 2 agregat + 3 daftar + 4 eager load (terduplikasi
-        // karena masuk & keluar dua koleksi terpisah) + 2 agregasi klasifikasi
-        // + 1 daftar klasifikasi + 1 composer sidebar.
-        $this->hitung(route('dashboard'), 15, 'dashboard');
+        // Sesudah widget log aktivitas & sebaran klasifikasi turun dari layar:
+        // 9 — 2 agregat + 2 daftar terbaru + 4 eager load (primer & petugas,
+        // terduplikasi karena masuk dan keluar dua koleksi terpisah)
+        // + 1 composer sidebar.
+        $this->hitung(route('dashboard'), 11, 'dashboard');
     }
 
     public function test_daftar_surat_masuk(): void
