@@ -147,13 +147,54 @@ class PembacaIsiLampiran
             return null;
         }
 
-        // Paragraf -> baris baru, tab & baris baru di dalam sel -> whitespace,
-        // sisanya (semua tag) dibuang. Runs <w:t> dibiarkan bersambung karena
-        // Word memecah satu kalimat jadi banyak run.
-        $xml = str_replace(['</w:p>', '<w:br/>', '<w:tab/>', '</w:tr>'], ["\n", "\n", "\t", "\n"], $xml);
-        $teks = preg_replace('/<[^>]+>/u', '', $xml);
+        // Diambil TEKS SAJA, dalam urutan dokumen — bukan "buang semua tag".
+        // Bentuk lama lolos di berkas Word yang XML-nya satu baris padat, tapi docx
+        // hasil Google Docs / generator menyimpan baris baru dan indentasi DI ANTARA
+        // tag, dan whitespace itu bukan teks: ia ikut tersisa jadi puluhan baris
+        // kosong dan enam spasi di awal tiap baris.
+        //
+        // Runs <w:t> dibiarkan bersambung karena Word memecah satu kalimat jadi banyak
+        // run; hanya batas paragraf/garis/tab yang memotong.
+        $baris = [];
+        $jalan = '';
 
-        return html_entity_decode((string) $teks, ENT_QUOTES | ENT_XML1, 'UTF-8');
+        preg_match_all(
+            '~<w:t(?:\s[^>]*)?>(?<teks>.*?)</w:t>'
+            .'|(?<batas></w:p>|<w:p(?:\s[^>]*)?/>|<w:br(?:\s[^>]*)?/>|<w:tab(?:\s[^>]*)?/>)~us',
+            $xml,
+            $cocok,
+            PREG_SET_ORDER
+        );
+
+        foreach ($cocok as $potong) {
+            $teks = $potong['teks'] ?? null;
+
+            if ($teks !== null && $teks !== '') {
+                $jalan .= $teks;
+
+                continue;
+            }
+
+            if (($potong['batas'] ?? '') === '') {
+                continue;
+            }
+
+            if (preg_match('~^<w:tab~', $potong['batas']) === 1) {
+                $jalan .= "\t";
+
+                continue;
+            }
+
+            // Akhir paragraf (atau paragraf kosong / page break): baris ditutup,
+            // termasuk kalau isinya masih kosong — rapikan() yang memutuskan berapa
+            // banyak baris kosong yang boleh tersisa.
+            $baris[] = $jalan;
+            $jalan = '';
+        }
+
+        $baris[] = $jalan;
+
+        return html_entity_decode(implode("\n", $baris), ENT_QUOTES | ENT_XML1, 'UTF-8');
     }
 
     private function dariXlsx(string $path): ?string

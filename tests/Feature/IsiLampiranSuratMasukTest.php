@@ -76,6 +76,26 @@ class IsiLampiranSuratMasukTest extends TestCase
         $this->assertNull($this->surat->isi_terverifikasi_pada);
     }
 
+    /**
+     * docx hasil Google Docs menyimpan baris baru + indentasi DI ANTARA tag. Whitespace
+     * itu bukan isi surat: kalau ikut terbaca, satu surat jadi puluhan baris kosong dan
+     * tiap barisnya berawal dengan enam spasi.
+     */
+    public function test_docx_berindentasi_tidak_menularkan_baris_kosong_ke_hasil_baca(): void
+    {
+        $paragraf = ['Nomor: 005/312/415.53/2026', 'Perihal: Undangan rapat koordinasi', 'Hari: Rabu'];
+
+        $rapi = app(PembacaIsiLampiran::class)->baca(
+            $this->lampiranBuatan('undangan-docs.docx', $this->docxParagraf($paragraf, padat: false))
+        );
+        $padat = app(PembacaIsiLampiran::class)->baca(
+            $this->lampiranBuatan('undangan-word.docx', $this->docxParagraf($paragraf, padat: true))
+        );
+
+        $this->assertSame(implode("\n", $paragraf), $rapi['teks']);
+        $this->assertSame($rapi['teks'], $padat['teks'], 'Dua bentuk XML harus menghasilkan teks yang sama.');
+    }
+
     public function test_pdf_terbaca(): void
     {
         // PDF sungguhan dari dompdf (bukan byte asal), supaya jalur parser-nya
@@ -291,13 +311,61 @@ class IsiLampiranSuratMasukTest extends TestCase
         ]);
     }
 
+    /**
+     * Satu paragraf, XML di-pretty-print — bentuk yang disimpan Google Docs dan
+     * banyak generator docx.
+     */
     private function docx(string $teks): string
     {
-        return $this->zip(['word/document.xml' => $teks === ''
-            ? '<?xml version="1.0"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body/></w:document>'
-            : '<?xml version="1.0"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>'
-                .'<w:p><w:r><w:t xml:space="preserve">'.htmlspecialchars($teks, ENT_XML1).'</w:t></w:r></w:p>'
-                .'</w:body></w:document>']);
+        return $this->docxParagraf($teks === '' ? [] : [$teks], padat: false);
+    }
+
+    /**
+     * Satu paragraf, seluruh XML satu baris — bentuk Word menyimpan dokumen.
+     */
+    private function docxPadat(string $teks): string
+    {
+        return $this->docxParagraf($teks === '' ? [] : [$teks], padat: true);
+    }
+
+    /**
+     * Dua bentuk XML di atas harus menghasilkan teks yang sama persis: whitespace
+     * di antara tag adalah tata letak berkas, bukan isi surat.
+     *
+     * @param  array<int, string>  $paragraf
+     */
+    private function docxParagraf(array $paragraf, bool $padat): string
+    {
+        // [tingkat indentasi, tag] — indentasi cuma dipakai bentuk rapi, karena
+        // Word menyimpan semuanya satu baris tanpa whitespace di antara tag.
+        $isi = [];
+
+        foreach ($paragraf as $teks) {
+            $isi[] = [2, '<w:p>'];
+            $isi[] = [3, '<w:r><w:t xml:space="preserve">'.htmlspecialchars($teks, ENT_XML1).'</w:t></w:r>'];
+            $isi[] = [2, '</w:p>'];
+        }
+
+        $baris = [[0, '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'],
+            [0, '<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">']];
+
+        if ($isi === []) {
+            $baris[] = [1, '<w:body/>'];
+        } else {
+            $baris[] = [1, '<w:body>'];
+            $baris = array_merge($baris, $isi);
+            $baris[] = [1, '</w:body>'];
+        }
+
+        $baris[] = [0, '</w:document>'];
+
+        $xml = '';
+
+        foreach ($baris as [$tingkat, $tag]) {
+            $xml .= $padat ? $tag : str_repeat('  ', $tingkat).$tag."\n";
+        }
+
+        return $this->zip(['word/document.xml' => $xml]);
     }
 
     /**
