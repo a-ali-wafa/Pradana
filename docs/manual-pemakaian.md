@@ -312,6 +312,8 @@ Isi yang dijadwalkan: backup arsip ke Google Drive (harian 00:00), **cadangan da
 ### A.4 Google Drive (opsional, hanya backup)
 Simpan kredensial Service Account di `storage/app/google/service-account.json` (**jangan pernah di-commit**), isi `GOOGLE_DRIVE_ROOT_FOLDER_ID` di `.env`, lalu bagikan folder itu (akses Editor) ke email Service Account. Uji: `php artisan arsip:sinkron-ke-drive --dry-run`. Aplikasi tetap jalan penuh tanpa Drive — file arsip ada di disk lokal.
 
+**Yang perlu diketahui sebelum menghabiskan waktu di jalur ini:** Service Account **tidak punya kuota penyimpanan sendiri**, jadi ia hanya bisa menulis ke **Shared Drive** (drive tim). Google menulis ini apa adanya: akun Gmail pribadi **tidak bisa membuat Shared Drive**, dan delegasi OAuth hanya tersedia di Google Workspace. Artinya cadangan Drive baru benar-benar jalan kalau kantor punya Workspace/Drive edukasi, atau kalau aplikasi ini nanti dialihkan ke OAuth akun biasa (aliran consent + refresh token — belum dibuat). `--dry-run` TIDAK menangkap ini: ia hanya mencetak daftar "akan upload" tanpa mengirim apa pun; kegagalan aslinya muncul sebagai `storageQuotaExceeded` saat upload pertama. Selama belum ada Workspace, pakai `arsip:backup-db` dan salin folder `db-backup` ke luar server (Lampiran A.6) — itu cadangan yang terbukti.
+
 ### A.5 Perintah yang paling sering dibutuhkan
 ```bash
 php artisan arsip:reset-pin staff@kantor.desa        # user lupa PIN & admin tidak ada
@@ -420,4 +422,5 @@ Port 80 sengaja tetap hidup: hanya jalur `/.well-known/acme-challenge/` yang dil
 - **Kunci otomatis arsip setelah N hari** belum diaktifkan — nilai N belum diputuskan.
 - **Pembaca isi lampiran bukan OCR.** PDF hasil scan (gambarnya saja), JPG/PNG, dan DOC/XLS format lama tidak terbaca; sistem selalu menyebutkan alasannya di kartu hasil baca, tidak pernah diam-diam.
 - **Hasil baca mesin = draf.** Teks yang diambil dari PDF/DOCX/XLSX bisa salah susun (tabel, header) dan baru dianggap diverifikasi setelah petugas menekan Simpan.
+- **Cadangan Drive butuh Workspace.** Dengan Service Account, upload ke Drive milik akun Gmail pribadi ditolak Google (`storageQuotaExceeded`) dan Gmail pribadi tidak bisa membuat Shared Drive — lihat A.4. Fitur ini baru teruji di kantor yang punya Workspace/Drive edukasi.
 - Backup Drive tidak menyalin ulang file yang sudah dihapus di kedua sisi; ia menambah, bukan mencerminkan keadaan.
